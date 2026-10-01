@@ -585,7 +585,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [ ] Türkçe/İngilizce, erişilebilirlik denetimi
 - [ ] Test paketinin tamamlanması (protokol, WebKit, güvenlik)
 - [ ] ~~Plex tarzı alan adı~~ → Faz 1'e taşındı (DuckDNS + Let's Encrypt, ücretsiz)
-- [ ] Web sitesi, kurulum videosu
+- [x] GitHub deposu (özel): github.com/YusufUzun03/couch-remote, MIT lisansı, README/KURULUM/SECURITY, v0.3.0 sürümü (CouchRemote.exe)`n- [ ] Depoyu herkese açma + indirme sayfasını (site/) GitHub Pages ile yayınlama (özel depoda Pages ücretli plan ister)`n- [ ] Web sitesi, kurulum videosu
 
 ### Faz 6 — Gerçek iOS Uygulaması (Mac gerekir)
 **Ön koşullar:** Mac (ikinci el M1 Mac mini yeterli), Apple Developer hesabı (yıllık 99 $), Live Activity için küçük bir **push aracı sunucusu**.
