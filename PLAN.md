@@ -573,7 +573,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 ### Faz 5 — Jiroskop, Önizleme ve Performans (3–4 hafta)
 - [x] **Jiroskop / hava faresi:** Touchpad sekmesinde "Hava faresi" modu. Dokunduğun sürece telefonun yönelimi imleci sürer, bırakınca durur (kavrama). Eğim/bilek bükmeden bağımsız, titreme süzülmüş, işaretçi ivmeli, hız ayarı. Çekirdek `web/air.js`, sentetik testler `tools/air-test.mjs` (29 test). Gamepad nişanı yok (gamepad kaldırıldı)
 - [ ] Uygulama içi kamerayla QR okuma (yeni PC ekleme)
-- [ ] **Ekran önizleme** + mutlak (tablet) mod
+- [-] ~~**Ekran önizleme** + mutlak (tablet) mod~~ — **YAPILMAYACAK** (kullanıcı kararı, 2026-10-01): CPU/GPU, pil, ağ gecikmesi ve gizlilik maliyeti değmez; tek kare ekran görüntüsü yeterli
 - [ ] WebRTC DataChannel (p95 < 15 ms hedefi)
 - [ ] Tarayıcı eklentisi (YouTube/Netflix derin kontrol)
 - [ ] Çoklu PC desteği
