@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>CouchRemote Kurulum</title>
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/logo.svg">
+<style>
+  :root {
+    --bg: #f2f2f7; --surface: #fff; --fill: rgba(120,120,128,.12); --sep: rgba(60,60,67,.18);
+    --label: #000; --label-2: rgba(60,60,67,.6); --label-3: rgba(60,60,67,.3);
+    --accent: #007aff; --green: #34c759; --orange: #ff9500;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #000; --surface: #1c1c1e; --fill: rgba(120,120,128,.24); --sep: rgba(84,84,88,.6);
+      --label: #fff; --label-2: rgba(235,235,245,.6); --label-3: rgba(235,235,245,.3);
+      --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--label); font: 17px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         padding: calc(env(safe-area-inset-top) + 32px) 16px calc(env(safe-area-inset-bottom) + 32px); }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  .logo { display: block; width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 18px; box-shadow: 0 10px 28px rgba(10,132,255,.28); }
+  h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; text-align: center; margin: 0 0 6px; }
+  .lead { color: var(--label-2); text-align: center; margin: 0 0 26px; font-size: 16px; }
+  .section { color: var(--label-2); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0 16px 6px; }
+  .list { list-style: none; margin: 0 0 22px; padding: 0; background: var(--surface); border-radius: 14px; overflow: hidden; }
+  .list li { display: flex; gap: 14px; padding: 14px 16px; position: relative; }
+  .list li + li::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: .5px; background: var(--sep); }
+  .num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; display: grid; place-items: center; flex: none; }
+  .list b { display: block; font-weight: 600; font-size: 16px; }
+  .list small { display: block; color: var(--label-2); font-size: 14px; margin-top: 3px; }
+  .path { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
+  .chip { background: var(--fill); border-radius: 7px; padding: 3px 8px; font-size: 13px; font-weight: 500; }
+  .sep { color: var(--label-3); font-size: 13px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 50px; margin-top: 12px; border-radius: 12px;
+         background: var(--accent); color: #fff; font: 600 17px -apple-system, system-ui, sans-serif; text-decoration: none; border: 0; }
+  .btn.secondary { background: var(--fill); color: var(--accent); }
+  .btn:active { opacity: .8; transform: scale(.99); }
+  .btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .note { font-size: 13px; color: var(--label-2); margin-top: 8px; }
+  #status { display: flex; gap: 12px; align-items: center; background: var(--surface); border-radius: 14px; padding: 14px 16px; }
+  #status .ind { width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; }
+  #status.checking .ind { border: 2.5px solid var(--fill); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  #status.waiting .ind { background: var(--orange); }
+  #status.ok .ind { background: var(--green); }
+  #status .ind svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  #status b { display: block; font-size: 16px; font-weight: 600; }
+  #status small { color: var(--label-2); font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #status.checking .ind { animation-duration: 3s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="/logo.svg" alt="">
+  <h1>Telefonunu bağla</h1>
+  <p class="lead">Sadece bir kez yapılır. Sonrasında uygulama her açılışta kendiliğinden bağlanır.</p>
+
+  <div class="section">Güvenlik profili</div>
+  <ol class="list">
+    <li>
+      <span class="num">1</span>
+      <div style="flex:1">
+        <b>Profili indir</b>
+        <small>Çıkan pencerede <b style="display:inline">İzin Ver</b>, sonra <b style="display:inline">Kapat</b>'a dokun.</small>
+        <a class="btn" href="/ca.mobileconfig">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Profili indir
+        </a>
+      </div>
+    </li>
+    <li>
+      <span class="num">2</span>
+      <div>
+        <b>Profili yükle</b>
+        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Profil İndirildi</span><span class="sep">›</span><span class="chip">Yükle</span></div>
+        <small><b style="display:inline">Güvenlik kontrolü:</b> profilin adındaki "CouchRemote · XXXX-XXXX" kodu bilgisayar ekranındaki kodla aynı olmalı. Farklıysa yükleme.</small>
+        <small>Kırmızı "Doğrulanmadı" yazısı normal: profili bir şirket değil, senin bilgisayarın oluşturdu. İçinde sadece bu bilgisayara güvenli bağlanmak için bir sertifika var.</small>
+      </div>
+    </li>
+    <li>
+      <span class="num">3</span>
+      <div>
+        <b>Sertifikaya güven</b>
+        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Genel</span><span class="sep">›</span><span class="chip">Hakkında</span><span class="sep">›</span><span class="chip">Sertifika Güven Ayarları</span></div>
+        <small>En alttaki <b style="display:inline">CouchRemote Yerel CA</b> anahtarını aç. Sadece <b style="display:inline">%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
+      </div>
+    </li>
+  </ol>
+
+  <div class="section">Durum</div>
+  <div id="status" class="waiting">
+    <span class="ind"></span>
+    <div><b id="stTitle">Profil bekleniyor</b><small id="stText">Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.</small></div>
+  </div>
+  <button class="btn secondary" id="check">Kontrol et</button>
+</div>
+
+<script>
+  const APP_ORIGIN = '%%APP_ORIGIN%%';
+  const code = new URLSearchParams(location.search).get('c') || '';
+  const box = document.getElementById('status');
+  const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  let checking = false;
+
+  function setStatus(state, title, text) {
+    box.className = state;
+    box.querySelector('.ind').innerHTML = state === 'ok' ? CHECK : '';
+    document.getElementById('stTitle').textContent = title;
+    document.getElementById('stText').textContent = text;
+  }
+
+  async function check(auto) {
+    if (checking) return;
+    checking = true;
+    setStatus('checking', 'Kontrol ediliyor…', 'Sertifikaya güvenilip güvenilmediğine bakılıyor.');
+    try {
+      const r = await fetch(APP_ORIGIN + '/api/hello', { cache: 'no-store' });
+      if (!r.ok) throw new Error(r.status);
+      setStatus('ok', 'Hazır', 'Son adım açılıyor…');
+      setTimeout(() => (location.href = APP_ORIGIN + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 700);
+    } catch {
+      setStatus('waiting', 'Profil bekleniyor',
+        auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.');
+    } finally {
+      checking = false;
+    }
+  }
+  // Profil kurulumu uzun sürebilir: sayfa her görüntülendiğinde eşleşme kodunun süresi uzatılır
+  const touch = () => code && fetch('/api/pair/touch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) }).catch(() => {});
+  touch();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    touch();
+    check(true); // Ayarlar'dan geri dönünce otomatik kontrol
+  });
+  document.getElementById('check').onclick = () => check(false);
+  check(true);
+</script>
+</body>
+</html>

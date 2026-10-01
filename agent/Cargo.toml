@@ -1,0 +1,42 @@
+﻿[package]
+name = "couch-agent"
+version = "0.3.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = { version = "0.8.9", features = ["ws"] }
+base64 = "0.23.1"
+chrono = "0.4.45"
+crc32fast = "1.5.2"
+flate2 = "1.1.10"
+http-body-util = "0.1.5"
+hyper = "1"
+hyper-util = { version = "0.1.21", features = ["server-auto", "tokio", "service"] }
+if-addrs = "0.15.0"
+mime_guess = "2.0.5"
+p256 = { version = "0.14.0", features = ["ecdsa"] }
+qrcode = "0.14.1"
+rand = "0.10.3"
+rcgen = { version = "0.14.10", features = ["pem", "x509-parser"] }
+rust-embed = "8.12.0"
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+socket2 = { version = "0.6.5", features = ["all"] }
+time = "0.3.55"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "time", "sync", "fs", "signal"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12", "logging"] }
+tower = "0.5.3"
+tray-icon = "0.26.0"
+uuid = { version = "1.26.1", features = ["v4"] }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+windows-core = "0.62.2"
+windows = { version = "0.62.2", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging", "Win32_UI_HiDpi", "Win32_Foundation", "Win32_System_Threading", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_Console", "Win32_UI_TextServices", "Win32_System_WinRT", "Media_Control", "Foundation", "Storage_Streams", "Win32_UI_Shell", "Win32_System_Registry", "Win32_Media_Audio", "Win32_Storage_FileSystem", "Win32_Devices_FunctionDiscovery", "Win32_Media_Audio_Endpoints", "Win32_System_Com", "Win32_System_Power", "Win32_System_Shutdown", "Win32_System_DataExchange", "Win32_System_Ole", "Win32_Security", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Graphics_Gdi", "Win32_Storage_EnhancedStorage", "Win32_UI_Shell_PropertiesSystem", "UI_Notifications", "Data_Xml_Dom"] }
+winreg = "0.56.0"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

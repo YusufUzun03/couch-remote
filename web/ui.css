@@ -1,0 +1,452 @@
+/* CouchRemote — tasarım katmanı (v3 "canlı ve akıcı").
+   app.css'in üstüne biner: hareket sistemi, derinlik/cam, ortam ışığı, kayan göstergeli kontroller, paneller.
+   Kurallar: sadece transform/opacity canlandırılır; bulanıklık (blur) küçük sabit yüzeylerde; yatak modunda efektler kısılır;
+   "hareketi azalt" ayarında tüm hareket kapanır (dosyanın sonu). */
+
+/* ================================================================ token'lar */
+@property --tint { syntax: '<color>'; inherits: true; initial-value: rgba(10, 132, 255, 0.2); }
+
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Yay eğrileri: önce yedek (aşmalı bezier), destekleyen tarayıcıda gerçek yay fiziği */
+  --spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+  --spring-soft: cubic-bezier(0.25, 1.1, 0.5, 1);
+  --dur-fast: 0.14s;
+  --dur: 0.28s;
+  --dur-slow: 0.5s;
+  --press: transform 0.42s var(--spring), background-color 0.18s var(--ease), color 0.18s var(--ease), opacity 0.18s var(--ease), box-shadow 0.25s var(--ease);
+
+  --r: 16px;
+  --r-lg: 22px;
+  /* Yüzey derinliği: üstten ince ışık + ince kenar çizgisi. Düz renk üstüne gradyan bindirilir. */
+  --card: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.012) 100%);
+  --hairline: inset 0 0.5px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 0.5px rgba(255, 255, 255, 0.035);
+  --lift: 0 1px 2px rgba(0, 0, 0, 0.45), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+  --glow: 0 10px 34px -10px color-mix(in srgb, var(--accent) 60%, transparent);
+  --ambient: 1;
+  --seg-thumb: rgba(120, 120, 128, 0.42);
+  --tint: rgba(10, 132, 255, 0.2);
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring: linear(0, 0.126, 0.3764, 0.6265, 0.821, 0.9475, 1.0156, 1.0425, 1.045, 1.0362, 1.0242, 1.0135, 1.0057, 1.001, 0.9986, 0.9979, 0.998, 0.9985, 0.9991, 0.9995, 0.9998, 1, 1.0001, 1.0001, 1.0001, 1.0001, 1);
+    --spring-soft: linear(0, 0.1196, 0.3447, 0.5628, 0.7334, 0.8514, 0.9257, 0.9685, 0.9908, 1.001, 1.0045, 1.0049, 1.0041, 1.0029, 1.0019, 1.0011, 1.0006, 1.0003, 1.0001, 1, 1, 1, 1, 1, 1, 1, 1);
+  }
+}
+
+/* Yatak modu: efektler kısılır, renk sıcak ve sönük kalır (göz yormaz) */
+body.bed {
+  --card: none;
+  --hairline: inset 0 0 0 0.5px rgba(255, 96, 48, 0.1);
+  --lift: 0 6px 18px -10px rgba(0, 0, 0, 0.8);
+  --glow: none;
+  --ambient: 0.55;
+  --seg-thumb: rgba(255, 96, 48, 0.2);
+}
+body.bed #main { --tint: rgba(255, 80, 40, 0.1) !important; }
+
+/* ================================================================ ortam ışığı */
+#main { isolation: isolate; }
+#ambient {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--ambient);
+  background:
+    radial-gradient(80% 36% at 50% -4%, var(--tint) 0%, transparent 72%),
+    radial-gradient(70% 30% at 100% 102%, color-mix(in srgb, var(--tint) 50%, transparent) 0%, transparent 70%);
+  transition: --tint 1s var(--ease), opacity 0.6s var(--ease);
+}
+
+/* ================================================================ yüzeyler (derinlik) */
+#np, .volume, #ctx, .card-list, .list, #dpad, .pill, .mb, #typer, #clipText, .power-grid .pw, .timer-now, #hud,
+.searchbar, #pad, #miniPad, .out-row, .mix-row {
+  background-image: var(--card);
+}
+#np, .volume, #ctx, .card-list, .list, #dpad, .pill, .mb, #pad, .out-row { box-shadow: var(--hairline); }
+.card-list, .list, #np { border-radius: var(--r-lg); }
+.volume, #ctx, .out-row { border-radius: var(--r); }
+
+/* ================================================================ üst çubuk */
+#bar { gap: 10px; padding-bottom: 10px; }
+.status {
+  flex: 0 1 auto; margin-right: auto; max-width: calc(100% - 150px); padding: 7px 13px 7px 11px; border-radius: 999px;
+  background: var(--fill); box-shadow: var(--hairline); transition: background-color var(--dur) var(--ease);
+}
+#dot { position: relative; }
+#dot.ok { animation: ring 2.6s ease-out infinite; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+#dot.down { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 25%, transparent); }
+#conn { transition: opacity 0.2s var(--ease); }
+.icon-btn { width: 38px; height: 38px; background-image: var(--card); box-shadow: var(--hairline); }
+.icon-btn:active { transform: scale(0.88); }
+.icon-btn.on { box-shadow: var(--glow), var(--hairline); }
+
+/* ================================================================ kayan göstergeli segment kontrolü */
+.seg { position: relative; isolation: isolate; --n: 2; --i: 0; }
+.seg:has(> :nth-child(3)) { --n: 3; }
+.seg:has(> :nth-child(4)) { --n: 4; }
+.seg:has(> :nth-child(5)) { --n: 5; }
+.seg:has(> :nth-child(2).on) { --i: 1; }
+.seg:has(> :nth-child(3).on) { --i: 2; }
+.seg:has(> :nth-child(4).on) { --i: 3; }
+.seg:has(> :nth-child(5).on) { --i: 4; }
+.seg::before {
+  content: ""; position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n)); border-radius: 8px;
+  background: var(--seg-thumb); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.14);
+  transform: translateX(calc(var(--i) * 100%)); transition: transform 0.5s var(--spring);
+}
+.seg button { position: relative; transition: color 0.2s var(--ease), transform 0.3s var(--spring); }
+.seg button.on { background: transparent; }
+.seg button:active { transform: scale(0.96); }
+
+/* ================================================================ sekme çubuğu: kayan gösterge */
+#tabs { position: relative; --n: 5; --i: 0; box-shadow: inset 0 0.5px 0 var(--sep), 0 -12px 30px -18px rgba(0, 0, 0, 0.8); }
+#tabs:has(> :nth-child(2).on) { --i: 1; }
+#tabs:has(> :nth-child(3).on) { --i: 2; }
+#tabs:has(> :nth-child(4).on) { --i: 3; }
+#tabs:has(> :nth-child(5).on) { --i: 4; }
+#tabs::before {
+  content: ""; position: absolute; top: 7px; width: 58px; height: 30px; border-radius: 15px;
+  left: calc(8px + (100% - 16px) / 5 * var(--i) + ((100% - 16px) / 5 - 58px) / 2);
+  background: color-mix(in srgb, var(--accent) 17%, transparent); box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: left 0.55s var(--spring);
+}
+#tabs button { position: relative; transition: color 0.2s var(--ease); }
+#tabs button .ic { transition: transform 0.5s var(--spring); }
+#tabs button.on .ic { transform: translateY(-1px) scale(1.07); }
+#tabs button span { transition: font-weight 0.2s var(--ease); }
+#tabs button.on span { font-weight: 600; }
+#tabs button:active .ic { transform: scale(0.86); }
+
+/* ================================================================ sekme geçişleri */
+.view { animation: viewIn 0.38s var(--ease-out) both; }
+@keyframes viewIn { from { opacity: 0; transform: translateX(var(--dx, 0px)) scale(0.992); } }
+/* İçerik sırayla yukarı süzülür (ilk 8 çocuk) */
+.view:not([hidden]) > * { animation: rise 0.55s var(--ease-out) both; animation-delay: calc(var(--k, 0) * 30ms); }
+.view > :nth-child(1) { --k: 0; } .view > :nth-child(2) { --k: 1; } .view > :nth-child(3) { --k: 2; } .view > :nth-child(4) { --k: 3; }
+.view > :nth-child(5) { --k: 4; } .view > :nth-child(6) { --k: 5; } .view > :nth-child(7) { --k: 6; } .view > :nth-child(n+8) { --k: 7; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+/* ================================================================ paneller (sheet) */
+#backdrop { background: rgba(0, 0, 0, 0.42); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); animation: fadeIn 0.3s var(--ease) both; }
+#backdrop.closing { animation: fadeOut 0.28s var(--ease) both; }
+@keyframes fadeOut { to { opacity: 0; } }
+.sheet {
+  border-radius: 28px 28px 0 0; will-change: transform;
+  background: color-mix(in srgb, var(--surface) 88%, transparent); background-image: var(--card);
+  -webkit-backdrop-filter: blur(34px) saturate(170%); backdrop-filter: blur(34px) saturate(170%);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.12), 0 -18px 60px rgba(0, 0, 0, 0.55);
+  animation: sheetIn 0.55s var(--ease-sheet) both; overscroll-behavior: contain;
+}
+.sheet.dragging { animation: none; transition: none; }
+.sheet.closing { animation: sheetOut 0.3s var(--ease-sheet) both; }
+@keyframes sheetIn { from { transform: translateY(105%); } }
+@keyframes sheetOut { to { transform: translateY(105%); } }
+.grabber { width: 40px; height: 5px; background: var(--label-3); margin: 3px auto 12px; }
+.sheet h3 { letter-spacing: -0.01em; }
+.sheet .card-list { background-color: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+
+/* ================================================================ bildirim ve uyarı */
+#toast {
+  bottom: calc(env(safe-area-inset-bottom) + 100px); transform: translate(-50%, 18px) scale(0.94); padding: 11px 18px; border-radius: 22px;
+  box-shadow: var(--hairline), var(--lift); transition: opacity 0.25s var(--ease), transform 0.5s var(--spring);
+}
+#toast.show { transform: translate(-50%, 0) scale(1); }
+.alert { animation: popIn 0.4s var(--spring) both; box-shadow: var(--lift); }
+@keyframes popIn { from { transform: scale(1.1); opacity: 0; } }
+
+/* ================================================================ çevrimdışı: halka animasyonu */
+#offline .box { background-image: var(--card); box-shadow: var(--hairline), var(--lift); animation: popIn 0.5s var(--spring) both; }
+#offline .hero-icon.small { position: relative; margin-bottom: 20px; }
+#offline .hero-icon.small::before, #offline .hero-icon.small::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; animation: wave 2.4s var(--ease-out) infinite;
+}
+#offline .hero-icon.small::after { animation-delay: 1.2s; }
+@keyframes wave { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.1); opacity: 0; } }
+
+/* ================================================================ butonlar: basınca çöker, bırakınca yay gibi döner */
+.btn-primary { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)); box-shadow: var(--glow), inset 0 0.5px 0 rgba(255, 255, 255, 0.3); }
+.btn-primary:active { transform: scale(0.97); opacity: 1; filter: brightness(0.92); }
+.chip-btn, .ctx-btn, .pw, .pill, .row-btn, .tile, .mb, .t, .d { -webkit-tap-highlight-color: transparent; }
+
+/* ================================================================ hareketi azalt */
+@media (prefers-reduced-motion: reduce) {
+  .view, .view > *, .sheet, #backdrop, .alert, #offline .box, #dot { animation: none !important; }
+  .seg::before, #tabs::before, #tabs button .ic { transition-duration: 0.01ms !important; }
+  #offline .hero-icon.small::before, #offline .hero-icon.small::after { display: none; }
+}
+
+/* ================================================================ KUMANDA */
+#v-remote { gap: 9px; padding: 2px 16px 12px; }
+
+/* "Şu an çalıyor" kartı: kapaktan türeyen renk, büyük kapak, ilerleme çubuğu kartın içinde */
+#np {
+  flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 14px 10px; min-height: 0; position: relative; overflow: hidden;
+  background-color: var(--surface);
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--tint) 60%, transparent), transparent 72%), var(--card);
+  transition: background-color 0.6s var(--ease);
+}
+.np-top { display: flex; gap: 14px; align-items: center; }
+.np-art { width: 76px; height: 76px; flex: none; position: relative; border-radius: 18px; overflow: hidden; background: var(--surface-2);
+  box-shadow: 0 16px 30px -12px var(--tint), 0 2px 8px rgba(0, 0, 0, 0.45); transition: box-shadow 0.6s var(--ease); }
+#npThumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; box-shadow: none; opacity: 1; transition: opacity 0.5s var(--ease); }
+#np.empty #npThumb { display: block; opacity: 0; }
+.np-art-ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--label-3); }
+.np-art-ph .ic { width: 34px; height: 34px; animation: breathe 3.2s ease-in-out infinite; }
+#np:not(.empty) .np-art-ph { display: none; }
+@keyframes breathe { 50% { transform: scale(0.88); opacity: 0.55; } }
+.np-text { flex: 1; min-width: 0; padding: 0; }
+#npTitle { font-size: 18px; font-weight: 650; line-height: 1.22; letter-spacing: -0.01em; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#npArtist { margin-top: 2px; font-size: 14.5px; line-height: 1.3; }
+#npApp { display: inline-flex; margin-top: 7px; padding: 2px 9px; border-radius: 10px; background: var(--fill); color: var(--label-2); font-size: 11.5px; font-weight: 600; }
+#npApp:empty { display: none; }
+#npBar { padding: 0; gap: 2px; }
+#npSeek { height: 26px; }
+#npSeek::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--label) 0 var(--p), rgba(255, 255, 255, 0.18) var(--p) 100%); transition: height 0.2s var(--ease); }
+#npSeek::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -3px; transition: transform 0.35s var(--spring); }
+#npSeek:active::-webkit-slider-thumb { transform: scale(1.5); }
+body.bed #npSeek::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--label) 0 var(--p), var(--fill-strong) var(--p) 100%); }
+
+/* Uygulamaya özel düğmeler: tek satır, yana kayar */
+#ctx { padding: 8px 0 10px 12px; overflow: hidden; }
+.ctx-title { margin: 0 12px 6px 2px; }
+.ctx-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-right: 12px; }
+.ctx-row::-webkit-scrollbar { display: none; }
+.ctx-btn { flex: none; background-image: var(--card); box-shadow: var(--hairline); }
+.ctx-btn.accent { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); box-shadow: var(--glow); }
+
+/* Oynatma kontrolleri: oynat/duraklat simgesi dönüşerek değişir */
+.transport { padding: 2px 4px; }
+.t .ic { transition: transform 0.45s var(--spring); }
+.t.big { width: 68px; height: 68px; position: relative; box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.6); transition: var(--press), box-shadow 0.6s var(--ease); }
+#ppBtn.playing { box-shadow: 0 12px 42px -8px var(--tint), 0 8px 22px -8px rgba(0, 0, 0, 0.6); }
+#ppBtn .ic { position: absolute; width: 31px; height: 31px; transition: transform 0.5s var(--spring), opacity 0.2s var(--ease); }
+#ppBtn .play, #ppBtn .pause { display: block; }
+#ppBtn .pause, #ppBtn.playing .play { opacity: 0; transform: scale(0.4) rotate(-50deg); }
+#ppBtn.playing .play { transform: scale(0.4) rotate(50deg); }
+#ppBtn.playing .pause { opacity: 1; transform: none; }
+#ppBtn .play { opacity: 1; transform: none; }
+#ppBtn.playing .play { opacity: 0; }
+.t.down { transform: scale(0.88); }
+
+/* Yön halkası */
+#dpad { width: 190px; height: 190px; background-color: var(--surface); }
+#dpad::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, transparent 66%, rgba(255, 255, 255, 0.045) 67%, transparent 100%); }
+.d { width: 54px; height: 54px; overflow: hidden; }
+.d.dir-up { left: 68px; top: 3px; } .d.dir-down { left: 68px; bottom: 3px; } .d.dir-left { left: 3px; top: 68px; } .d.dir-right { right: 3px; top: 68px; }
+.d.ok { left: 52px; top: 52px; width: 86px; height: 86px; background-image: var(--card); box-shadow: var(--hairline), 0 6px 18px -6px rgba(0, 0, 0, 0.6); }
+.d:not(.ok)::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--accent); opacity: 0; transform: scale(0.4); transition: opacity 0.25s var(--ease), transform 0.45s var(--spring); }
+.d:not(.ok).down::after { opacity: 0.2; transform: scale(1); }
+.d .ic { position: relative; z-index: 1; }
+.d.ok.down { background-color: color-mix(in srgb, var(--accent) 38%, var(--surface-2)); color: #fff; }
+.pills .pill { height: 42px; }
+
+/* Ses kartı: seviye + çıkış cihazı + uygulama sesleri tek yerde */
+#soundCard { display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: var(--r-lg); background-color: var(--surface); background-image: var(--card); box-shadow: var(--hairline); }
+#soundCard .volume { background: none; box-shadow: none; padding: 4px 8px 2px 10px; border-radius: 0; }
+.sound-extras { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sound-extras:not(:has(> :not([hidden]))) { display: none; }
+.sound-extras:has(> [hidden]) > .out-row:not([hidden]) { grid-column: 1 / -1; }
+.sound-extras .out-row { padding: 7px 12px; gap: 9px; background-color: var(--fill); background-image: none; box-shadow: none; border-radius: 14px; }
+#volSlider { height: 30px; }
+#volSlider::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--label) 0 var(--p), rgba(255, 255, 255, 0.16) var(--p) 100%); }
+#volSlider::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -8px; transition: transform 0.35s var(--spring); }
+#volSlider:active::-webkit-slider-thumb { transform: scale(1.22); }
+body.bed #volSlider::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--label) 0 var(--p), var(--fill-strong) var(--p) 100%); }
+
+/* ================================================================ TOUCHPAD ve HAVA FARESİ */
+.pad-mode { padding-bottom: 8px; }
+#pad {
+  margin: 0 16px; border-radius: 26px;
+  background-color: var(--surface);
+  background-image: radial-gradient(130% 80% at 50% -10%, color-mix(in srgb, var(--tint) 70%, transparent), transparent 62%), var(--card);
+  box-shadow: var(--hairline), 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+  transition: box-shadow 0.35s var(--ease);
+}
+/* Yüzey dokusu: ortada belirgin, kenarlara doğru sönen nokta ızgarası */
+#pad::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.9;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.085) 1px, transparent 1.3px); background-size: 22px 22px; background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 70% 62% at 50% 50%, #000 25%, transparent 78%); mask-image: radial-gradient(ellipse 70% 62% at 50% 50%, #000 25%, transparent 78%);
+}
+body.bed #pad::before { opacity: 0.4; background-image: radial-gradient(rgba(255, 130, 90, 0.18) 1px, transparent 1.3px); }
+#pad.active { box-shadow: var(--hairline), inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 44px -14px color-mix(in srgb, var(--accent) 70%, transparent); }
+body.bed #pad.active { box-shadow: var(--hairline), inset 0 0 0 1px var(--sep); }
+#hint { inset: auto 0 20px; }
+
+/* Parmağı izleyen yumuşak ışık ve dokunuş dalgası */
+.finger-glow {
+  position: absolute; left: 0; top: 0; width: 140px; height: 140px; border-radius: 50%; pointer-events: none; opacity: 0; will-change: transform;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent); transition: opacity 0.3s var(--ease);
+}
+#pad.active .finger-glow { opacity: 1; }
+#pad.air .finger-glow { display: none; }
+.ripple {
+  position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 42%, transparent) 40%, transparent); animation: ripple 0.65s var(--ease-out) forwards;
+}
+@keyframes ripple { from { transform: scale(0.25); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+
+/* Fare tuşları: dokunsal, basınca çöker */
+#btns { gap: 10px; padding: 12px 16px 10px; }
+.mb {
+  display: flex; align-items: center; justify-content: center; gap: 8px; height: 58px; border-radius: 18px; background-color: var(--surface);
+  color: var(--label-2); box-shadow: var(--hairline), 0 8px 18px -12px rgba(0, 0, 0, 0.9);
+}
+.mb .ic { width: 22px; height: 22px; stroke-width: 1.6; }
+.mb.down { background-color: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--label); transform: scale(0.97);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), inset 0 2px 8px rgba(0, 0, 0, 0.35); }
+body.bed .mb.down { box-shadow: inset 0 0 0 1px var(--sep), inset 0 2px 8px rgba(0, 0, 0, 0.35); }
+
+/* Hava faresi: halka + telefonun gittiği yönü gösteren canlı nokta */
+.air-ring { width: 92px; height: 92px; margin-bottom: 16px; border-width: 1.5px; background: radial-gradient(closest-side, var(--fill), transparent 72%); }
+.air-ring::after { display: none; }
+.air-ring::before { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; }
+#airDot { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: var(--label-3);
+  transition: transform 0.55s var(--spring), background-color 0.25s var(--ease), box-shadow 0.25s var(--ease); }
+#pad.pointing .air-ring { border-color: var(--accent); box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 46px -6px color-mix(in srgb, var(--accent) 60%, transparent); transform: scale(1.08); }
+#pad.pointing .air-ring::before { animation: wave 1.6s var(--ease-out) infinite; }
+#pad.pointing #airDot { background: var(--accent); box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 70%, transparent); transition: transform 0.09s linear, background-color 0.25s var(--ease); }
+body.bed #pad.pointing .air-ring { box-shadow: 0 0 0 10px rgba(255, 90, 46, 0.1); }
+
+/* ================================================================ UYGULAMALAR */
+#v-apps { gap: 0; }
+.section-title { letter-spacing: 0.01em; margin: 24px 4px 11px; }
+.searchbar { height: 42px; border-radius: 14px; box-shadow: var(--hairline); transition: background-color 0.25s var(--ease), box-shadow 0.3s var(--ease); }
+.searchbar:focus-within { background-color: var(--fill-strong); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, transparent), var(--glow); }
+.searchbar .ic { transition: color 0.2s var(--ease), transform 0.4s var(--spring); }
+.searchbar:focus-within .ic { color: var(--accent); transform: scale(1.12); }
+.chip-btn { background-image: var(--card); box-shadow: var(--hairline); }
+.chip-btn.on { background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); box-shadow: var(--glow); }
+
+/* Hızlı başlat: derinlikli, marka renginden gradyanlı kutucuklar */
+.tiles { gap: 18px 10px; }
+.tile { gap: 7px; }
+.tile-icon {
+  --c: #444; width: 62px; height: 62px; border-radius: 17px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 78%, white) 0%, var(--c) 52%, color-mix(in srgb, var(--c) 78%, black) 100%);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 12px 20px -10px color-mix(in srgb, var(--c) 75%, transparent), 0 2px 5px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.tile-icon::after { background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), transparent 48%); }
+.tile.down { transform: scale(0.9); }
+body.bed .tile-icon { box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 6px 12px -8px rgba(0, 0, 0, 0.8); }
+
+/* Son kullanılanlar */
+.recent-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; }
+.recent-row::-webkit-scrollbar { display: none; }
+.recent-chip { flex: none; display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 14px 0 6px; border-radius: 23px; background-color: var(--surface); background-image: var(--card); box-shadow: var(--hairline); transition: var(--press); max-width: 220px; }
+.recent-chip span { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recent-chip.down { transform: scale(0.95); }
+.tile-icon.mini { width: 34px; height: 34px; border-radius: 10px; font-size: 15px; flex: none; }
+.recent-chip .initial { width: 34px; height: 34px; border-radius: 10px; background: var(--fill-strong); color: var(--label-2); display: grid; place-items: center; font-weight: 600; flex: none; }
+.cover-art.mini { width: 26px; height: 34px; border-radius: 6px; margin-left: 4px; flex: none; }
+.cover-art.mini b { font-size: 14px; }
+
+/* Oyunlar: yatay kapak kartları */
+.cover-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 10px; scroll-snap-type: x proximity; scroll-padding-left: 16px; }
+.cover-row::-webkit-scrollbar { display: none; }
+.cover { flex: none; width: 92px; display: flex; flex-direction: column; gap: 7px; text-align: left; scroll-snap-align: start; transition: var(--press); }
+.cover.down { transform: scale(0.94); }
+.cover-art {
+  --h: 220; width: 92px; height: 138px; border-radius: 12px; position: relative; overflow: hidden; display: grid; place-items: center;
+  background: linear-gradient(160deg, hsl(var(--h) 55% 42%), hsl(calc(var(--h) + 40) 60% 22%));
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 14px 22px -12px rgba(0, 0, 0, 0.9);
+}
+.cover-art.epic { background: linear-gradient(160deg, #3a3a3d, #151517); }
+.cover-art b { font-size: 34px; font-weight: 700; color: rgba(255, 255, 255, 0.9); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+.cover-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: fadeIn 0.5s var(--ease) both; }
+.cover-art.has-art b { display: none; }
+.cover-name { font-size: 12px; line-height: 1.25; color: var(--label-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Liste satırları */
+#appList button { transition: background-color 0.15s var(--ease), transform 0.4s var(--spring); }
+#appList button.down { background: var(--fill-strong); }
+.list { background-color: var(--surface); }
+
+/* Yükleniyor iskeleti: yumuşak ışıltı */
+.skel .tile-icon, .skel span, .skel-row i, .skel-row b {
+  background: linear-gradient(100deg, var(--fill) 30%, var(--fill-strong) 50%, var(--fill) 70%); background-size: 220% 100%; animation: shimmer 1.4s linear infinite; box-shadow: none; border-radius: 12px;
+}
+.skel .tile-icon::after { display: none; }
+.skel span { width: 44px; height: 9px; border-radius: 5px; display: block; }
+.skel-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px !important; }
+.skel-row::before { display: none; }
+.skel-row i { width: 30px; height: 30px; border-radius: 8px; flex: none; }
+.skel-row b { height: 11px; width: 55%; border-radius: 6px; }
+.skel-row:nth-child(even) b { width: 38%; }
+@keyframes shimmer { from { background-position: 120% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel .tile-icon, .skel span, .skel-row i, .skel-row b { animation: none !important; } }
+
+/* ================================================================ AKTAR ve AYARLAR */
+.badge {
+  --c: var(--accent); width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 82%, white), var(--c) 55%, color-mix(in srgb, var(--c) 80%, black));
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.35), 0 6px 12px -6px color-mix(in srgb, var(--c) 70%, transparent);
+}
+.badge.gray { --c: #6d6d72; }
+#shotOpen .badge { --c: #af52de; }
+#clipGet .badge { --c: #0a84ff; }
+#clipSend .badge { --c: #30d158; }
+label[for="filePick"] .badge { --c: #ff9f0a; }
+body.bed .badge { box-shadow: none; filter: saturate(0.5) brightness(0.8); }
+.row-btn { transition: background-color 0.15s var(--ease), transform 0.4s var(--spring); }
+.row-btn:active { transform: scale(0.99); }
+#clipText { background-image: var(--card); transition: box-shadow 0.3s var(--ease); }
+#clipText:focus { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent), var(--glow); }
+#uploads .up-bar { height: 5px; }
+#uploads .up-bar i { transition: width 0.3s var(--ease-out); background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.0), rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0)); background-size: 60px 100%; background-repeat: no-repeat; animation: sheen 1.3s linear infinite; }
+#uploads .done .up-bar i { animation: none; }
+@keyframes sheen { from { background-position: -60px 0; } to { background-position: 160px 0; } }
+
+/* Ayar satırları: basılınca hafif vurgu, anahtarlar iOS'un kendi anahtarı */
+.settings .set-row { min-height: 48px; transition: background-color 0.15s var(--ease); }
+.set-row input[type=range] { height: 28px; }
+.set-row output { font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { #uploads .up-bar i { animation: none !important; } }
+
+/* Klavye sekmesi: mini touchpad ana touchpad ile aynı yüzey dilini kullanır */
+#miniPad { background-color: var(--surface); border-radius: 20px; box-shadow: var(--hairline); overflow: hidden; }
+#miniPad::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.085) 1px, transparent 1.3px); background-size: 22px 22px; background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 25%, transparent 80%); mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 25%, transparent 80%);
+}
+body.bed #miniPad::before { opacity: 0.4; background-image: radial-gradient(rgba(255, 130, 90, 0.18) 1px, transparent 1.3px); }
+#miniPad.active { box-shadow: var(--hairline), inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 34px -14px color-mix(in srgb, var(--accent) 70%, transparent); }
+#miniPad .ripple { z-index: 1; }
+
+/* ================================================================ YATAY DÜZEN (yan yatarak kullanım) */
+@media (orientation: landscape) and (max-height: 540px) {
+  /* Sekmeler dikey sütun: kayan gösterge yerine aktif düğme kendi zeminini alır */
+  #tabs::before { display: none; }
+  #tabs button { border-radius: 12px; transition: color 0.2s var(--ease), background-color 0.35s var(--ease); }
+  #tabs button.on { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  #tabs { box-shadow: inset -0.5px 0 0 var(--sep); }
+  #v-remote > #dpad { transform: scale(0.86); margin: -12px auto -10px; }
+  .status { max-width: calc(100% - 140px); }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  /* Kumanda: iki sütunlu ızgara. Sütun akışı yeni kartlarla taşıyordu; yerleşim açıkça tanımlı. */
+  #v-remote {
+    display: grid; column-count: auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: min-content; gap: 8px 16px; align-content: start; overflow-x: hidden; padding-bottom: 10px;
+    grid-template-areas: "np dpad" "ctx dpad" "tr pills" "tr snd";
+  }
+  #v-remote > * { margin-bottom: 0; break-inside: auto; }
+  #v-remote > #np { grid-area: np; }
+  #v-remote > #ctx { grid-area: ctx; }
+  #v-remote > .transport { grid-area: tr; align-self: start; }
+  #v-remote > #dpad { grid-area: dpad; justify-self: center; align-self: center; margin: -12px 0 -10px; transform: scale(0.86); }
+  #v-remote > .pills { grid-area: pills; }
+  #v-remote > #soundCard { grid-area: snd; }
+}
+
+/* Uzun adlar (uygulama / cihaz) kartın dışına taşmaz: ızgara sütunları içeriğe göre genişlemez, yazı "…" ile kısalır */
+.sound-extras { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sound-extras .out-row { min-width: 0; overflow: hidden; }
+.out-row > span { min-width: 0; }
+.out-row b { max-width: 100%; display: block; }
+.mix-row { min-width: 0; }
+.mix-name { min-width: 0; }
+.settings .set-row > span { min-width: 0; overflow-wrap: anywhere; }

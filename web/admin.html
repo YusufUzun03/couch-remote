@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CouchRemote</title>
+<link rel="icon" href="/logo.svg">
+<style>
+  :root {
+    --bg:#f2f2f7; --card:#fff; --fill:rgba(120,120,128,.12); --line:rgba(60,60,67,.14); --fg:#000; --muted:rgba(60,60,67,.62);
+    --accent:#007aff; --ok:#34c759; --warn:#ff9500; --bad:#ff3b30; --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#000; --card:#1c1c1e; --fill:rgba(120,120,128,.24); --line:rgba(84,84,88,.55); --fg:#fff; --muted:rgba(235,235,245,.6);
+      --accent:#0a84ff; --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --shadow:none; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; padding:32px 16px 48px; }
+  .wrap { max-width:980px; margin:0 auto; }
+  header { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
+  header img { width:44px; height:44px; border-radius:11px; box-shadow:0 6px 16px rgba(10,132,255,.25); }
+  h1 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; }
+  #sub { color:var(--muted); font-size:14px; }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }
+  section, details { background:var(--card); border-radius:18px; padding:20px; min-width:0; box-shadow:var(--shadow); }
+  h2 { font-size:13px; font-weight:600; margin:0 0 12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .muted { color:var(--muted); font-size:13px; }
+  code, .mono { font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:12.5px; word-break:break-all; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:10px; padding:9px 16px; font:600 14px inherit; font-family:inherit; cursor:pointer; transition:opacity .15s, transform .1s; }
+  button:active { transform:scale(.98); opacity:.85; }
+  .row-actions { margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
+  button.ghost { background:transparent; color:var(--bad); padding:4px 10px; font-weight:500; }
+  button.plain { background:var(--fill); color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td { padding:9px 4px; border-top:.5px solid var(--line); vertical-align:top; }
+  tr:first-child td { border-top:0; }
+  td:first-child { color:var(--muted); width:42%; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
+  pre { background:var(--fill); border-radius:10px; padding:12px; overflow:auto; max-height:360px; font-size:12px; margin:0; }
+  .row { display:flex; gap:10px; align-items:center; justify-content:space-between; padding:10px 0; border-top:.5px solid var(--line); }
+  .row:first-child { border-top:0; padding-top:0; }
+
+  /* Telefonu bağla */
+  #connect { display:grid; grid-template-columns:auto 1fr; gap:32px; align-items:center; margin-bottom:16px; padding:28px; }
+  @media (max-width: 640px) { #connect { grid-template-columns:1fr; } }
+  #connect h2 { font-size:24px; font-weight:700; text-transform:none; letter-spacing:-.01em; color:var(--fg); margin-bottom:4px; }
+  .qr { background:#fff; border-radius:18px; padding:14px; width:272px; max-width:100%; box-shadow:0 0 0 .5px var(--line); }
+  .qr svg { display:block; width:100%; height:auto; }
+  .steps { margin:16px 0 18px; padding:0; list-style:none; counter-reset:s; }
+  .steps li { position:relative; padding:0 0 0 38px; margin:10px 0; counter-increment:s; }
+  .steps li::before { content:counter(s); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff;
+    font-size:13px; font-weight:700; display:grid; place-items:center; }
+  .pin { font:600 28px/1 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing:5px; }
+  #banner { display:none; background:color-mix(in srgb, var(--warn) 14%, var(--card)); color:var(--fg); border-radius:14px; padding:14px 16px; margin-bottom:16px; }
+  #banner button { margin-left:10px; }
+  details { margin-top:16px; }
+  details > summary { cursor:pointer; color:var(--muted); font-weight:600; list-style-position:inside; }
+  details[open] > summary { margin-bottom:16px; }
+  details section { background:var(--bg); box-shadow:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/logo.svg" alt="">
+    <div><h1>CouchRemote</h1><div id="sub">Yükleniyor…</div></div>
+  </header>
+
+  <div id="banner"></div>
+
+  <section id="connect">
+    <div id="qrBox"></div>
+    <div>
+      <h2>Telefonunu bağla</h2>
+      <p class="muted" style="margin:0">Sadece bir kez. Sonrasında telefondaki simgeye dokunmak yeterli.</p>
+      <ol class="steps" id="steps"></ol>
+      <div id="pinBox"></div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section>
+      <h2>Eşleşmiş telefonlar</h2>
+      <div id="devices"></div>
+    </section>
+    <section>
+      <h2>Durum</h2>
+      <table id="health"></table>
+    </section>
+  </div>
+
+  <details id="adv">
+    <summary>Gelişmiş</summary>
+    <div class="grid">
+      <section>
+        <h2>Gecikme (canlı)</h2>
+        <table id="latency"></table>
+        <p class="muted">Tek yön: telefondaki dokunmadan bilgisayara varışa, saat farkı tahminiyle. Hedef p95 &lt; 20 ms.</p>
+      </section>
+      <section>
+        <h2>Siri ve Kestirmeler</h2>
+        <div id="shortcut"></div>
+      </section>
+      <section>
+        <h2>Tanılama raporları</h2>
+        <table id="exps"></table>
+        <details style="margin-top:12px; padding:0; border:0"><summary class="muted">Ham raporlar</summary><pre id="raw"></pre></details>
+      </section>
+    </div>
+  </details>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Couch-Admin': '1' }, body: JSON.stringify(body ?? {}) });
+  let lastQr = '';
+
+  function yes(v, okText = 'evet', noText = 'hayır') {
+    if (v === undefined || v === null) return '<span class="muted">–</span>';
+    return v === true || v === 'ok' ? `<span class="ok">✓ ${okText}</span>` : v === false ? `<span class="bad">✗ ${noText}</span>` : `<span class="warn">${esc(v)}</span>`;
+  }
+
+  function renderConnect(s) {
+    const p = s.pairing;
+    if (!p) {
+      lastQr = '';
+      $('qrBox').innerHTML = '';
+      $('steps').innerHTML = '';
+      $('pinBox').innerHTML = s.pairingLocked
+        ? `<p class="bad" style="margin-top:0"><b>Çok fazla hatalı PIN denemesi yapıldı.</b></p><p class="muted">Güvenlik için eşleşme 5 dakika durduruldu. Denemeyi sen yapmadıysan ağında yabancı bir cihaz olabilir.</p><button id="newCode">Yine de yeni kod üret</button>`
+        : `<p class="muted">Eşleşme kodu yok.</p><button id="newCode">Yeni kod üret</button>`;
+      $('newCode').onclick = () => post('/api/new-pairing').then(poll);
+      return;
+    }
+    if (lastQr !== p.setupUrl) {
+      lastQr = p.setupUrl;
+      $('qrBox').innerHTML = `<div class="qr">${p.qr}</div>`;
+      $('steps').innerHTML = `<li>iPhone'un <b>Kamera</b>sını QR koda tut ve çıkan bağlantıya dokun.</li>
+           <li>Açılan sayfadaki adımlarla <b>güvenlik profilini</b> yükle (bir kez, ~1 dk). Profilin adında şu kod görünmeli: <b class="mono" style="font-size:14px">${esc(s.caCode)}</b></li>
+           <li>Safari'de <b>Paylaş → Ana Ekrana Ekle</b>, sonra <b>Couch</b> simgesinden aç.</li>`;
+      $('pinBox').innerHTML = `
+        <p class="muted" style="margin:0 0 4px">Telefon PIN sorarsa:</p>
+        <div class="pin" id="pin"></div>
+        <p class="muted" id="exp" style="margin:6px 0 10px"></p>
+        <button class="plain" id="newCode">Yeni kod üret</button>
+        <p class="muted" style="margin-top:12px">QR açılmazsa bu adresi telefonda aç: <code>${esc(p.ipUrl)}</code></p>
+        <p class="muted">Güvenlik: iPhone'da profil adı <b class="mono">CouchRemote · ${esc(s.caCode)}</b> değilse yükleme — aynı ağda araya giren biri olabilir.</p>`;
+      $('newCode').onclick = () => post('/api/new-pairing').then(poll);
+    }
+    $('pin').textContent = p.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
+    const m = Math.floor(p.expiresIn / 60), sec = String(p.expiresIn % 60).padStart(2, '0');
+    $('exp').textContent = `Kod ${m}:${sec} içinde yenilenir (kurulum sayfası açık kaldıkça uzar)`;
+  }
+
+  function renderBanner(s) {
+    const b = $('banner');
+    if (s.networkPublic === true) {
+      b.style.display = 'block';
+      if (!$('fixNet')) {
+        b.innerHTML = `<b>Telefon bu bilgisayara bağlanamayabilir.</b> Windows bu ağı "Genel" olarak işaretlemiş; güvenlik için bu profilde bağlantılar engelleniyor.
+          Evdeki ağınsa "Özel" yapabilirsin.<button id="fixNet">Ağı Özel yap</button>`;
+        $('fixNet').onclick = async () => {
+          $('fixNet').disabled = true;
+          const r = await (await post('/api/network-private')).json().catch(() => ({}));
+          if (!r.ok) alert('Değiştirilemedi (izin verilmedi olabilir).');
+          poll();
+        };
+      }
+    } else {
+      b.style.display = 'none';
+      b.innerHTML = '';
+    }
+  }
+
+  function render(s) {
+    const n = s.devices.length;
+    $('sub').textContent = `${s.connected ? '● ' + s.connected + ' telefon bağlı' : n ? 'Telefon bağlı değil' : 'Henüz eşleşmiş telefon yok'} · sürüm ${s.version ?? ''}`;
+    renderBanner(s);
+    renderConnect(s);
+
+    // cihazlar
+    $('devices').innerHTML = n
+      ? s.devices.map((d) => `<div class="row"><div><b>${esc(d.name)}</b><div class="muted">Eşleşme: ${esc((d.pairedAt ?? '').slice(0, 10))} · son görülme: ${esc((d.lastSeen ?? '–').replace('T', ' ').slice(0, 16))}</div></div>
+          <button class="ghost" data-id="${esc(d.id)}">Kaldır</button></div>`).join('')
+      : '<p class="muted">Henüz eşleşmiş telefon yok. Yukarıdaki QR kodu okut.</p>';
+    if (n) {
+      $('devices').insertAdjacentHTML('beforeend', '<div class="row-actions"><button class="ghost danger" id="removeAll">Hepsini kaldır</button> <span class="muted">Telefon kaybolduysa veya çalındıysa: tüm eşleşmeleri siler ve Kestirmeler jetonunu yeniler.</span></div>');
+      $('removeAll').onclick = () => confirm('Tüm telefonların eşleşmesi kaldırılsın ve Kestirmeler jetonu yenilensin mi?') && post('/api/remove-all-devices', {}).then(poll);
+    }
+    for (const b of $('devices').querySelectorAll('button')) b.onclick = () => confirm('Bu telefonun eşleşmesi kaldırılsın mı?') && post('/api/remove-device', { id: b.dataset.id }).then(poll);
+
+    // durum
+    const net = s.networkPublic === true ? '<span class="bad">Genel (engellenebilir)</span>' : s.networkPublic === false ? '<span class="ok">Özel</span>' : '<span class="muted">kontrol ediliyor…</span>';
+    $('health').innerHTML = `
+      <tr><td>Bilgisayarın adı</td><td class="mono">${esc(s.host)}</td></tr>
+      <tr><td>Yerel IP</td><td class="mono">${esc(s.lanIp)}</td></tr>
+      <tr><td>Ağ profili</td><td>${net}</td></tr>
+      <tr><td>Bağlı telefon</td><td>${s.connected}</td></tr>`;
+
+    // gecikme
+    const ow = s.latency.oneWay, pr = s.latency.proc;
+    const col = (v) => (v == null ? '–' : `<span class="${v < 20 ? 'ok' : v < 35 ? 'warn' : 'bad'}">${v} ms</span>`);
+    $('latency').innerHTML = ow
+      ? `<tr><td>Tek yön p50</td><td>${col(ow.p50)}</td></tr><tr><td>Tek yön p95</td><td>${col(ow.p95)}</td></tr>
+         <tr><td>Tek yön p99</td><td>${col(ow.p99)}</td></tr><tr><td>Örnek sayısı</td><td>${ow.n}</td></tr>
+         <tr><td>PC işleme p99</td><td>${pr ? pr.p99 + ' ms' : '–'}</td></tr><tr><td>Paket / sn</td><td>${s.latency.rate}</td></tr>`
+      : `<tr><td colspan="2" class="muted">Henüz veri yok — telefonda touchpad'i kullan.</td></tr>`;
+
+    // kestirmeler
+    const sc = s.shortcut;
+    $('shortcut').innerHTML = `
+      <p class="muted" style="margin-top:0">Kolay yol: telefonda <b>Ayarlar → Siri ve Kestirmeler</b> ekranı jetonu ve adresleri tek dokunuşla kopyalatır. Elle: iPhone'da <b>Kestirmeler</b> → yeni kestirme → <b>URL İçeriğini Al</b> eylemi (adres sonuna <code>?v=değer</code>). Sonra "Hey Siri, [kestirme adı]" diyebilir veya Eylem Düğmesi'ne atayabilirsin.</p>
+      <table>
+        <tr><td>URL</td><td class="mono">${esc(sc.url)}</td></tr>
+        <tr><td>Yöntem</td><td class="mono">POST</td></tr>
+        <tr><td>Başlık</td><td class="mono">Authorization: Bearer ${esc(sc.token)}</td></tr>
+        <tr><td>Eylemler</td><td class="mono">${sc.actions.map((a) => esc(a.id + (a.params ? ' (' + a.params + ')' : ''))).join('<br>')}</td></tr>
+        <tr><td>Son istek</td><td>${sc.last ? `<span class="ok">✓ ${esc(sc.last.id)}</span> <span class="muted">${esc(sc.last.at)}</span>` : '<span class="muted">henüz yok</span>'}</td></tr>
+      </table>
+      <div class="row-actions"><button class="ghost" id="rotateToken">Jetonu yenile</button> <span class="muted">Eski jetonla kurulan kestirmeler çalışmaz olur.</span></div>`;
+    $('rotateToken').onclick = () => confirm('Kestirmeler jetonu yenilensin mi? Telefonlardaki mevcut kestirmeleri yeni jetonla güncellemen gerekir.') && post('/api/rotate-shortcut-token', {}).then(poll);
+
+    // tanılama raporları
+    const last = (phase) => s.reports.find((r) => r.phase === phase);
+    const launch = last('standalone-launch'), touch = last('first-touch'), safari = last('safari');
+    const any = launch ?? touch ?? safari;
+    $('exps').innerHTML = any ? `
+      <tr><td>Güvenli bağlantı</td><td>${yes(any.secureContext)}</td></tr>
+      <tr><td>Ana ekran uygulaması</td><td>${yes(launch?.standalone)}</td></tr>
+      <tr><td>Eşleşme yöntemi</td><td>${esc(launch?.pairedVia ?? launch?.pairError ?? '–')}</td></tr>
+      <tr><td>Service Worker / Wake Lock</td><td>${yes(launch?.serviceWorkerApi)} / ${yes(touch?.wakeLockResult)}</td></tr>
+      <tr><td>Ekran yenileme</td><td>${esc(touch?.fps ?? '–')} Hz</td></tr>
+      <tr><td>iOS</td><td class="muted">${esc(any.iosVersion ?? '–')}</td></tr>` : '<tr><td class="muted">Henüz rapor yok.</td></tr>';
+    $('raw').textContent = JSON.stringify(s.reports, null, 2);
+  }
+
+  let timer = 0;
+  async function poll() {
+    try {
+      const r = await fetch('/api/status');
+      if (r.status === 401) {
+        // Program yeniden başladı: güvenlik anahtarı değişti, bu sekme artık geçersiz
+        clearInterval(timer);
+        document.querySelector('.wrap').innerHTML = `<header><h1>CouchRemote</h1></header>
+          <section><p style="margin:0">Program yeniden başlatıldığı için bu sayfanın süresi doldu.</p>
+          <p class="muted">Saatin yanındaki <b>CouchRemote</b> simgesine tıklayarak yeniden aç.</p></section>`;
+        return;
+      }
+      render(await r.json());
+    } catch {
+      $('sub').innerHTML = '<span class="bad">CouchRemote çalışmıyor — başlat menüsünden veya masaüstünden aç.</span>';
+    }
+  }
+  poll();
+  timer = setInterval(poll, 1000);
+</script>
+</body>
+</html>

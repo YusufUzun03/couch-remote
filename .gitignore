@@ -1,0 +1,19 @@
+# Derleme çıktıları
+/agent/target/
+/dist/
+
+# Node
+node_modules/
+
+# Günlükler ve yerel çıktılar
+*.log
+install.log
+
+# Faz 0 prototipi: Rust programı onun yerini aldı; içindeki veri klasöründe (state.json) özel anahtar var
+/prototype/
+
+# Geliştirme artıkları
+*.part
+*.tmp
+.DS_Store
+Thumbs.db

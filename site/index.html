@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CouchRemote</title>
+<meta name="description" content="iPhone'unu bilgisayarın için touchpad, klavye ve kumandaya çevir. Kurulum yok, hesap yok, reklam yok.">
+<style>
+  :root { --bg:#fbfbfd; --card:#fff; --fill:rgba(120,120,128,.1); --fg:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --line:rgba(0,0,0,.08);
+          --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.06); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#000; --card:#1c1c1e; --fill:rgba(120,120,128,.24); --fg:#f5f5f7; --muted:#a1a1a6; --accent:#2997ff; --line:rgba(255,255,255,.1); --shadow:none; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.55 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:980px; margin:0 auto; padding:0 16px; }
+  header { padding:72px 0 48px; text-align:center; }
+  .logo { display:block; margin-left:auto; margin-right:auto; width:96px; height:96px; border-radius:22px; box-shadow:0 14px 36px rgba(10,132,255,.3); margin-bottom:24px; }
+  h1 { font-size:clamp(36px, 7vw, 60px); line-height:1.06; margin:0 auto 16px; letter-spacing:-0.03em; font-weight:700; max-width:760px; }
+  .lead { font-size:clamp(18px, 2.4vw, 22px); color:var(--muted); max-width:640px; margin:0 auto 32px; }
+  .dl { display:inline-flex; align-items:center; gap:10px; background:var(--accent); color:#fff; text-decoration:none; font-weight:600;
+        padding:15px 28px; border-radius:980px; font-size:18px; transition:transform .15s, opacity .15s; }
+  .dl:hover { opacity:.9; } .dl:active { transform:scale(.98); }
+  .dl svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+  .meta { color:var(--muted); font-size:14px; margin-top:14px; }
+  h2 { font-size:clamp(26px, 4vw, 34px); letter-spacing:-0.02em; margin:72px 0 20px; text-align:center; }
+  .steps { list-style:none; padding:0; margin:0 auto; display:grid; gap:14px; counter-reset:s; max-width:720px; }
+  .steps li { background:var(--card); border-radius:20px; padding:22px 22px 22px 72px; position:relative; counter-increment:s; box-shadow:var(--shadow); }
+  .steps li::before { content:counter(s); position:absolute; left:22px; top:22px; width:32px; height:32px; border-radius:50%; background:var(--accent);
+                      color:#fff; font-weight:700; display:grid; place-items:center; font-size:15px; }
+  .steps b { display:block; font-size:18px; }
+  .steps p { margin:4px 0 0; color:var(--muted); font-size:16px; }
+  .note { background:var(--fill); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:15px; color:var(--muted); }
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); }
+  .card { background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow); }
+  .card b { display:block; margin-bottom:6px; font-size:18px; }
+  .card p { margin:0; color:var(--muted); font-size:16px; }
+  .center { text-align:center; color:var(--muted); max-width:640px; margin:0 auto; }
+  footer { color:var(--muted); font-size:13px; padding:72px 0 40px; text-align:center; }
+  code { font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:.9em; }
+</style>
+<link rel="icon" href="logo.svg">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" role="img" aria-label="CouchRemote" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#5E5CE6"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#g)"/><g fill="#fff"><rect x="26" y="32" width="48" height="22" rx="7"/><rect x="23" y="50" width="54" height="16" rx="5"/><rect x="17" y="41" width="14" height="26" rx="6"/><rect x="69" y="41" width="14" height="26" rx="6"/><rect x="28.5" y="66" width="5" height="8" rx="1.5"/><rect x="66.5" y="66" width="5" height="8" rx="1.5"/></g></svg>
+    <h1>iPhone'un, bilgisayarının uzaktan kumandası.</h1>
+    <p class="lead">Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.</p>
+    <a class="dl" id="download" href="https://github.com/YusufUzun03/couch-remote/releases/latest/download/CouchRemote.exe"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Windows için indir</a>
+    <div class="meta">Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~7 MB</div>
+  </header>
+
+  <h2>Kurulum (2 dakika)</h2>
+  <ol class="steps">
+    <li>
+      <b>CouchRemote.exe'yi indir ve çalıştır</b>
+      <p>Program kendini kurar, Windows ile birlikte açılır ve saatin yanında küçük bir simge olarak durur.</p>
+      <div class="note">Windows "Bilgisayarınız korundu" derse: <b style="display:inline">Ek bilgi → Yine de çalıştır</b>. Bu uyarı, program henüz dijital imzalı olmadığı için çıkıyor.</div>
+    </li>
+    <li>
+      <b>Güvenlik duvarı iznini onayla</b>
+      <p>Telefonunun sadece evdeki ağından bağlanabilmesi için bir kez yönetici izni istenir.</p>
+    </li>
+    <li>
+      <b>Ekrandaki QR kodu iPhone kamerasıyla okut</b>
+      <p>Açılan sayfadaki adımlarla güvenlik profilini yükle (bir kez), sonra <b style="display:inline">Paylaş → Ana Ekrana Ekle</b>. Bundan sonra simgeye dokunmak yeterli.</p>
+    </li>
+  </ol>
+
+  <h2>Neler yapabilirsin</h2>
+  <div class="grid">
+    <div class="card"><b>Touchpad</b><p>Düşük gecikmeli imleç, iki parmakla ivmeli kaydırma, üç parmakla masaüstü değiştirme.</p></div>
+    <div class="card"><b>Klavye</b><p>iPhone klavyesiyle Türkçe dahil yaz; Ctrl, Alt, Win, F tuşları ve kısayollar.</p></div>
+    <div class="card"><b>Kumanda</b><p>Çalan film veya şarkının adı ve kapağı, oynat/duraklat, ileri-geri sarma, ses.</p></div>
+    <div class="card"><b>Güç ve uyku zamanlayıcısı</b><p>Uyut, kapat, kilitle; film bitince sesi yavaşça kısıp bilgisayarı uyutan zamanlayıcı.</p></div>
+    <div class="card"><b>Pano ve dosya</b><p>Kopyaladığını telefon ile bilgisayar arasında taşı, fotoğraf ve dosya gönder.</p></div>
+    <div class="card"><b>Uygulamalar</b><p>Netflix, YouTube, Spotify ve bilgisayarındaki programları tek dokunuşla aç; içlerinde ara.</p></div>
+    <div class="card"><b>Siri ve Kestirmeler</b><p>"Hey Siri, bilgisayarda videoyu durdur" gibi komutlar ve Eylem Düğmesi.</p></div>
+    <div class="card"><b>Gizlilik</b><p>Her şey evdeki ağında kalır. Hiçbir sunucuya veri gitmez, hesap açman gerekmez.</p></div>
+  </div>
+
+  <h2>Kaldırmak istersen</h2>
+  <p class="center">Saatin yanındaki simge → <b>Kaldır</b>, veya Windows Ayarlar → Uygulamalar → CouchRemote. iPhone'da simgeyi sil ve Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldır.</p>
+
+  <footer>CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.</footer>
+</div>
+</body>
+</html>

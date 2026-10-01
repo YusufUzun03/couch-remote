@@ -1,0 +1,14 @@
+{
+  "name": "couch-remote-tools",
+  "private": true,
+  "type": "module",
+  "description": "PC programı için uçtan uca duman testi (iPhone'u taklit eder)",
+  "scripts": {
+    "smoke": "node smoke-test.mjs"
+  },
+  "dependencies": {
+    "@peculiar/x509": "^2.1.0",
+    "reflect-metadata": "^0.2.2",
+    "ws": "^8.22.0"
+  }
+}

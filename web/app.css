@@ -1,0 +1,546 @@
+/* CouchRemote — iPhone arayüzü. Apple tarzı: iOS koyu mod renkleri, cam paneller, sistem fontu. */
+:root {
+  --bg: #000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --fill: rgba(120, 120, 128, 0.2);
+  --fill-strong: rgba(120, 120, 128, 0.36);
+  --glass: rgba(22, 22, 24, 0.72);
+  --sep: rgba(84, 84, 88, 0.55);
+  --label: #fff;
+  --label-2: rgba(235, 235, 245, 0.62);
+  --label-3: rgba(235, 235, 245, 0.32);
+  --accent: #0a84ff;
+  --green: #30d158;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --yellow: #ffd60a;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --press: transform 0.12s var(--ease), background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+
+/* Yatak modu: karanlıkta göz yormayan kehribar/kırmızı tonlar, düşük parlaklık */
+body.bed {
+  --surface: #140603;
+  --surface-2: #1f0a05;
+  --fill: rgba(255, 96, 48, 0.1);
+  --fill-strong: rgba(255, 96, 48, 0.2);
+  --glass: rgba(20, 5, 2, 0.85);
+  --sep: rgba(255, 96, 48, 0.16);
+  --label: #ff8a5c;
+  --label-2: rgba(255, 138, 92, 0.6);
+  --label-3: rgba(255, 138, 92, 0.3);
+  --accent: #ff5a2e;
+  --green: #ff8a5c;
+  --red: #ff5a2e;
+  --orange: #ff7a45;
+  --yellow: #ff9d6b;
+}
+body.bed img { filter: sepia(1) saturate(1.6) hue-rotate(-18deg) brightness(0.45); }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; background: var(--bg); color: var(--label);
+  font: 17px/1.35 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+
+.ic { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ic.sm { width: 17px; height: 17px; }
+
+/* ---------------------------------------------------------------- rehber / PIN sayfaları */
+.page { padding: calc(env(safe-area-inset-top) + 40px) 20px calc(env(safe-area-inset-bottom) + 28px); max-width: 520px; margin: 0 auto; }
+.hero-icon { display: grid; place-items: center; margin-bottom: 18px; }
+.hero-icon img { width: 88px; height: 88px; border-radius: 20px; box-shadow: 0 10px 30px rgba(10, 132, 255, 0.25); }
+.hero-icon.small { width: 64px; height: 64px; border-radius: 50%; background: var(--fill); color: var(--accent); margin-left: auto; margin-right: auto; }
+.hero-icon.small .ic { width: 30px; height: 30px; }
+h1 { font-size: 32px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; text-align: center; }
+.lead { color: var(--label-2); margin: 0 0 24px; text-align: center; font-size: 16px; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: 14px; overflow: hidden; }
+.list li { display: flex; gap: 14px; align-items: flex-start; padding: 14px 16px; position: relative; }
+.list li + li::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 0.5px; background: var(--sep); }
+.list b { font-weight: 600; font-size: 16px; }
+.list small { display: block; color: var(--label-2); font-size: 14px; margin-top: 2px; }
+.badge { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; }
+.badge .ic { width: 20px; height: 20px; }
+.footnote { color: var(--label-3); font-size: 13px; text-align: center; margin-top: 16px; }
+#pinInput {
+  width: 100%; font: 600 32px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 14px; text-align: center; padding: 16px;
+  border-radius: 14px; border: 0; background: var(--surface); color: var(--label); -webkit-user-select: text; user-select: text; outline: none;
+}
+#pinInput::placeholder { color: var(--label-3); }
+.btn-primary {
+  display: block; width: 100%; margin-top: 14px; height: 52px; border-radius: 14px; background: var(--accent); color: #fff;
+  font-size: 17px; font-weight: 600; transition: var(--press);
+}
+.btn-primary:active { transform: scale(0.98); opacity: 0.85; }
+.err { color: var(--red); min-height: 1.4em; font-size: 15px; text-align: center; }
+
+/* ---------------------------------------------------------------- ana düzen */
+/* Yükseklik görünür alana eşit: iPhone klavyesi açılınca arayüz klavyenin üstüne sığar */
+#main { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100%); display: flex; flex-direction: column; touch-action: manipulation; }
+#bar { display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 6px) 16px 8px; }
+.status { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--label); }
+.status .ic { color: var(--label-2); }
+#conn { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#lat { font: 500 12px ui-monospace, "SF Mono", Menlo, monospace; color: var(--label-3); white-space: nowrap; }
+#dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex: none; animation: pulse 1.2s var(--ease) infinite; }
+#dot.ok { background: var(--green); animation: none; }
+#dot.down { background: var(--red); animation: none; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--fill); color: var(--label-2); display: grid; place-items: center; transition: var(--press); }
+.icon-btn .ic { width: 20px; height: 20px; }
+.icon-btn.on { background: var(--accent); color: #fff; }
+.icon-btn:active { transform: scale(0.92); }
+#hud { margin: 0 16px 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); font: 11px/1.55 ui-monospace, "SF Mono", Menlo, monospace; color: var(--label-2); white-space: pre-wrap; }
+#hud.off { display: none; }
+
+.view { flex: 1; display: flex; flex-direction: column; min-height: 0; animation: viewIn 0.22s var(--ease) both; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------------------------------------------------------------- touchpad */
+#pad {
+  flex: 1; margin: 2px 16px 0; border-radius: 24px; position: relative; overflow: hidden; touch-action: none;
+  background: radial-gradient(120% 90% at 50% 0%, #1f1f22 0%, var(--surface) 60%);
+  box-shadow: inset 0 0 0 0.5px var(--sep);
+  transition: box-shadow 0.2s var(--ease);
+}
+body.bed #pad { background: var(--surface); }
+#pad.active { box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.45); }
+body.bed #pad.active { box-shadow: inset 0 0 0 1px var(--sep); }
+#hint { position: absolute; inset: auto 0 18px; padding: 0 20px; text-align: center; pointer-events: none; transition: opacity 0.4s var(--ease); }
+#hint p { margin: 4px 0; font-size: 12.5px; color: var(--label-3); }
+#hint b { color: var(--label-2); font-weight: 600; }
+#pad.used #hint { opacity: 0; }
+#btns { display: flex; gap: 10px; padding: 10px 16px 10px; }
+.mb {
+  flex: 1; height: 56px; border-radius: 16px; background: var(--surface); display: grid; place-items: center;
+  color: var(--label-2); font-size: 15px; font-weight: 500; touch-action: none; transition: var(--press);
+}
+.mb.down { background: var(--fill-strong); color: var(--label); transform: scale(0.97); }
+
+/* ---------------------------------------------------------------- klavye */
+#v-kbd {
+  padding: 2px 0 0; gap: 8px;
+  --key: #4a4a4d; --key-fn: #2e2e31; --key-text: #fff; --kb-bg: #1b1b1d; --key-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+body.bed #v-kbd { --key: #2a0e07; --key-fn: #1a0804; --key-text: var(--label); --kb-bg: #0c0302; --key-shadow: 0 1px 0 rgba(0, 0, 0, 0.8); }
+.kbd-head { display: flex; justify-content: center; padding: 0 16px; }
+.seg.mini { margin: 0; width: 100%; max-width: 320px; }
+.seg.mini button { height: 30px; font-size: 13px; }
+
+/* Klavye ekranındaki küçük touchpad: yazarken imleci oynatmak / tıklamak için sekme değiştirmek gerekmez */
+#miniPad {
+  flex: 1; min-height: 70px; margin: 0 16px; border-radius: 18px; position: relative; touch-action: none;
+  background: radial-gradient(120% 90% at 50% 0%, #1f1f22 0%, var(--surface) 60%); box-shadow: inset 0 0 0 0.5px var(--sep);
+  display: grid; place-items: center; transition: box-shadow 0.2s var(--ease);
+}
+body.bed #miniPad { background: var(--surface); }
+#miniPad.active { box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.45); }
+#miniPad span { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--label-3); pointer-events: none; }
+
+/* PC tuş şeridi */
+.strip { display: flex; gap: 5px; padding: 0 12px; }
+.sk {
+  flex: 1; min-width: 0; height: 38px; border-radius: 8px; background: var(--surface-2); color: var(--label);
+  font-size: 13px; font-weight: 500; display: grid; place-items: center; touch-action: none; transition: var(--press);
+}
+.sk .ic { width: 19px; height: 19px; }
+.sk.ar { flex: 0.9; }
+.sk.down { background: var(--fill-strong); transform: scale(0.94); }
+.sk.mod.on { background: var(--accent); color: #fff; }
+.sk.mod.lock, .kk.lock { box-shadow: inset 0 -2.5px 0 rgba(255, 255, 255, 0.85); }
+.strip-gap { width: 4px; flex: none; }
+
+/* Tam klavye (iOS görünümü) */
+#kb {
+  background: var(--kb-bg); padding: 8px 3px calc(8px); display: flex; flex-direction: column; gap: 11px;
+  touch-action: none; box-shadow: inset 0 0.5px 0 var(--sep);
+}
+.kb-row { display: flex; gap: 6px; justify-content: center; padding: 0 3px; }
+#kb[data-layer="abc"] .kb-row:nth-child(2) { padding: 0 calc(4.1% + 3px); }
+.kk {
+  flex: 1 1 0; min-width: 0; height: 43px; border-radius: 6px; background: var(--key); color: var(--key-text);
+  box-shadow: var(--key-shadow); font-size: 22px; line-height: 1; display: grid; place-items: center; touch-action: none;
+  font-weight: 400; padding: 0;
+}
+#kb.upper .kk.ch { font-size: 0; }
+#kb.upper .kk.ch::before { content: attr(data-up); font-size: 21px; }
+.kk.fn { background: var(--key-fn); font-size: 15px; }
+.kk.fn .ic { width: 22px; height: 22px; }
+.kk.wide { flex-grow: 1.45; }
+.kk.enter { flex-grow: 2; }
+.kk.space { flex-grow: 5; font-size: 15px; color: var(--label-2); }
+.kk.small { font-size: 12.5px; }
+#kb[data-layer="fn"] .kb-row:first-child .kk { font-size: 11px; }
+.kk.on { background: var(--key); }
+.kk.shift.on { background: var(--key); color: var(--key-text); }
+body:not(.bed) .kk.shift.on { background: #fff; color: #000; }
+.kk.down { background: var(--fill-strong); }
+.kk.fn.down { background: var(--key); }
+/* Harf balonu: parmağın altında kalan harfi büyütüp gösterir */
+#keyPop {
+  position: fixed; z-index: 60; height: 54px; border-radius: 10px 10px 8px 8px; background: #6b6b6f; color: #fff;
+  display: grid; place-items: center; font-size: 32px; pointer-events: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+body.bed #keyPop { background: #3a150a; color: var(--label); }
+
+/* Metin çubuğu modu: iPhone klavyesi kullanılır, ekran klavyesi ve küçük touchpad gizlenir */
+#v-kbd .text-only { display: none; }
+#v-kbd.text-mode .text-only { display: revert; }
+#v-kbd.text-mode .sk.text-only { display: grid; }
+#v-kbd.text-mode #kb, #v-kbd.text-mode #miniPad { display: none; }
+#v-kbd:not(.text-mode) #typer { display: none; }
+#v-kbd .note-sm { padding: 0 16px 10px; }
+#typer {
+  width: auto; margin: 0 16px; flex: 1; min-height: 96px; resize: none; border: 0; outline: none; border-radius: 16px; background: var(--surface);
+  color: var(--label); font: 17px/1.4 -apple-system, system-ui, sans-serif; padding: 14px; -webkit-user-select: text; user-select: text;
+  box-shadow: inset 0 0 0 0.5px var(--sep); transition: box-shadow 0.2s var(--ease);
+}
+#typer::placeholder { color: var(--label-3); }
+#typer:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.note-sm { color: var(--label-3); font-size: 12.5px; margin: 0; line-height: 1.45; }
+.note-sm b { color: var(--label-2); font-weight: 600; }
+
+/* ---------------------------------------------------------------- kumanda */
+#v-remote { padding: 4px 16px 16px; gap: 18px; overflow-y: auto; }
+#np { display: flex; gap: 14px; align-items: center; background: var(--surface); border-radius: 18px; padding: 12px; min-height: 96px; }
+#npThumb { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; background: var(--surface-2); flex: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+#np.empty #npThumb { display: none; }
+.np-text { min-width: 0; padding: 0 4px; }
+#npTitle { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#npArtist { color: var(--label-2); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#npApp { color: var(--label-3); font-size: 12px; font-weight: 600; margin-top: 3px; }
+#npBar { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
+.times { display: flex; justify-content: space-between; font-size: 12px; color: var(--label-3); font-variant-numeric: tabular-nums; }
+#npSeek {
+  --p: 0%; -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; margin: 0; touch-action: pan-x;
+}
+#npSeek::-webkit-slider-runnable-track {
+  height: 5px; border-radius: 3px; background: linear-gradient(to right, var(--label-2) 0 var(--p), var(--fill-strong) var(--p) 100%);
+}
+#npSeek::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4.5px; border-radius: 50%; background: var(--label); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.transport { display: flex; align-items: center; justify-content: space-between; padding: 0 6px; }
+.t { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: var(--label); transition: var(--press); }
+.t .ic { width: 30px; height: 30px; }
+.t.big { width: 72px; height: 72px; background: var(--label); color: var(--bg); }
+.t.big .ic { width: 32px; height: 32px; }
+.t.down { transform: scale(0.9); background: var(--fill); }
+.t.big.down { background: var(--label-2); }
+#ppBtn .pause, #ppBtn.playing .play { display: none; }
+#ppBtn.playing .pause { display: block; }
+
+/* Apple TV kumandası gibi yuvarlak yön tuşu */
+#dpad { position: relative; width: 232px; height: 232px; margin: 0 auto; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 0.5px var(--sep); flex: none; }
+.d { position: absolute; width: 64px; height: 64px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; transition: var(--press); }
+.d .ic { width: 26px; height: 26px; }
+.d.dir-up { left: 84px; top: 4px; } .d.dir-down { left: 84px; bottom: 4px; } .d.dir-left { left: 4px; top: 84px; } .d.dir-right { right: 4px; top: 84px; }
+.d.ok { left: 66px; top: 66px; width: 100px; height: 100px; background: var(--surface-2); color: var(--label); font-size: 15px; font-weight: 600; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); }
+.d.down, .d.ok.down { color: var(--accent); transform: scale(0.94); }
+.d.ok.down { background: var(--fill-strong); }
+.pills { display: flex; gap: 10px; }
+.pill {
+  flex: 1; height: 48px; border-radius: 24px; background: var(--surface); display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 14px; font-weight: 500; color: var(--label); transition: var(--press);
+}
+.pill .ic { width: 19px; height: 19px; color: var(--label-2); }
+.pill.down { background: var(--fill-strong); transform: scale(0.97); }
+.segmented { display: flex; background: var(--surface); border-radius: 14px; padding: 4px; gap: 4px; }
+.segmented button { flex: 1; height: 46px; border-radius: 10px; display: grid; place-items: center; color: var(--label); transition: var(--press); }
+.segmented button.down { background: var(--fill-strong); transform: scale(0.96); }
+
+/* ---------------------------------------------------------------- sekme çubuğu (cam) */
+#tabs {
+  display: flex; padding: 6px 8px calc(env(safe-area-inset-bottom) + 2px);
+  background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 0.5px 0 var(--sep);
+}
+#tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; color: #8e8e93; transition: color 0.15s var(--ease); }
+body.bed #tabs button { color: var(--label-3); }
+body.bed #tabs button.on { color: var(--accent); }
+#tabs button .ic { width: 26px; height: 26px; }
+#tabs button span { font-size: 10.5px; font-weight: 500; letter-spacing: 0.01em; }
+#tabs button.on { color: var(--accent); }
+#tabs button:active .ic { transform: scale(0.9); }
+
+/* ---------------------------------------------------------------- çevrimdışı */
+#offline { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  display: grid; place-items: center; padding: 20px; z-index: 5; animation: fadeIn 0.25s var(--ease) both; }
+#offline .box { background: var(--surface); border-radius: 22px; padding: 26px 22px 20px; max-width: 400px; width: 100%; text-align: center; }
+#offline h2 { margin: 0 0 6px; font-size: 20px; font-weight: 700; }
+#offline p { color: var(--label-2); font-size: 15px; margin: 0 0 12px; }
+#offline ul { text-align: left; color: var(--label-2); font-size: 14px; padding-left: 20px; margin: 0 0 6px; }
+#offline li { margin: 4px 0; }
+@keyframes fadeIn { from { opacity: 0; } }
+
+#toast {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 96px); transform: translate(-50%, 8px);
+  background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); color: var(--label);
+  padding: 10px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; z-index: 30;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------------------------------------------------------------- uygulamalar */
+#v-apps { padding: 4px 16px 16px; overflow-y: auto; }
+.searchbar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px; border-radius: 12px; background: var(--fill); color: var(--label-2); flex: none; margin: 0; }
+.searchbar .ic { width: 19px; height: 19px; }
+.searchbar input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--label); font: 17px -apple-system, system-ui, sans-serif;
+  -webkit-user-select: text; user-select: text; -webkit-appearance: none; appearance: none; }
+.searchbar input::placeholder { color: var(--label-3); }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 10px -16px 0; padding: 0 16px; flex: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip-btn { flex: none; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--fill); font-size: 14px; font-weight: 500; color: var(--label); transition: var(--press); }
+.chip-btn.on { background: var(--accent); color: #fff; }
+.section-title { color: var(--label-2); font-size: 13px; font-weight: 600; margin: 22px 4px 10px; }
+.section-title span { font-weight: 400; color: var(--label-3); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 10px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; transition: var(--press); }
+.tile-icon { width: 60px; height: 60px; border-radius: 15px; display: grid; place-items: center; color: #fff; font: 700 24px -apple-system, system-ui, sans-serif;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.35); position: relative; overflow: hidden; }
+.tile-icon::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(255, 255, 255, 0.16), transparent 55%); }
+body.bed .tile-icon { filter: brightness(0.5) sepia(0.6); }
+.tile span { font-size: 11.5px; color: var(--label-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.down { transform: scale(0.92); }
+.tile.busy .tile-icon { opacity: 0.55; }
+#appList { margin-bottom: 8px; }
+#appList li { padding: 0; }
+#appList li + li::before { left: 56px; }
+#appList button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px; text-align: left; color: var(--label); transition: background-color 0.12s var(--ease); }
+#appList button.down { background: var(--fill); }
+#appList .initial { width: 30px; height: 30px; border-radius: 8px; background: var(--fill-strong); color: var(--label-2); display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none; }
+#appList .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
+#appList .ic { width: 16px; height: 16px; color: var(--label-3); }
+.muted-row { color: var(--label-3); font-size: 15px; padding: 14px 16px !important; }
+
+/* ---------------------------------------------------------------- üst çubuk ekleri */
+#timerPill { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 12px; background: var(--fill);
+  color: var(--orange); font: 600 12px -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums; flex: none; }
+#timerPill .ic { width: 14px; height: 14px; }
+body.lefty #btns { flex-direction: row-reverse; }
+
+/* ---------------------------------------------------------------- kumanda: ses + uygulamaya özel */
+.volume { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 16px; padding: 10px 14px; }
+#muteBtn { width: 32px; height: 32px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; transition: var(--press); }
+#muteBtn .off-icon, #muteBtn.muted .on-icon { display: none; }
+#muteBtn.muted .off-icon { display: block; color: var(--red); }
+#muteBtn.down { background: var(--fill); }
+#volSlider { --p: 0%; flex: 1; -webkit-appearance: none; appearance: none; height: 28px; background: transparent; margin: 0; touch-action: pan-x; }
+#volSlider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--label) 0 var(--p), var(--fill-strong) var(--p) 100%); }
+#volSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
+body.bed #volSlider::-webkit-slider-thumb { background: var(--label); }
+#volPct { width: 40px; text-align: right; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+#ctx { background: var(--surface); border-radius: 16px; padding: 10px 12px 12px; animation: viewIn 0.22s var(--ease) both; }
+.ctx-title { font-size: 12px; font-weight: 600; color: var(--label-2); margin: 0 2px 8px; }
+.ctx-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ctx-btn { height: 36px; padding: 0 14px; border-radius: 18px; background: var(--fill); font-size: 14px; font-weight: 500; transition: var(--press); }
+.ctx-btn.accent { background: var(--accent); color: #fff; }
+.ctx-btn.down { transform: scale(0.95); background: var(--fill-strong); }
+
+/* ---------------------------------------------------------------- aktar */
+#v-share { padding: 4px 16px 16px; overflow-y: auto; gap: 10px; }
+.section-title.first { margin-top: 4px; }
+.card-list { background: var(--surface); border-radius: 14px; overflow: hidden; }
+.row-btn { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; text-align: left; position: relative; cursor: pointer; transition: background-color 0.12s var(--ease); }
+.row-btn + .row-btn::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; height: 0.5px; background: var(--sep); }
+.row-btn b { display: block; font-size: 16px; font-weight: 600; }
+.row-btn small { display: block; color: var(--label-2); font-size: 13px; margin-top: 1px; }
+.row-btn.down, .row-btn:active { background: var(--fill); }
+.badge.gray { background: var(--fill-strong); color: var(--label); }
+#clipText { width: 100%; min-height: 84px; resize: none; border: 0; outline: none; border-radius: 14px; background: var(--surface); color: var(--label);
+  font: 16px/1.4 -apple-system, system-ui, sans-serif; padding: 12px 14px; -webkit-user-select: text; user-select: text; box-shadow: inset 0 0 0 0.5px var(--sep); }
+#clipText:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pill.accent { background: var(--accent); color: #fff; }
+#uploads li { display: block; padding: 11px 14px; }
+#uploads .up-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#uploads .up-bar { height: 4px; border-radius: 2px; background: var(--fill-strong); margin-top: 7px; overflow: hidden; }
+#uploads .up-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s linear; }
+#uploads .up-state { font-size: 12px; color: var(--label-2); margin-top: 4px; }
+#uploads .done .up-bar i { background: var(--green); }
+#uploads .fail .up-state { color: var(--red); }
+
+/* ---------------------------------------------------------------- alttan açılan paneller */
+#backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 40; animation: fadeIn 0.2s var(--ease) both; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-height: 88vh; overflow-y: auto;
+  background: var(--surface); border-radius: 22px 22px 0 0; padding: 8px 16px calc(env(safe-area-inset-bottom) + 18px);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5); animation: sheetIn 0.28s var(--ease) both; touch-action: pan-y;
+}
+@keyframes sheetIn { from { transform: translateY(100%); } }
+.grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--fill-strong); margin: 2px auto 10px; }
+.sheet h3 { font-size: 20px; font-weight: 700; margin: 8px 4px 12px; }
+.sheet .section-title { margin-top: 18px; }
+.sheet .card-list { background: var(--surface-2); }
+.power-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.pw { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 2px; border-radius: 14px; background: var(--surface-2); transition: var(--press); }
+.pw .ic { width: 26px; height: 26px; }
+.pw span { font-size: 11px; color: var(--label-2); text-align: center; line-height: 1.2; }
+.pw.danger .ic { color: var(--red); }
+.pw.down { transform: scale(0.95); background: var(--fill-strong); }
+.chips.wrap { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0; }
+.seg { display: flex; background: var(--surface-2); border-radius: 10px; padding: 3px; margin-top: 12px; }
+.seg button { flex: 1; height: 34px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--label-2); transition: var(--press); }
+.seg button.on { background: var(--fill-strong); color: var(--label); }
+.hint-sm { color: var(--label-3); font-size: 12.5px; margin: 10px 4px 0; line-height: 1.4; }
+.hint-sm.center { text-align: center; margin-top: 18px; }
+.btn-secondary { display: block; width: 100%; margin-top: 12px; height: 48px; border-radius: 14px; background: var(--fill); color: var(--red); font-size: 16px; font-weight: 600; }
+.timer-now { display: flex; align-items: baseline; gap: 10px; background: var(--surface-2); border-radius: 14px; padding: 14px 16px; }
+#timerLeft { font: 600 34px/1 -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums; color: var(--orange); }
+.timer-now small { color: var(--label-2); font-size: 14px; }
+.settings .set-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; position: relative; }
+.settings .set-row + .set-row::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--sep); }
+.set-row > span { flex: 1; font-size: 16px; }
+.set-row small { display: block; font-size: 12.5px; color: var(--label-2); }
+.set-row input[type=range] { width: 42%; accent-color: var(--accent); }
+.set-row output { width: 36px; text-align: right; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.set-row input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--green); flex: none; }
+
+/* ---------------------------------------------------------------- onay penceresi (iOS uyarısı) */
+#confirm { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 0, 0, 0.45); padding: 40px; animation: fadeIn 0.18s var(--ease) both; }
+.alert { width: 100%; max-width: 280px; background: var(--glass); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 16px; overflow: hidden; text-align: center; animation: popIn 0.2s var(--ease) both; }
+@keyframes popIn { from { transform: scale(1.08); opacity: 0; } }
+.alert b { display: block; padding: 20px 16px; font-size: 16px; font-weight: 600; }
+.alert-btns { display: flex; box-shadow: inset 0 0.5px 0 var(--sep); }
+.alert-btns button { flex: 1; height: 46px; font-size: 17px; color: var(--accent); }
+.alert-btns button + button { box-shadow: inset 0.5px 0 0 var(--sep); }
+.alert-btns .danger { color: var(--red); font-weight: 600; }
+
+/* ---------------------------------------------------------------- ayarlar ekleri */
+.settings .set-row.col { flex-direction: column; align-items: stretch; gap: 8px; }
+.seg.small { margin-top: 0; }
+.seg.small button { height: 30px; font-size: 12.5px; }
+
+/* ---------------------------------------------------------------- yatay düzen (yan yatarak kullanım — H5) */
+@media (orientation: landscape) and (max-height: 540px) {
+  #main { display: grid; grid-template-columns: calc(env(safe-area-inset-left) + 74px) 1fr; grid-template-rows: auto 1fr; }
+  #tabs { grid-column: 1; grid-row: 1 / span 2; flex-direction: column; justify-content: center; gap: 2px;
+    padding: 8px 4px 8px calc(env(safe-area-inset-left) + 4px); box-shadow: inset -0.5px 0 0 var(--sep); }
+  #tabs button { flex: none; padding: 7px 0; }
+  #tabs button span { font-size: 9.5px; }
+  #bar { grid-column: 2; grid-row: 1; padding: max(6px, env(safe-area-inset-top)) calc(env(safe-area-inset-right) + 12px) 4px 12px; }
+  #hud { display: none !important; }
+  .view { grid-column: 2; grid-row: 2; padding-right: env(safe-area-inset-right); }
+  #v-pad { flex-direction: row; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  body.lefty #v-pad { flex-direction: row-reverse; }
+  #pad { margin: 0 0 0 10px; }
+  body.lefty #pad { margin: 0 10px 0 0; }
+  #btns, body.lefty #btns { flex-direction: column; width: 112px; padding: 0 10px; }
+  .mb { height: auto; }
+  #hint p { margin: 2px 0; }
+  /* İki bağımsız sütun: solda şu an çalıyor + kontroller, sağda yön tuşu + kısayollar + ses */
+  #v-remote { display: block; column-count: 2; column-gap: 18px; padding-top: 2px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  #v-remote > * { break-inside: avoid; margin-bottom: 10px; }
+  #v-remote > :last-child { margin-bottom: 0; }
+  #v-remote > #dpad { break-before: column; transform: scale(0.8); margin: -22px auto -14px; }
+  #np { min-height: 0; padding: 8px 10px; }
+  #npThumb { width: 52px; height: 52px; }
+  #npTitle { font-size: 16px; }
+  #npBar { gap: 2px; }
+  #ctx { padding: 8px 10px 10px; }
+  .ctx-btn { height: 32px; font-size: 13px; }
+  .transport { padding: 0; }
+  .t { width: 44px; height: 44px; }
+  .t .ic { width: 26px; height: 26px; }
+  .t.big { width: 58px; height: 58px; }
+  .pills .pill { height: 42px; }
+  .volume { padding: 6px 12px; }
+  .out-row { padding: 6px 12px; }
+  #v-apps, #v-share { padding-left: 16px; }
+  #v-kbd { gap: 6px; }
+  #miniPad { display: none; }
+  .sk { height: 32px; }
+  #kb { gap: 7px; padding: 6px 3px max(6px, env(safe-area-inset-bottom)); flex: 1; justify-content: space-evenly; }
+  .kk { height: auto; flex-basis: 0; min-height: 30px; font-size: 19px; }
+  .kb-row { flex: 1; max-width: 760px; width: 100%; margin: 0 auto; }
+  .tiles { grid-template-columns: repeat(6, 1fr); }
+  .sheet { left: 50%; right: auto; width: min(560px, 100%); transform: translateX(-50%); max-height: 94vh; }
+  @keyframes sheetIn { from { transform: translate(-50%, 100%); } }
+}
+
+/* Kaydırılabilir ekranlarda içerik sıkıştırılmaz, taşan kısım kaydırılır.
+   (Flex sütunda öğeler varsayılan olarak küçülür; kenarları kesen .list / .card-list sıfıra kadar ezilip
+   uygulamaları görünmez yapıyordu.) */
+#v-apps > *, #v-share > *, #v-remote > * { flex-shrink: 0; }
+#v-apps, #v-share, #v-remote { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+/* ---------------------------------------------------------------- Siri ve Kestirmeler */
+.settings .set-row.link { width: 100%; text-align: left; transition: var(--press); }
+.settings .set-row.link:active { background: var(--fill); }
+.settings .set-row.link .ic { color: var(--label-3); }
+.hint-sm.first { margin-top: 0; }
+.steps { margin: 8px 4px 0; padding-left: 20px; color: var(--label-2); font-size: 14px; line-height: 1.5; }
+.steps li { margin: 4px 0; }
+.steps b { color: var(--label); font-weight: 600; }
+
+/* ---------------------------------------------------------------- ses çıkışı */
+.out-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px; border-radius: 14px; background: var(--surface); text-align: left; transition: var(--press); }
+.out-row:active { background: var(--fill); }
+.out-row > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.out-row small { font-size: 11.5px; color: var(--label-2); }
+.out-row b { font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.out-row .ic { color: var(--label-2); }
+.settings .set-row.on .check { color: var(--accent); }
+
+/* ---------------------------------------------------------------- uygulama sesleri (karıştırıcı) */
+.mixer { background: var(--surface-2); }
+.mix-row { padding: 12px 14px; position: relative; }
+.mix-row + .mix-row::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 0.5px; background: var(--sep); }
+.mix-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.mix-name { flex: 1; font-size: 16px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mix-pct { font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.mix-mute { width: 32px; height: 32px; border-radius: 16px; background: var(--fill); display: grid; place-items: center; transition: var(--press); }
+.mix-mute .off-icon { display: none; }
+.mix-mute.off .on-icon { display: none; }
+.mix-mute.off .off-icon { display: block; color: var(--red); }
+.mix-row input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.mix-row.idle .mix-name { color: var(--label-2); }
+.mix-row.muted input[type=range] { opacity: 0.45; }
+
+/* ---------------------------------------------------------------- oyunlar */
+#gameList .initial.game { color: #fff; }
+#gameList .initial.game.steam { background: linear-gradient(135deg, #1b2838, #2a475e); }
+#gameList .initial.game.epic { background: linear-gradient(135deg, #2a2a2a, #121212); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.store-tag { font-size: 11.5px; color: var(--label-3); margin-right: 4px; }
+
+/* ---------------------------------------------------------------- ekran görüntüsü */
+#shotView { position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; height: var(--vvh, 100%); animation: viewIn 0.22s var(--ease) both; }
+.shot-bar { display: flex; align-items: center; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 12px 8px; }
+.shot-spacer { flex: 1; }
+.shot-bar .seg.mini { margin: 0; width: auto; max-width: none; }
+.shot-bar .seg.mini button { padding: 0 12px; }
+.shot-btn { height: 34px; padding: 0 14px; border-radius: 17px; background: var(--fill); font-size: 14px; font-weight: 500; transition: var(--press); }
+.shot-btn.accent { background: var(--accent); color: #fff; }
+.shot-btn:disabled { opacity: 0.4; }
+.shot-btn:active { transform: scale(0.96); }
+.shot-box { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 4px 8px; -webkit-overflow-scrolling: touch; }
+.shot-box img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 0 0 0.5px var(--sep); -webkit-user-select: none; user-select: none; -webkit-touch-callout: default; }
+.shot-box.zoom { place-items: start; }
+.shot-box.zoom img { max-width: none; max-height: none; width: 220%; }
+.shot-load { color: var(--label-2); font-size: 15px; grid-area: 1 / 1; }
+.shot-note { margin: 0; padding: 8px 16px calc(env(safe-area-inset-bottom) + 10px); text-align: center; color: var(--label-3); font-size: 12px; }
+
+/* ---------------------------------------------------------------- hava faresi */
+.pad-mode { padding: 0 16px 6px; display: flex; justify-content: center; }
+.pad-mode .seg.mini { margin: 0; width: 100%; max-width: 320px; }
+.pad-mode .seg.mini button { height: 30px; font-size: 13px; }
+#airHint { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 0 24px; pointer-events: none; }
+#pad.air #airHint { display: flex; }
+#pad.air #hint { display: none; }
+#airHint p { margin: 2px 0; font-size: 13.5px; color: var(--label-3); }
+#airHint p b { color: var(--label-2); font-weight: 600; }
+#airHint .air-note { color: var(--orange); }
+.air-ring { width: 84px; height: 84px; border-radius: 50%; margin-bottom: 14px; border: 2px solid var(--fill-strong); position: relative; transition: border-color 0.2s var(--ease), transform 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.air-ring::after { content: ""; position: absolute; inset: 31px; border-radius: 50%; background: var(--fill-strong); transition: background-color 0.2s var(--ease); }
+#pad.pointing .air-ring { border-color: var(--accent); transform: scale(1.12); box-shadow: 0 0 0 8px rgba(10, 132, 255, 0.14); }
+#pad.pointing .air-ring::after { background: var(--accent); }
+#pad.air.used #hint { opacity: 0; }
+@media (orientation: landscape) and (max-height: 540px) { .pad-mode { display: none; } }
