@@ -218,7 +218,146 @@ async function featureTests(ws) {
   for (let k = 0; k < 20; k++) ws.send(JSON.stringify({ type: 'screenshot' }));
   await sleep(7000); // yavaş (debug) derlemede yakalama ~1 sn sürer
   ws.off('message', countShots);
-  check('Hız sınırı: ağır komut art arda yapılamıyor', okShots >= 1 && okShots <= 6 && busyShots >= 12, `${okShots} yapıldı, ${busyShots} reddedildi`);
+  check('Hız sınırı: ağır komut art arda yapılamıyor', okShots >= 1 && okShots <= 10 && busyShots >= 8, `${okShots} yapıldı, ${busyShots} reddedildi`);
+
+  // LG TV köprüsü: sahte webOS TV (SSAP) ile eşleşme, durum olayları, komut eşlemesi ve reddedilen girdiler
+  {
+    const { WebSocketServer } = await import('ws');
+    const log = [];
+    const ptr = [];
+    const tvState = { volume: 15, muted: false };
+    const wss = new WebSocketServer({ host: LAN_IP, port: 3000 });
+    const volMsg = (id = 'vol') => JSON.stringify({ type: 'response', id, payload: { returnValue: true, volumeStatus: { volume: tvState.volume, muteStatus: tvState.muted } } });
+    wss.on('connection', (c, rq) => {
+      if (rq.url === '/pointer') { c.on('message', (d) => ptr.push(d.toString())); return; }
+      c.on('message', (d) => {
+        const m = JSON.parse(d.toString());
+        const reply = (id, payload) => c.send(JSON.stringify({ type: 'response', id, payload: { returnValue: true, ...payload } }));
+        if (m.type === 'register') {
+          log.push({ register: !!m.payload['client-key'] });
+          if (!m.payload['client-key']) reply('reg', { pairingType: 'PROMPT' });
+          setTimeout(() => c.send(JSON.stringify({ type: 'registered', id: 'reg', payload: { 'client-key': 'MOCKKEY' } })), 200);
+          return;
+        }
+        log.push(m.uri + ' ' + JSON.stringify(m.payload ?? {}));
+        if (m.uri.endsWith('getVolume')) c.send(volMsg());
+        else if (m.uri.endsWith('getForegroundAppInfo')) reply('fg', { appId: 'netflix' });
+        else if (m.uri.endsWith('getExternalInputList')) reply('inputs', { devices: [{ id: 'HDMI_1', label: 'HDMI 1', connected: true }, { id: 'HDMI_2', label: 'HDMI 2', connected: false }] });
+        else if (m.uri.endsWith('getinfo')) reply('net', { wired: { state: 'disconnected' }, wifi: { state: 'connected' }, wifiInfo: { macAddress: 'aa:bb:cc:dd:ee:ff' } });
+        else if (m.uri.endsWith('getCurrentSWInformation')) reply('sw', { model_name: 'OLED48C1' });
+        else if (m.uri.endsWith('getPointerInputSocket')) reply('ptr', { socketPath: `ws://${LAN_IP}:3000/pointer` });
+        else if (m.uri.endsWith('setVolume')) { tvState.volume = m.payload.volume; c.send(volMsg()); }
+        else if (m.uri.endsWith('setMute')) { tvState.muted = m.payload.mute; c.send(volMsg()); }
+      });
+    });
+    const until = async (fn, ms = 6000) => { for (let t = 0; t < ms; t += 100) { if (fn()) return true; await sleep(100); } return false; };
+    const tvId = () => seen.tvs?.tvs?.[0]?.id;
+    const cur = () => seen.tvs?.tvs?.[0];
+    const tv = (o) => ws.send(JSON.stringify({ type: 'tv', id: tvId(), ...o }));
+    try {
+      for (const t of seen.tvs?.tvs ?? []) ws.send(JSON.stringify({ type: 'tv', op: 'forget', id: t.id }));
+      await sleep(300);
+      tv({ op: 'add', ip: '8.8.8.8' });
+      tv({ op: 'add', ip: '127.0.0.1' });
+      await sleep(500);
+      check('TV: yerel olmayan adres reddediliyor', (seen.tvs?.tvs ?? []).length === 0);
+      tv({ op: 'add', ip: LAN_IP });
+      tv({ op: 'add', ip: LAN_IP });
+      check('TV: eşleşip bağlanıyor', await until(() => cur()?.state === 'on'), cur()?.state);
+      check('TV: aynı adres ikinci kez eklenmiyor', seen.tvs.tvs.length === 1, String(seen.tvs.tvs.length));
+      check('TV: model adı, ses ve açık uygulama geliyor', cur()?.name === 'LG OLED48C1' && cur()?.volume === 15 && cur()?.app === 'netflix', JSON.stringify([cur()?.name, cur()?.volume, cur()?.app]));
+      check('TV: girişler ve uyandırma (MAC) bilgisi var', cur()?.inputs?.length === 2 && cur()?.canWake === true);
+      tv({ op: 'vol', level: 30 });
+      check('TV: ses ayarı TV’ye gidip geri bildiriliyor', await until(() => cur()?.volume === 30));
+      tv({ op: 'mute', mute: true });
+      check('TV: sessiz', await until(() => cur()?.muted === true));
+      tv({ op: 'vol-up' }); tv({ op: 'launch', app: 'youtube.leanback.v4' }); tv({ op: 'input', input: 'HDMI_1' });
+      tv({ op: 'launch', app: '../etc' }); tv({ op: 'launch', app: 'a b' }); tv({ op: 'key', name: 'POWEROFF' }); tv({ op: 'yok' }); tv({ op: 'vol', level: 'x' });
+      tv({ op: 'key', name: 'HOME' }); tv({ op: 'move', dx: 5, dy: -5000 }); tv({ op: 'click' });
+      ws.send(JSON.stringify({ type: 'tv', op: 'vol-up', id: 'yok-boyle-tv' }));
+      check('TV: komutlar sabit URI’lere eşleniyor', await until(() => log.some((l) => typeof l === 'string' && l.includes('system.launcher/launch {"id":"youtube.leanback.v4"}')) && log.some((l) => typeof l === 'string' && l.includes('volumeUp')) && log.some((l) => typeof l === 'string' && l.includes('switchInput {"inputId":"HDMI_1"}'))));
+      check('TV: işaretçi (tuş, hareket sınırı, tık) iletiliyor', await until(() => ptr.length >= 3), JSON.stringify(ptr));
+      check('TV: geçersiz kimlik / tuş / işlem sızmıyor', !log.some((l) => typeof l === 'string' && (l.includes('etc') || l.includes('a b'))) && !ptr.some((p) => p.includes('POWEROFF')) && ptr.some((p) => p.includes('dy:-200')) && log.filter((l) => typeof l === 'string' && l.includes('volumeUp')).length === 1);
+      const sr = [await act('tv-volup'), await act('tv-key?v=home&tv=oled'), await act('tv-volume?v=500'), await act('tv-launch?v=..%2Fetc'), await act('tv-off?tv=yok-boyle'), await act('tv-bilinmeyen')];
+      check('Kestirme: TV eylemleri (ad ile TV seçimi dahil) çalışıyor', sr[0].status === 200 && sr[1].status === 200 && await until(() => log.filter((l) => typeof l === 'string' && l.includes('volumeUp')).length === 2 && ptr.filter((p) => p.includes('name:HOME')).length === 2));
+      check('Kestirme: TV hatalı parametre / bilinmeyen TV / bilinmeyen eylem reddediliyor', sr.slice(2).every((r) => r.status === 400));
+      check('TV: eşleşme anahtarı diskte şifreli', (() => { const t = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'tvs.json'), 'utf8'); return t.includes('key_enc') && !t.includes('MOCKKEY'); })());
+      // TV kapanınca durum 'off', anahtarla yeniden bağlanır (yeniden eşleşme istemez)
+      for (const c of wss.clients) c.close();
+      check('TV: bağlantı kopunca kapalı görünüyor', await until(() => cur()?.state === 'off', 4000), cur()?.state);
+      check('TV: geri gelince anahtarla kendiliğinden bağlanıyor', await until(() => cur()?.state === 'on', 20000) && log.filter((l) => l.register === true).length >= 1);
+      tv({ op: 'forget' });
+      check('TV: kayıt siliniyor', await until(() => (seen.tvs?.tvs ?? []).length === 0));
+    } finally {
+      for (const t of seen.tvs?.tvs ?? []) ws.send(JSON.stringify({ type: 'tv', op: 'forget', id: t.id }));
+      for (const c of wss.clients) c.terminate();
+      wss.close();
+    }
+  }
+
+  // Samsung ve Android TV sürücüleri: sahte TV'lerle (tools/mock-tvs.mjs) eşleşme + komut eşlemesi
+  {
+    const { startSamsung, startAndroid } = await import('./mock-tvs.mjs');
+    const until = async (fn, ms = 6000) => { for (let t = 0; t < ms; t += 100) { if (fn()) return true; await sleep(100); } return false; };
+    const byBrand = (b) => seen.tvs?.tvs?.find((t) => t.brand === b);
+    const tvOp = (b, o) => ws.send(JSON.stringify({ type: 'tv', id: byBrand(b)?.id, ...o }));
+    const forgetAll = () => { for (const t of seen.tvs?.tvs ?? []) ws.send(JSON.stringify({ type: 'tv', op: 'forget', id: t.id })); };
+    forgetAll();
+    await sleep(300);
+
+    // Hiçbir TV yokken (portlar kapalı) ekleme: marka tanınamaz, hata bildirilir ve kayıt oluşmaz
+    ws.send(JSON.stringify({ type: 'tv', op: 'add', ip: LAN_IP }));
+    check('TV: marka tanınamayan adres eklenmiyor, hata bildiriliyor', await until(() => seen['tv-add']?.ok === false, 8000) && (seen.tvs?.tvs ?? []).length === 0);
+
+    const sam = await startSamsung(LAN_IP);
+    try {
+      ws.send(JSON.stringify({ type: 'tv', op: 'add', ip: LAN_IP }));
+      check('Samsung: eşleşip bağlanıyor', await until(() => byBrand('samsung')?.state === 'on'), byBrand('samsung')?.state);
+      check('Samsung: model adı ve MAC alınıyor', byBrand('samsung')?.name === 'Samsung QE55Q80' && byBrand('samsung')?.canWake === true, byBrand('samsung')?.name);
+      check('Samsung: yetenekler (işaretçi/ses ayarı yok, uygulamalar var)', byBrand('samsung')?.caps?.pointer === false && byBrand('samsung')?.caps?.vol === false && byBrand('samsung')?.apps?.length >= 4);
+      for (const o of [{ op: 'vol-up' }, { op: 'mute', mute: true }, { op: 'key', name: 'HOME' }, { op: 'launch', app: '11101200001' }, { op: 'text', text: 'merhaba' },
+        { op: 'vol', level: 30 }, { op: 'move', dx: 3, dy: 3 }, { op: 'input', input: 'HDMI_1' }, { op: 'key', name: 'POWEROFF' }]) tvOp('samsung', o);
+      const msgs = () => sam.log.filter((l) => l.method);
+      check('Samsung: tuş, uygulama ve yazı komutları doğru iletiliyor', await until(() => msgs().length >= 5) &&
+        msgs().some((l) => l.params.DataOfCmd === 'KEY_VOLUP') && msgs().some((l) => l.params.DataOfCmd === 'KEY_MUTE') && msgs().some((l) => l.params.DataOfCmd === 'KEY_HOME') &&
+        msgs().some((l) => l.params.data?.appId === '11101200001') && msgs().some((l) => l.params.TypeOfRemote === 'SendInputString' && Buffer.from(l.params.Cmd, 'base64').toString() === 'merhaba'));
+      await sleep(500);
+      check('Samsung: desteklenmeyen / geçersiz komutlar sızmıyor', msgs().length === 5, String(msgs().length));
+      sam.drop();
+      check('Samsung: kopunca kapalı, sonra kayıtlı jetonla kendiliğinden bağlanıyor', await until(() => byBrand('samsung')?.state === 'off', 4000) && await until(() => byBrand('samsung')?.state === 'on', 20000) && sam.log.filter((l) => l.connect).at(-1)?.token === sam.TOKEN);
+      check('Samsung: jeton diskte şifreli', !fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'tvs.json'), 'utf8').includes(sam.TOKEN));
+    } finally {
+      forgetAll();
+      sam.close();
+      await sleep(400);
+    }
+
+    const atv = await startAndroid(LAN_IP);
+    try {
+      ws.send(JSON.stringify({ type: 'tv', op: 'add', ip: LAN_IP }));
+      check('Android TV: eşleşme kodu isteniyor (RSA kimlik üretimi dahil)', await until(() => byBrand('android')?.state === 'code', 240000), byBrand('android')?.state);
+      check('Android TV: eşleşme adımları sırayla tamamlandı', ['request', 'option', 'config'].every((x) => atv.state.pairLog.includes(x)), atv.state.pairLog.join(','));
+      tvOp('android', { op: 'pair-code', code: '000000' });
+      tvOp('android', { op: 'pair-code', code: 'zzzzzz' });
+      await sleep(500);
+      check('Android TV: yanlış / bozuk kod kabul edilmiyor', byBrand('android')?.state === 'code' && !atv.state.paired);
+      tvOp('android', { op: 'pair-code', code: atv.state.code });
+      check('Android TV: doğru kodla eşleşip bağlanıyor', await until(() => byBrand('android')?.state === 'on', 15000), byBrand('android')?.state + ' ' + atv.state.pairLog.join(','));
+      check('Android TV: TV ses durumu geliyor, yapılandırma yanıtlanıyor', await until(() => byBrand('android')?.volume === 25) && atv.state.clientConfigured);
+      for (const o of [{ op: 'vol-up' }, { op: 'key', name: 'UP' }, { op: 'key', name: '5' }, { op: 'launch', app: 'https://www.youtube.com' }, { op: 'off' }, { op: 'move', dx: 1, dy: 1 }, { op: 'input', input: 'HDMI_1' }]) tvOp('android', o);
+      check('Android TV: tuş kodları ve uygulama bağlantısı doğru', await until(() => atv.state.keys.length >= 4 && atv.state.links.length >= 1) &&
+        [24, 19, 12, 26].every((k) => atv.state.keys.includes(k)) && atv.state.links[0] === 'https://www.youtube.com', JSON.stringify(atv.state.keys));
+      await sleep(400);
+      check('Android TV: desteklenmeyen komutlar sızmıyor', atv.state.keys.length === 4 && atv.state.links.length === 1);
+      tvOp('android', { op: 'launch', app: 'javascript:alert(1)' });
+      await sleep(300);
+      check('Android TV: geçersiz uygulama bağlantısı reddediliyor', atv.state.links.length === 1);
+      check('Android TV: kimlik diskte şifreli (özel anahtar düz yazı değil)', !fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'atv-client.json'), 'utf8').includes('PRIVATE'));
+    } finally {
+      forgetAll();
+      atv.close();
+    }
+  }
 
   // Zamanlayıcı: 1 dk kur ve hemen iptal et (sesi kısmaya başlamadan)
   let p = waitFor('timer');

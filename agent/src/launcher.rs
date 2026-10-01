@@ -427,7 +427,7 @@ impl Launcher {
             .collect();
         let installed = self.with_apps(|apps| apps.iter().map(|a| json!({ "id": a.id, "name": a.name })).collect::<Vec<_>>());
         let games: Vec<Value> = games().iter().map(|g| json!({ "id": g.id, "name": g.name, "store": g.store })).collect();
-        json!({ "type": "apps", "catalog": catalog, "installed": installed, "games": games, "browser": if chrome_path().is_some() { "Chrome'da" } else { "varsayılan tarayıcıda" } })
+        json!({ "type": "apps", "catalog": catalog, "installed": installed, "games": games, "browser": if chrome_path().is_some() { "Chrome'da" } else { "varsayılan tarayıcıda" }, "chrome": chrome_path().is_some() })
     }
 
     /// Hızlı başlat öğesi veya Başlat menüsü uygulaması. Dönen ad ve "medya mı" telefonda kullanılır.

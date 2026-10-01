@@ -39,6 +39,7 @@ pub struct App {
     pub input: Input,
     pub media: Media,
     pub audio: Audio,
+    pub tv: crate::tv::Tv,
     pub timer: Timer,
     pub launcher: Launcher,
     pub resolver: Arc<SniResolver>,
@@ -117,6 +118,7 @@ impl App {
         let input = Input::start(stats.clone());
         let media = Media::start(input.clone(), events.clone());
         let audio = Audio::start(events.clone());
+        let tv = crate::tv::Tv::start(events.clone());
         crate::context::start(events.clone());
         let icons = [180, 192, 512].into_iter().map(|s| (s, crate::icons::png(s))).collect();
         let (revoked, _) = broadcast::channel(16);
@@ -132,6 +134,7 @@ impl App {
             input,
             media,
             audio,
+            tv,
             timer: Timer::new(),
             launcher: Launcher::new(),
             stats,

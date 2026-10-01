@@ -57,11 +57,11 @@ body.bed #main { --tint: rgba(255, 80, 40, 0.1) !important; }
 }
 
 /* ================================================================ yüzeyler (derinlik) */
-#np, .volume, #ctx, .card-list, .list, #dpad, .pill, .mb, #typer, #clipText, .power-grid .pw, .timer-now, #hud,
+#np, .volume, #ctx, .card-list, .list, #dpad, #tvDpad, #tvPad, .pill, .mb, #typer, #clipText, .power-grid .pw, .timer-now, #hud,
 .searchbar, #pad, #miniPad, .out-row, .mix-row {
   background-image: var(--card);
 }
-#np, .volume, #ctx, .card-list, .list, #dpad, .pill, .mb, #pad, .out-row { box-shadow: var(--hairline); }
+#np, .volume, #ctx, .card-list, .list, #dpad, #tvDpad, #tvPad, .pill, .mb, #pad, .out-row { box-shadow: var(--hairline); }
 .card-list, .list, #np { border-radius: var(--r-lg); }
 .volume, #ctx, .out-row { border-radius: var(--r); }
 
@@ -229,8 +229,8 @@ body.bed #npSeek::-webkit-slider-runnable-track { background: linear-gradient(to
 .t.down { transform: scale(0.88); }
 
 /* Yön halkası */
-#dpad { width: 190px; height: 190px; background-color: var(--surface); }
-#dpad::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+#dpad, #tvDpad { width: 190px; height: 190px; background-color: var(--surface); }
+#dpad::before, #tvDpad::before { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
   background: radial-gradient(closest-side, transparent 66%, rgba(255, 255, 255, 0.045) 67%, transparent 100%); }
 .d { width: 54px; height: 54px; overflow: hidden; }
 .d.dir-up { left: 68px; top: 3px; } .d.dir-down { left: 68px; bottom: 3px; } .d.dir-left { left: 3px; top: 68px; } .d.dir-right { right: 3px; top: 68px; }
@@ -485,3 +485,122 @@ body.bed #miniPad::before { opacity: 0.4; background-image: radial-gradient(rgba
 #pinBtn { margin-top: 18px; }
 #pinBtn:disabled { opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) { .tap-hint { animation: none; } }
+
+/* Ekran klavyesi: İngilizce QWERTY'de 2. satır 9 tuş (10'luk satırın altında ortalanır) */
+#kb[data-kb="us"][data-layer="abc"] .kb-row:nth-child(2) { padding: 0 calc(5% + 3px); }
+
+/* ================================================================ ERİŞİLEBİLİRLİK */
+/* Kontrast (WCAG AA): ipucu metni 4,5:1; beyaz yazılı dolgular 4,5:1; yatak modunda ikincil metinler 4,5:1 */
+:root { --accent-fill: #0a6fe8; --on-accent: #fff; --label-3: rgba(235, 235, 245, 0.6); }
+body.bed { --accent-fill: #ff7a45; --on-accent: #1a0a05; --label-2: rgba(255, 138, 92, 0.75); --label-3: rgba(255, 138, 92, 0.7); }
+.badge, .btn-primary, .icon-btn.on, .sk.mod.on, .chip-btn.on, .ctx-btn.accent, .pill.accent, .shot-btn.accent { background-color: var(--accent-fill); color: var(--on-accent); }
+
+/* Odak halkası (klavye, Anahtar Denetimi, ekran okuyucu): dokunmayla görünmez */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.kk:focus-visible, .sk:focus-visible, .d:focus-visible, .mb:focus-visible, .tile:focus-visible, .row-btn:focus-visible { outline-offset: -3px; }
+#pad:focus-visible, #miniPad:focus-visible { outline-offset: -4px; }
+input[type=range]:focus-visible { outline-offset: 6px; border-radius: 8px; }
+.sheet:focus { outline: none; }
+.pin-boxes input:focus-visible { outline: none; }
+
+/* Dokunma hedefleri ≥ 44 pt: görünüm aynı kalır, görünmez alan genişler */
+.icon-btn { width: 44px; height: 44px; }
+.status { max-width: calc(100% - 172px); }
+.chip-btn, .mix-mute, .shot-btn, .ctx-btn, .recent-chip { position: relative; }
+.chip-btn::after, .mix-mute::after, .shot-btn::after, .ctx-btn::after { content: ""; position: absolute; inset: -6px -4px; }
+.seg button { min-height: 36px; }
+.seg button::after { content: ""; position: absolute; inset: -4px 0; }
+.mix-mute { width: 36px; height: 36px; }
+
+/* İmleç yön düğmeleri */
+#nudge { display: flex; gap: 8px; padding: 8px 16px 0; justify-content: center; }
+#nudge[hidden] { display: none; }
+.nb { flex: 1; max-width: 90px; height: 48px; border-radius: 14px; background-color: var(--surface); background-image: var(--card); box-shadow: var(--hairline); display: grid; place-items: center; touch-action: none; transition: var(--press); }
+.nb .ic { width: 24px; height: 24px; }
+.nb.down { background-color: var(--accent-fill); color: var(--on-accent); transform: scale(0.94); }
+@media (orientation: landscape) and (max-height: 540px) { #nudge { padding: 4px 0 0; } .nb { height: 38px; } }
+
+/* Şeffaflığı azalt: bulanık yüzeyler düz renge döner */
+@media (prefers-reduced-transparency: reduce) {
+  #tabs, .sheet, #toast, .alert, #offline, #backdrop, .tap-hint { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #tabs { background: var(--surface); }
+  .sheet { background-color: var(--surface); }
+  #toast, .alert { background: var(--surface-2); }
+  #offline { background: rgba(0, 0, 0, 0.85); }
+}
+/* Yüksek karşıtlık: ayırıcılar ve kenarlar belirginleşir */
+@media (prefers-contrast: more) {
+  :root { --sep: rgba(255, 255, 255, 0.55); --label-2: rgba(235, 235, 245, 0.88); --label-3: rgba(235, 235, 245, 0.78); }
+  body.bed { --sep: rgba(255, 138, 92, 0.6); --label-2: rgba(255, 138, 92, 0.9); --label-3: rgba(255, 138, 92, 0.82); }
+  #np, .volume, #ctx, .card-list, .list, #dpad, #tvDpad, #tvPad, .pill, .mb, #pad, .out-row, .tile-icon, .cover-art { box-shadow: inset 0 0 0 1px var(--sep); }
+}
+
+/* ================================================================ LG TV KUMANDASI */
+#devSeg { align-self: center; min-width: 240px; }
+#v-remote.tv-mode { display: flex !important; flex-direction: column; column-count: auto; gap: 12px; }
+#v-remote.tv-mode > .pc-only { display: none !important; }
+#tvRemote { display: flex; flex-direction: column; gap: 12px; }
+#tvRemote[hidden], #tvRemote [hidden] { display: none !important; }
+#tvBody { display: flex; flex-direction: column; gap: 12px; }
+.tv-head { display: flex; align-items: center; gap: 12px; }
+.tv-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tv-title b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-title small { color: var(--label-2); font-size: 13px; }
+.tv-title small.ok::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #30d158; }
+.tv-note { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: var(--r); background-color: var(--surface); box-shadow: var(--hairline); }
+.tv-note p { margin: 0; font-size: 15px; line-height: 1.4; }
+.tv-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.tv-row .pill { flex: 1 1 0; min-width: 0; white-space: nowrap; }
+#tvDpad { margin: 4px auto; }
+.tv-transport { justify-content: center; gap: 14px; }
+#tvRemote .chips { flex-wrap: wrap; }
+.tv-type { display: flex; gap: 8px; }
+.tv-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 12px; background: var(--surface); color: var(--label); font-size: 16px; box-shadow: var(--hairline); }
+#tvPad { height: 150px; border-radius: var(--r); background-color: var(--surface); display: grid; place-items: center; text-align: center; padding: 0 20px; color: var(--label-3); font-size: 14px; touch-action: none; user-select: none; -webkit-user-select: none; }
+#tvPad.active { box-shadow: inset 0 0 0 1px var(--accent); }
+#tvPad span { pointer-events: none; }
+#tvFound .set-row b { font-weight: 600; }
+
+.tv-head .pill { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; }
+
+.tv-type .pill { flex: none; padding: 0 16px; }
+
+/* ================================================================ CİHAZ SEÇİCİ (sol üst) */
+body.tv-target #pad, body.tv-target #miniPad { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.dev-btn { display: flex; align-items: center; gap: 7px; min-width: 0; color: inherit; background: none; padding: 0; text-align: left; -webkit-tap-highlight-color: transparent; transition: opacity var(--dur) var(--ease); }
+.dev-btn:active { opacity: 0.6; }
+.dev-btn #conn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dev-caret { width: 12px; height: 12px; transform: rotate(90deg); opacity: 0.55; flex: none; }
+.dev-row .check { margin-left: auto; color: var(--accent); }
+.dev-row > span { min-width: 0; flex: 1; }
+.dev-row.sel b { color: var(--accent); }
+#tvSaved .set-row .pill { flex: none; height: 34px; padding: 0 14px; }
+#tvSaved .set-row > span { flex: 1; min-width: 0; }
+
+/* ================================================================ iPAD / GENİŞ EKRAN */
+/* Tablette içerik ortalanır ve rahat okunur genişlikte kalır; kontroller büyür */
+@media (min-width: 700px) {
+  #bar, .view, #tabs { width: min(100%, 900px); align-self: center; }
+  .sheet { left: 0; right: 0; margin-inline: auto; width: min(100%, 720px); }
+  .tiles { grid-template-columns: repeat(6, 1fr); }
+  #dpad, #tvDpad { transform: scale(1.3); margin-block: 30px; }
+  .transport .t { transform: scale(1.15); }
+  .volume { padding: 14px 20px; }
+  #np { padding: 18px; }
+  .section-title { font-size: 14px; }
+  #v-pad #pad { min-height: 360px; }
+}
+/* Yatay iPad: Kumanda iki sütun, Uygulamalar daha çok kapak */
+@media (min-width: 1000px) and (orientation: landscape) and (min-height: 600px) {
+  #bar, .view, #tabs { width: min(100%, 1100px); }
+  #v-remote:not(.tv-mode) { display: grid !important; grid-template-columns: 1fr 1fr; grid-template-areas: "np dpad" "ctx dpad" "tr dpad" "pills snd"; align-content: start; gap: 18px 28px; }
+  #v-remote:not(.tv-mode) > #np { grid-area: np; }
+  #v-remote:not(.tv-mode) > #ctx { grid-area: ctx; }
+  #v-remote:not(.tv-mode) > .transport { grid-area: tr; }
+  #v-remote:not(.tv-mode) > #dpad { grid-area: dpad; justify-self: center; align-self: center; margin-block: 0; }
+  #v-remote:not(.tv-mode) > .pills { grid-area: pills; }
+  #v-remote:not(.tv-mode) > #soundCard { grid-area: snd; }
+  #v-remote.tv-mode #tvBody { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; align-items: start; }
+  #v-remote.tv-mode #tvBody > * { min-width: 0; }
+  #v-remote.tv-mode #tvDpad { grid-row: span 3; justify-self: center; }
+}

@@ -1,8 +1,8 @@
 // Service Worker: arayüzü önbellekte tutar. PC kapalıyken bile uygulama açılır ve
 // "Bilgisayara ulaşılamıyor" ekranını gösterebilir (Safari hata sayfası yerine).
 // Ağ öncelikli: PC açıksa her zaman en güncel arayüz gelir.
-const CACHE = 'couch-shell-v3';
-const SHELL = ['/app', '/app.js', '/air.js', '/app.css', '/ui.css', '/apple-touch-icon.png', '/icon-192.png'];
+const CACHE = 'couch-shell-v5';
+const SHELL = ['/app', '/app.js', '/air.js', '/tv.js', '/app.css', '/ui.css', '/i18n.js', '/i18n-en.js', '/apple-touch-icon.png', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));

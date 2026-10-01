@@ -124,7 +124,7 @@
       <div style="min-width:0">
         <b>Sertifikaya güven</b>
         <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Genel</span><span class="sep">›</span><span class="chip">Hakkında</span><span class="sep">›</span><span class="chip">Sertifika Güven Ayarları</span></div>
-        <small>En alttaki <b>CouchRemote Yerel CA</b> anahtarını aç. Sadece <b>%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
+        <small id="s3text">En alttaki <b>CouchRemote Yerel CA</b> anahtarını aç. Sadece <b>%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
       </div>
     </li>
   </ol>
@@ -137,7 +137,10 @@
   <button class="btn secondary" id="check">Kontrol et</button>
 </div>
 
-<script>
+<script type="module">
+  import { t as tl, lang, ready, translateDom } from '/i18n.js';
+  await ready;
+  translateDom();
   const APP_ORIGIN = '%%APP_ORIGIN%%';
   const code = new URLSearchParams(location.search).get('c') || '';
   const box = document.getElementById('status');
@@ -160,16 +163,16 @@
   async function check(auto) {
     if (checking) return;
     checking = true;
-    setStatus('checking', 'Kontrol ediliyor…', 'Sertifikaya güvenilip güvenilmediğine bakılıyor.');
+    setStatus('checking', tl('Kontrol ediliyor…'), tl('Sertifikaya güvenilip güvenilmediğine bakılıyor.'));
     try {
       const r = await fetch(APP_ORIGIN + '/api/hello', { cache: 'no-store' });
       if (!r.ok) throw new Error(r.status);
       markDone('s1', 's2', 's3');
-      setStatus('ok', 'Hazır', 'Son adım açılıyor…');
+      setStatus('ok', tl('Hazır'), tl('Son adım açılıyor…'));
       setTimeout(() => (location.href = APP_ORIGIN + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 900);
     } catch {
-      setStatus('waiting', 'Profil bekleniyor',
-        auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.');
+      setStatus('waiting', tl('Profil bekleniyor'),
+        tl(auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.'));
     } finally {
       checking = false;
     }

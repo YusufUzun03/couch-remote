@@ -23,6 +23,7 @@ mod events;
 mod assets;
 mod certs;
 mod dpapi;
+mod i18n;
 mod icons;
 mod input;
 mod launcher;
@@ -41,6 +42,7 @@ mod sync;
 mod system;
 mod tls;
 mod tray;
+mod tv;
 mod upload;
 mod web;
 mod ws;
@@ -114,12 +116,21 @@ async fn main() -> anyhow::Result<()> {
 fn friendly_error(e: &anyhow::Error) -> String {
     let in_use = e.chain().any(|c| c.downcast_ref::<std::io::Error>().is_some_and(|io| io.kind() == std::io::ErrorKind::AddrInUse));
     if in_use {
-        format!(
-            "CouchRemote başlatılamadı: {HTTP_PORT}–{ADMIN_PORT} numaralı ağ portlarından biri başka bir program tarafından kullanılıyor.\n\n\
-             Bilgisayarı yeniden başlatmayı dene. Sorun sürerse bu portları kullanan programı kapat."
-        )
-    } else {
+        if i18n::is_tr() {
+            format!(
+                "CouchRemote başlatılamadı: {HTTP_PORT}–{ADMIN_PORT} numaralı ağ portlarından biri başka bir program tarafından kullanılıyor.\n\n\
+                 Bilgisayarı yeniden başlatmayı dene. Sorun sürerse bu portları kullanan programı kapat."
+            )
+        } else {
+            format!(
+                "CouchRemote couldn't start: one of the network ports {HTTP_PORT}–{ADMIN_PORT} is being used by another program.\n\n\
+                 Try restarting your computer. If the problem continues, close the program that uses these ports."
+            )
+        }
+    } else if i18n::is_tr() {
         format!("CouchRemote başlatılamadı:\n\n{e:#}\n\nAyrıntılar: {}", state::data_dir().join("couch.log").display())
+    } else {
+        format!("CouchRemote couldn't start:\n\n{e:#}\n\nDetails: {}", state::data_dir().join("couch.log").display())
     }
 }
 
@@ -138,7 +149,14 @@ async fn run(background: bool) -> anyhow::Result<()> {
         let running = if installing { system::running_version() } else { None };
         match running {
             Some(old) if old != VERSION => {
-                if !system::message(&format!("CouchRemote {old} çalışıyor.\n\n{VERSION} sürümüne güncellensin mi?"), true) {
+                if !system::message(
+                    &if i18n::is_tr() {
+                        format!("CouchRemote {old} çalışıyor.\n\n{VERSION} sürümüne güncellensin mi?")
+                    } else {
+                        format!("CouchRemote {old} is running.\n\nUpdate to version {VERSION}?")
+                    },
+                    true,
+                ) {
                     return Ok(());
                 }
                 instance = system::stop_running_instance();
@@ -167,7 +185,14 @@ async fn run(background: bool) -> anyhow::Result<()> {
                 return Ok(());
             }
             Err(e) => {
-                system::message(&format!("CouchRemote kurulamadı:\n{e:#}\n\nBu konumdan çalışmaya devam edecek."), false);
+                system::message(
+                    &if i18n::is_tr() {
+                        format!("CouchRemote kurulamadı:\n{e:#}\n\nBu konumdan çalışmaya devam edecek.")
+                    } else {
+                        format!("CouchRemote couldn't be installed:\n{e:#}\n\nIt will keep running from this location.")
+                    },
+                    false,
+                );
             }
         }
     }

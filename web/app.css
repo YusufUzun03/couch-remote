@@ -235,7 +235,7 @@ body.bed #keyPop { background: #3a150a; color: var(--label); }
 #ppBtn.playing .pause { display: block; }
 
 /* Apple TV kumandası gibi yuvarlak yön tuşu */
-#dpad { position: relative; width: 232px; height: 232px; margin: 0 auto; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 0.5px var(--sep); flex: none; }
+#dpad, #tvDpad { position: relative; width: 232px; height: 232px; margin: 0 auto; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 0.5px var(--sep); flex: none; }
 .d { position: absolute; width: 64px; height: 64px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; transition: var(--press); }
 .d .ic { width: 26px; height: 26px; }
 .d.dir-up { left: 84px; top: 4px; } .d.dir-down { left: 84px; bottom: 4px; } .d.dir-left { left: 4px; top: 84px; } .d.dir-right { right: 4px; top: 84px; }
@@ -329,10 +329,10 @@ body.lefty #btns { flex-direction: row-reverse; }
 
 /* ---------------------------------------------------------------- kumanda: ses + uygulamaya özel */
 .volume { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 16px; padding: 10px 14px; }
-#muteBtn { width: 32px; height: 32px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; transition: var(--press); }
-#muteBtn .off-icon, #muteBtn.muted .on-icon { display: none; }
-#muteBtn.muted .off-icon { display: block; color: var(--red); }
-#muteBtn.down { background: var(--fill); }
+#muteBtn, #tvMute { width: 32px; height: 32px; display: grid; place-items: center; color: var(--label-2); border-radius: 50%; transition: var(--press); }
+#muteBtn .off-icon, #muteBtn.muted .on-icon, #tvMute .off-icon, #tvMute.muted .on-icon { display: none; }
+#muteBtn.muted .off-icon, #tvMute.muted .off-icon { display: block; color: var(--red); }
+#muteBtn.down, #tvMute.down { background: var(--fill); }
 #volSlider { --p: 0%; flex: 1; -webkit-appearance: none; appearance: none; height: 28px; background: transparent; margin: 0; touch-action: pan-x; }
 #volSlider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--label) 0 var(--p), var(--fill-strong) var(--p) 100%); }
 #volSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }

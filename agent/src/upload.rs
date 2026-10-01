@@ -185,7 +185,11 @@ pub async fn api_upload(State(app): State<Arc<App>>, headers: HeaderMap, body: B
     mark_of_the_web(&path);
     let saved = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     log!("Dosya alındı ({} KB)", written / 1024); // dosya adı günlüğe yazılmaz
-    crate::notify::toast("Telefondan dosya geldi", &format!("{saved} · İndirilenler › CouchRemote"), Some(&dir));
+    crate::notify::toast(
+        crate::i18n::pick("Telefondan dosya geldi", "File received from your phone"),
+        &format!("{saved} · {}", crate::i18n::pick("İndirilenler › CouchRemote", "Downloads › CouchRemote")),
+        Some(&dir),
+    );
     reply(StatusCode::OK, json!({ "ok": true, "name": saved, "bytes": written }))
 }
 

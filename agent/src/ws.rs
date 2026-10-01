@@ -397,6 +397,8 @@ fn command(app: &Arc<App>, device_id: &str, text: &str) -> Option<String> {
                 app.audio.send(AudioCmd::SetApp { id: id.to_string(), level, mute: m["mute"].as_bool() });
             }
         }
+        // ---- LG TV (PC aracı): sabit komut eşlemesi, tv.rs
+        "tv" => app.tv.handle(&m),
         "audio-device" => {
             if let Some(id) = m["id"].as_str().filter(|i| i.len() < 300) {
                 app.audio.send(AudioCmd::SetDefault(id.to_string()));

@@ -1,5 +1,7 @@
 # CouchRemote kurulum rehberi
 
+[English](INSTALL.md) · **Türkçe**
+
 iPhone'unu bilgisayarın için touchpad, klavye ve TV kumandasına çevirir. Yataktan film aç, sesi kıs, imleci sür.
 
 **Gerekenler:** Windows 10/11 bilgisayar, iPhone, ikisi de **aynı Wi-Fi** (veya bilgisayar kablolu, telefon aynı modemde).
@@ -26,6 +28,8 @@ Bundan sonra uygulamayı açman yeterli; bağlantı kendiliğinden kurulur.
 - **Kumanda:** oynat/duraklat, ses, uygulama özel düğmeleri (YouTube, Netflix...).
 - **Uygulamalar:** Netflix/YouTube/Spotify ve Steam oyunlarını telefondan aç.
 - **Aktar:** panoyu ve dosyaları telefon ↔ bilgisayar gönder, ekran görüntüsü al.
+- **Televizyon:** LG, Samsung ve Android/Google TV (deneysel) telefondan kumanda edilir. Ayarlar › Cihazlar › Televizyonlar'dan TV'ler otomatik bulunur. Sol üstteki cihaz adına dokunup Bilgisayar ve TV'ler arasında geçersin; seçili TV'yi Kumanda, Touchpad ve Klavye sekmeleri sürer. Güç menüsündeki **Sahneler** (Film modu, Uyku modu) ve Siri kestirmeleri (`tv-off`, `tv-volup`…) de çalışır.
+- **iPad:** geniş ekranda düzen kendiliğinden uyum sağlar.
 
 ## Sorun olursa
 - **"Bilgisayara ulaşılamıyor":** bilgisayar uyku modunda olabilir; uyandırıp birkaç saniye bekle. İkisi de aynı Wi-Fi'de mi bak.

@@ -6,6 +6,10 @@
 <title>CouchRemote</title>
 <meta name="description" content="iPhone'unu bilgisayarın için touchpad, klavye ve kumandaya çevir. Kurulum yok, hesap yok, reklam yok.">
 <style>
+  .lang-sw { position:fixed; top:14px; right:14px; z-index:5; display:flex; background:var(--card); border-radius:999px; padding:3px; box-shadow:var(--shadow); }
+  .lang-sw button { border:0; background:transparent; color:var(--muted); font:600 12.5px inherit; font-family:inherit; padding:6px 11px; border-radius:999px; cursor:pointer; }
+  .lang-sw button.on { background:var(--accent); color:#fff; }
+  .lang-sw button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
   :root { --bg:#fbfbfd; --card:#fff; --fill:rgba(120,120,128,.1); --fg:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --line:rgba(0,0,0,.08);
           --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.06); }
   @media (prefers-color-scheme: dark) {
@@ -42,13 +46,14 @@
 <link rel="icon" href="logo.svg">
 </head>
 <body>
+<div class="lang-sw" role="group" aria-label="Dil / Language"><button id="langTr" type="button">TR</button><button id="langEn" type="button">EN</button></div>
 <div class="wrap">
   <header>
     <svg class="logo" role="img" aria-label="CouchRemote" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#5E5CE6"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#g)"/><g fill="#fff"><rect x="26" y="32" width="48" height="22" rx="7"/><rect x="23" y="50" width="54" height="16" rx="5"/><rect x="17" y="41" width="14" height="26" rx="6"/><rect x="69" y="41" width="14" height="26" rx="6"/><rect x="28.5" y="66" width="5" height="8" rx="1.5"/><rect x="66.5" y="66" width="5" height="8" rx="1.5"/></g></svg>
     <h1>iPhone'un, bilgisayarının uzaktan kumandası.</h1>
     <p class="lead">Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.</p>
     <a class="dl" id="download" href="https://github.com/YusufUzun03/couch-remote/releases/latest/download/CouchRemote.exe"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Windows için indir</a>
-    <div class="meta">Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~7 MB</div>
+    <div class="meta">Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~6 MB</div>
   </header>
 
   <h2>Kurulum (2 dakika)</h2>
@@ -85,5 +90,43 @@
 
   <footer>CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.</footer>
 </div>
+<script>
+  // Türkçe ↔ İngilizce: metinler eşleşen öğelerin içeriğiyle değiştirilir (tarayıcı dili Türkçe değilse İngilizce açılır)
+  (() => {
+    const PAIRS = [["iPhone'un, bilgisayarının uzaktan kumandası.","Your iPhone, as your computer's remote."],["Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.","Control your computer from bed or the couch: touchpad, keyboard, media remote, apps and a sleep timer. No account, no ads, no internet needed."],["Windows için indir","Download for Windows"],["Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~6 MB","Windows 10 / 11 · iPhone (iOS 17+) · Free · ~6 MB"],["Kurulum (2 dakika)","Setup (2 minutes)"],["CouchRemote.exe'yi indir ve çalıştır","Download and run CouchRemote.exe"],["Program kendini kurar, Windows ile birlikte açılır ve saatin yanında küçük bir simge olarak durur.","The program installs itself, starts with Windows and sits next to the clock as a small icon."],["Windows \"Bilgisayarınız korundu\" derse: <b style=\"display:inline\">Ek bilgi → Yine de çalıştır</b>. Bu uyarı, program henüz dijital imzalı olmadığı için çıkıyor.","If Windows says \"Windows protected your PC\": <b style=\"display:inline\">More info → Run anyway</b>. This warning appears because the program isn't digitally signed yet."],["Güvenlik duvarı iznini onayla","Approve the firewall permission"],["Telefonunun sadece evdeki ağından bağlanabilmesi için bir kez yönetici izni istenir.","An administrator permission is requested once so your phone can connect from your home network only."],["Ekrandaki QR kodu iPhone kamerasıyla okut","Scan the on-screen QR code with your iPhone camera"],["Açılan sayfadaki adımlarla güvenlik profilini yükle (bir kez), sonra <b style=\"display:inline\">Paylaş → Ana Ekrana Ekle</b>. Bundan sonra simgeye dokunmak yeterli.","Follow the steps on the page that opens to install the security profile (once), then <b style=\"display:inline\">Share → Add to Home Screen</b>. After that, just tap the icon."],["Neler yapabilirsin","What you can do"],["Düşük gecikmeli imleç, iki parmakla ivmeli kaydırma, üç parmakla masaüstü değiştirme.","Low-latency cursor, inertial two-finger scrolling, three-finger desktop switching."],["Klavye","Keyboard"],["iPhone klavyesiyle Türkçe dahil yaz; Ctrl, Alt, Win, F tuşları ve kısayollar.","Type with the iPhone keyboard or an on-screen full keyboard; Ctrl, Alt, Win, F keys and shortcuts."],["Kumanda","Remote"],["Çalan film veya şarkının adı ve kapağı, oynat/duraklat, ileri-geri sarma, ses.","Now playing with cover art, play/pause, skip and seek, volume."],["Güç ve uyku zamanlayıcısı","Power and sleep timer"],["Uyut, kapat, kilitle; film bitince sesi yavaşça kısıp bilgisayarı uyutan zamanlayıcı.","Sleep, shut down, lock; a timer that fades the volume and puts the computer to sleep when the movie ends."],["Pano ve dosya","Clipboard and files"],["Kopyaladığını telefon ile bilgisayar arasında taşı, fotoğraf ve dosya gönder.","Move what you copied between phone and computer, send photos and files."],["Uygulamalar","Apps"],["Netflix, YouTube, Spotify ve bilgisayarındaki programları tek dokunuşla aç; içlerinde ara.","Open Netflix, YouTube, Spotify and your computer's programs with one tap; search inside them."],["Siri ve Kestirmeler","Siri & Shortcuts"],["\"Hey Siri, bilgisayarda videoyu durdur\" gibi komutlar ve Eylem Düğmesi.","Commands like \"Hey Siri, pause the video on my computer\" and the Action Button."],["Gizlilik","Privacy"],["Her şey evdeki ağında kalır. Hiçbir sunucuya veri gitmez, hesap açman gerekmez.","Everything stays on your home network. No data goes to any server, no account needed."],["Kaldırmak istersen","If you want to remove it"],["Saatin yanındaki simge → <b>Kaldır</b>, veya Windows Ayarlar → Uygulamalar → CouchRemote. iPhone'da simgeyi sil ve Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldır.","Icon next to the clock → <b>Uninstall</b>, or Windows Settings → Apps → CouchRemote. On iPhone, delete the icon and remove the profile under Settings → General → VPN & Device Management."],["CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.","CouchRemote · Works on your home network; your data never leaves your computer."]];
+    const norm = (s) => s.replace(/\s+/g, ' ').trim();
+    const map = new Map(PAIRS.map(([tr, en]) => [norm(tr), en]));
+    const rev = new Map(PAIRS.map(([tr, en]) => [norm(en), tr]));
+    const targets = [...document.querySelectorAll('h1, .lead, h2, .meta, .steps li b, .steps li p, .note, .card b, .card p, p.center, footer, #download')];
+    function apply(lang) {
+      const m = lang === 'en' ? map : rev;
+      for (const el of targets) {
+        const dl = el.id === 'download';
+        // indirme düğmesinde simge korunur: sadece metin düğümü çevrilir
+        if (dl) {
+          const n = [...el.childNodes].find((x) => x.nodeType === 3 && x.textContent.trim());
+          const to = n && m.get(norm(n.textContent));
+          if (to) n.textContent = to;
+          continue;
+        }
+        const to = m.get(norm(el.innerHTML));
+        if (to !== undefined) el.innerHTML = to;
+      }
+      document.documentElement.lang = lang;
+      document.title = lang === 'en' ? 'CouchRemote — your iPhone as a remote for your PC' : 'CouchRemote';
+      document.getElementById('langTr').classList.toggle('on', lang === 'tr');
+      document.getElementById('langEn').classList.toggle('on', lang === 'en');
+      try { localStorage.setItem('lang', lang); } catch {}
+    }
+    let pref = null;
+    try { pref = localStorage.getItem('lang'); } catch {}
+    const auto = (navigator.language || 'tr').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+    let cur = 'tr';
+    const set = (l) => { if (l !== cur) { apply(l); cur = l; } else apply(l); };
+    document.getElementById('langTr').onclick = () => set('tr');
+    document.getElementById('langEn').onclick = () => set('en');
+    set(pref === 'tr' || pref === 'en' ? pref : auto);
+  })();
+</script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 # CouchRemote — Güvenlik modeli
 
+[English](SECURITY.en.md) · **Türkçe**
+
 Bu belge, uygulamanın neye karşı korunduğunu, neye karşı **korunmadığını** ve bir sorun olduğunda ne yapılacağını anlatır.
 
 ## Temel güven modeli
@@ -26,6 +28,7 @@ Bu belge, uygulamanın neye karşı korunduğunu, neye karşı **korunmadığın
 | Sırların diskte okunması | Özel anahtarlar ve Kestirmeler jetonu Windows DPAPI ile şifreli (sadece bu Windows kullanıcısı çözer) |
 | Kaldırılan telefonun bağlı kalması | Eşleşme kaldırılınca açık bağlantı anında kesilir |
 | Programın tek bir hatayla çökmesi | Kilitler zehirlenmez; paniklar günlüğe yazılır |
+| TV köprüsü (LG, Samsung, Android TV) | Telefon TV'ye değil PC'ye komut yollar; PC yalnızca sabit bir komut listesini çevirir (serbest adres/URI geçmez), TV adresi yalnızca yerel ağ adresi olabilir, eşleşme anahtarı DPAPI ile şifreli. TV'nin öz imzalı sertifikası doğrulanmaz (yerel ağ, tüm LG istemcilerinde böyle) |
 | Bağımlılık açıkları | `cargo audit` ile tarandı: bilinen açık yok |
 
 ## Neye karşı korunmuyoruz (bilerek)

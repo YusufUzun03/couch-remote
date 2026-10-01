@@ -1,5 +1,10 @@
 // CouchRemote Faz 0 — iPhone web uygulaması: eşleşme, WSS bağlantısı, touchpad, gecikme ölçümü, iOS deneyleri.
 import { AirMouse } from '/air.js';
+import { initTv } from '/tv.js';
+import { t as tl, lang, ready, translateDom, langPref, setLangPref } from '/i18n.js';
+
+await ready; // İngilizce sözlük yüklenir (Türkçede anında geçer)
+translateDom(); // statik HTML'i çevir
 const $ = (id) => document.getElementById(id);
 const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 const params = new URLSearchParams(location.search);
@@ -127,7 +132,7 @@ async function pair(secret) {
     body: JSON.stringify({ ...secret, publicKeyJwk, keyMode: mode, name: /iPad/.test(navigator.userAgent) ? 'iPad' : 'iPhone' }),
   });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(body.message ?? 'Eşleşme başarısız'), { code: body.error });
+  if (!r.ok) throw Object.assign(new Error(body.message ?? tl('Eşleşme başarısız')), { code: body.error });
   const identity = { deviceId: body.deviceId, mode };
   if (mode === 'idb-nonextractable') {
     await kv('set', 'identity', { ...identity, privateKey: kp.privateKey });
@@ -144,11 +149,11 @@ const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 let toastTimer;
 function toast(text) {
-  const t = $('toast');
-  t.textContent = text;
-  t.classList.add('show');
+  const el = $('toast');
+  el.textContent = tl(text);
+  el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 // iOS 18+: switch tipindeki checkbox'a tıklamak hafif titreşim üretir (sadece kullanıcı dokunuşu sırasında)
@@ -180,15 +185,21 @@ let lastSend = 0;
 
 const T = { MOVE: 1, SCROLL: 2, STATE: 3, AIR: 4, PING: 0x10, PONG: 0x11, OFFSET: 0x12 };
 
+let tvUi = null;
+let pcConn = { state: '', text: '' };
 function setConn(stateName, text) {
-  $('dot').className = stateName;
-  $('conn').textContent = text;
+  pcConn = { state: stateName, text };
+  if (tvUi) tvUi.refresh();
+  else {
+    $('dot').className = stateName;
+    $('conn').textContent = text;
+  }
 }
 
 function connect() {
   clearTimeout(retryTimer);
   if (ws && ws.readyState <= 1) return;
-  setConn('', 'Bağlanıyor…');
+  setConn('', tl('Bağlanıyor…'));
   ws = new WebSocket(`wss://${location.host}/ws`);
   ws.binaryType = 'arraybuffer';
 
@@ -231,6 +242,12 @@ function connect() {
         onMixer(m);
       } else if (m.type === 'audio-devices') {
         onAudioDevices(m);
+      } else if (m.type === 'tvs') {
+        tvUi.onTvs(m);
+      } else if (m.type === 'tv-add') {
+        tvUi.onAdd(m);
+      } else if (m.type === 'tv-scan') {
+        tvUi.onScan(m);
       } else if (m.type === 'shortcut-info') {
         siriInfo = m;
         renderSiri();
@@ -243,7 +260,7 @@ function connect() {
       } else if (m.type === 'launched') {
         onLaunched(m);
       } else if (m.type === 'launch-error') {
-        toast(m.message || 'Açılamadı');
+        toast(m.message || tl('Açılamadı'));
       }
       return;
     }
@@ -253,7 +270,7 @@ function connect() {
 
   ws.onclose = () => {
     connected = false;
-    setConn('down', 'Bağlantı yok');
+    setConn('down', tl('Bağlantı yok'));
     if (document.visibilityState !== 'visible') return;
     retry++;
     if (retry >= 3) $('offline').hidden = false;
@@ -264,6 +281,7 @@ function connect() {
 
 function sendInput(type, a, b, t) {
   if (window.__preview) (window.__sentInput ??= []).push({ type, a, b, buttons }); // önizlemede gönderilecekler incelenebilsin
+  if (tvUi && tvUi.input(type, a, b, buttons)) return; // hedef TV ise touchpad/hava faresi TV'yi sürer
   if (!connected) return;
   inView.setUint8(0, type);
   inView.setUint8(1, buttons);
@@ -329,6 +347,7 @@ function pct(arr, q) {
   return s[Math.min(s.length - 1, Math.floor(q * s.length))].toFixed(1);
 }
 
+const hl = (s) => tl(s).padEnd(13);
 function renderHud() {
   const owP50 = serverStats?.oneWay?.p50;
   const rttHalf = rtts.length ? Number(pct(rtts, 0.5)) / 2 : null;
@@ -339,11 +358,11 @@ function renderHud() {
   const ow = serverStats?.oneWay;
   const pr = serverStats?.proc;
   hud.textContent =
-    `RTT          p50 ${pct(rtts, 0.5)}  p95 ${pct(rtts, 0.95)} ms\n` +
-    `Tek yön*     ${ow ? `p50 ${ow.p50}  p95 ${ow.p95}  p99 ${ow.p99} ms (n=${ow.n})` : 'parmağını touchpad\'de gezdir'}\n` +
-    `PC işleme    ${pr ? `p50 ${pr.p50}  p99 ${pr.p99} ms` : '–'}\n` +
-    `Paket/sn     iPhone ${sendRate} · PC ${serverStats?.rate ?? '–'}   Ekran ${fps ?? '…'} Hz\n` +
-    `* dokunma anından PC'ye varışa, saat farkı tahminiyle`;
+    `${hl('RTT')}p50 ${pct(rtts, 0.5)}  p95 ${pct(rtts, 0.95)} ms\n` +
+    `${hl('Tek yön*')}${ow ? `p50 ${ow.p50}  p95 ${ow.p95}  p99 ${ow.p99} ms (n=${ow.n})` : tl('parmağını touchpad\'de gezdir')}\n` +
+    `${hl('PC işleme')}${pr ? `p50 ${pr.p50}  p99 ${pr.p99} ms` : '–'}\n` +
+    `${hl('Paket/sn')}iPhone ${sendRate} · PC ${serverStats?.rate ?? '–'}   ${tl('Ekran yenileme')} ${fps ?? '…'} Hz\n` +
+    tl("* dokunma anından PC'ye varışa, saat farkı tahminiyle");
 }
 
 // ============================================================ hava faresi
@@ -368,7 +387,7 @@ function setAirNote(text) {
 async function ensureAirSensors() {
   if (airReady) return true;
   if (typeof DeviceOrientationEvent === 'undefined') {
-    setAirNote('Bu cihazda hareket sensörü yok.');
+    setAirNote(tl('Bu cihazda hareket sensörü yok.'));
     return false;
   }
   // iOS 13+: izin sadece kullanıcı dokunuşu sırasında istenebilir (bu fonksiyon dokunuş olayından çağrılır)
@@ -380,7 +399,7 @@ async function ensureAirSensors() {
       // izin penceresi gösterilemedi
     }
     if (result !== 'granted') {
-      setAirNote('Hareket izni verilmedi. Ayarlar › Safari › Hareket ve Yön Erişimi\'ni aç, sonra tekrar dene.');
+      setAirNote(tl('Hareket izni verilmedi. Ayarlar › Safari › Hareket ve Yön Erişimi\'ni aç, sonra tekrar dene.'));
       return false;
     }
   }
@@ -391,7 +410,7 @@ async function ensureAirSensors() {
   // Sensörden hiç olay gelmiyorsa kullanıcıya söyle
   clearTimeout(airAwaitTimer);
   airAwaitTimer = setTimeout(() => {
-    if (airMode && airEvents === 0) setAirNote('Hareket verisi gelmiyor. Ayarlar › Safari › Hareket ve Yön Erişimi\'ni kontrol et.');
+    if (airMode && airEvents === 0) setAirNote(tl('Hareket verisi gelmiyor. Ayarlar › Safari › Hareket ve Yön Erişimi\'ni kontrol et.'));
   }, 2500);
   return true;
 }
@@ -403,7 +422,7 @@ function onAirOrientation(e) {
   // Ayar için: "Gecikme ayrıntıları" açıksa sensör hızı gösterilir (iPhone'da genelde 60 Hz)
   if (airEvents === 120 && settings.hud) {
     const hz = Math.round(120 / ((performance.now() - airFirstAt) / 1000));
-    setAirNote(`Sensör: ${hz} Hz`);
+    setAirNote(tl('Sensör: {hz} Hz', { hz }));
     report('air-rate', { hz });
   }
   if (!airPointing || !airMode) return;
@@ -730,7 +749,9 @@ if (window.visualViewport) {
 }
 
 // Safari'nin yakınlaştırma / sayfa kaydırma hareketlerini engelle
-document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturestart', (e) => {
+  if (!$('main').hidden) e.preventDefault(); // kontrol yüzeyinde sayfa yakınlaşmasın; rehber ve PIN sayfalarında yakınlaştırma serbest
+});
 // Kaydırılabilir alanlar (kumanda ekranı, yazı kutusu, tuş şeridi) hariç sayfa kaymasın
 document.addEventListener('touchmove', (e) => {
   if (!$('main').hidden && !e.target.closest('#v-remote, #v-apps, #v-share, #typer, #clipText, .keys.scroll, .sheet, .shot-box')) e.preventDefault();
@@ -757,6 +778,7 @@ $('retryBtn').onclick = () => {
 // ============================================================ JSON komutları (klavye, medya)
 function sendJson(obj) {
   if (window.__preview) (window.__sent ??= []).push(obj); // önizlemede gönderilecekler incelenebilsin
+  if (obj.type !== 'tv' && tvUi && tvUi.json(obj)) return true; // hedef TV ise klavye TV'ye yazar
   if (!connected) return false;
   ws.send(JSON.stringify(obj));
   lastSend = performance.now();
@@ -772,8 +794,12 @@ function showView(name) {
   const dir = currentViewName && currentViewName !== name ? Math.sign(order.indexOf(name) - order.indexOf(currentViewName)) : 0;
   $('main').style.setProperty('--dx', `${dir * 26}px`);
   currentViewName = name;
+  if (tvUi) tvUi.onView();
   for (const [k, el] of Object.entries(views)) el.hidden = k !== name;
-  for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('on', b.dataset.view === name);
+  for (const b of document.querySelectorAll('#tabs button')) {
+    b.classList.toggle('on', b.dataset.view === name);
+    b.setAttribute('aria-current', b.dataset.view === name ? 'page' : 'false');
+  }
   try {
     localStorage.setItem('view', name);
   } catch {
@@ -846,7 +872,7 @@ function sendChar(ch) {
     // Ctrl/Alt/Win + harf: kısayol (ör. ctrl+c). Shift de açıksa değiştirici olarak eklenir (ctrl+shift+t).
     sendJson({ type: 'combo', char: ch, mods: shiftOn() && /\p{L}/u.test(ch) ? [...mods, 'shift'] : mods });
   } else {
-    sendJson({ type: 'text', text: shiftOn() ? ch.toLocaleUpperCase('tr') : ch });
+    sendJson({ type: 'text', text: shiftOn() ? ch.toLocaleUpperCase(kbLocale()) : ch });
   }
   clearMods();
 }
@@ -857,27 +883,48 @@ function sendNamedKey(key) {
 
 // ---- tuş düzenleri (Türkçe Q). Metin = karakter tuşu; nesne = özel tuş
 const K = {
-  shift: { t: 'shift', cls: 'fn wide shift', icon: 'i-shift', label: 'Shift' },
-  bksp: { t: 'key', key: 'backspace', cls: 'fn wide', icon: 'i-backspace', label: 'Sil', repeat: true },
-  enter: { t: 'key', key: 'enter', cls: 'fn enter', icon: 'i-return', label: 'Enter' },
-  space: { t: 'key', key: 'space', cls: 'space', text: 'boşluk', repeat: true },
+  shift: { t: 'shift', cls: 'fn wide shift', icon: 'i-shift', label: tl('Shift') },
+  bksp: { t: 'key', key: 'backspace', cls: 'fn wide', icon: 'i-backspace', label: tl('Sil'), repeat: true },
+  enter: { t: 'key', key: 'enter', cls: 'fn enter', icon: 'i-return', label: tl('Enter') },
+  space: { t: 'key', key: 'space', cls: 'space', text: tl('boşluk'), repeat: true },
   n123: { t: 'layer', to: 'num', cls: 'fn', text: '123' },
   abc: { t: 'layer', to: 'abc', cls: 'fn', text: 'ABC' },
   sym: { t: 'layer', to: 'sym', cls: 'fn wide', text: '#+=' },
   num: { t: 'layer', to: 'num', cls: 'fn wide', text: '123' },
-  fn: { t: 'layer', to: 'fn', cls: 'fn', text: 'Fn' },
+  fn: { t: 'layer', to: 'fn', cls: 'fn', text: tl('Fn') },
 };
 const named = (key, text) => ({ t: 'key', key, cls: 'fn small', text, repeat: key === 'delete' });
 const combo = (char, text) => ({ t: 'combo', char, cls: 'fn small', text });
 const bottom = (first) => [first, K.fn, ',', K.space, '.', K.enter];
+// Ekran klavyesi düzeni: 'tr' = Türkçe Q, 'us' = İngilizce QWERTY. Ayarlar henüz yüklenmediği için doğrudan depodan okunur.
+function kbKind() {
+  try {
+    const v = JSON.parse(localStorage.getItem('settings') || '{}').kbLayout;
+    if (v === 'tr' || v === 'us') return v;
+  } catch {
+    // bozuk kayıt
+  }
+  return lang === 'tr' ? 'tr' : 'us';
+}
+// Büyük harf dönüşümü düzene göre: Türkçede i → İ, ı → I
+const kbLocale = () => (kbKind() === 'tr' ? 'tr' : 'en');
+const upper = (s) => s.toLocaleUpperCase(lang === 'tr' ? 'tr' : undefined);
 const LAYOUTS = {
-  abc: [[...'qwertyuıopğü'], [...'asdfghjklşi'], [K.shift, ...'zxcvbnmöç', K.bksp], bottom(K.n123)],
-  num: [[...'1234567890'], [...'-/:;()₺&@"'], [K.sym, ...".,?!'", K.bksp], bottom(K.abc)],
-  sym: [[...'[]{}#%^*+='], [...'_\\|~<>€$£`'], [K.num, ...".,?!'", K.bksp], bottom(K.abc)],
+  get abc() {
+    return kbKind() === 'tr'
+      ? [[...'qwertyuıopğü'], [...'asdfghjklşi'], [K.shift, ...'zxcvbnmöç', K.bksp], bottom(K.n123)]
+      : [[...'qwertyuiop'], [...'asdfghjkl'], [K.shift, ...'zxcvbnm', K.bksp], bottom(K.n123)];
+  },
+  get num() {
+    return [[...'1234567890'], [...(kbKind() === 'tr' ? '-/:;()₺&@"' : '-/:;()$&@"')], [K.sym, ...".,?!'", K.bksp], bottom(K.abc)];
+  },
+  get sym() {
+    return [[...'[]{}#%^*+='], [...(kbKind() === 'tr' ? '_\\|~<>€$£`' : '_\\|~<>€£¥•')], [K.num, ...".,?!'", K.bksp], bottom(K.abc)];
+  },
   fn: [
     Array.from({ length: 12 }, (_, i) => named('f' + (i + 1), 'F' + (i + 1))),
     [named('home', 'home'), named('end', 'end'), named('pageup', 'pg up'), named('pagedown', 'pg dn'), named('insert', 'ins'), named('delete', 'del'), named('printscreen', 'prt sc')],
-    [combo('z', 'Geri al'), combo('x', 'Kes'), combo('c', 'Kopyala'), combo('v', 'Yapıştır'), combo('a', 'Tümü'), K.bksp],
+    [combo('z', tl('Geri al')), combo('x', tl('Kes')), combo('c', tl('Kopyala')), combo('v', tl('Yapıştır')), combo('a', tl('Tümü')), K.bksp],
     bottom(K.abc),
   ],
 };
@@ -886,6 +933,7 @@ let layer = 'abc';
 function renderKb() {
   kbEl.textContent = '';
   kbEl.dataset.layer = layer;
+  kbEl.dataset.kb = kbKind();
   for (const row of LAYOUTS[layer]) {
     const r = document.createElement('div');
     r.className = 'kb-row';
@@ -896,7 +944,7 @@ function renderKb() {
         b.className = 'kk ch';
         b.textContent = k;
         // Harfler shift'e göre büyük görünür (Türkçe: i → İ, ı → I)
-        b.dataset.up = k.toLocaleUpperCase('tr');
+        b.dataset.up = k.toLocaleUpperCase(kbLocale());
         b._k = { t: 'char', ch: k };
       } else {
         b.className = 'kk ' + (k.cls || '');
@@ -1177,8 +1225,8 @@ function renderMedia() {
   if (views.remote.hidden) return;
   const active = !!media.active;
   $('np').classList.toggle('empty', !active || !$('npThumb').getAttribute('src'));
-  $('npTitle').textContent = active ? media.title || 'Başlıksız' : 'Çalan bir şey yok';
-  $('npArtist').textContent = active ? media.artist || '' : 'Bilgisayarda bir şey oynatınca burada görünür';
+  $('npTitle').textContent = active ? media.title || tl('Başlıksız') : tl('Çalan bir şey yok');
+  $('npArtist').textContent = active ? media.artist || '' : tl('Bilgisayarda bir şey oynatınca burada görünür');
   $('npApp').textContent = active ? media.app || '' : '';
   $('ppBtn').classList.toggle('playing', active && !!media.playing);
   const dur = media.duration || 0;
@@ -1277,7 +1325,7 @@ function coverArt(g) {
   el.className = 'cover-art ' + g.store;
   el.style.setProperty('--h', String(nameHue(g.name)));
   const ini = document.createElement('b');
-  ini.textContent = g.name.trim().charAt(0).toLocaleUpperCase('tr');
+  ini.textContent = upper(g.name.trim().charAt(0));
   el.append(ini);
   fillCover(el, g.id);
   return el;
@@ -1331,7 +1379,7 @@ function renderRecent() {
       } else {
         icon = document.createElement('div');
         icon.className = 'initial';
-        icon.textContent = it.name.trim().charAt(0).toLocaleUpperCase('tr');
+        icon.textContent = upper(it.name.trim().charAt(0));
       }
       b.append(icon, Object.assign(document.createElement('span'), { textContent: it.name }));
       pressFeedback(b);
@@ -1361,7 +1409,7 @@ function renderApps() {
     }),
   );
   const target = searchable.find((a) => a.id === searchTarget);
-  searchInput.placeholder = target ? `${target.name} içinde ara · uygulama bul` : 'Uygulama bul';
+  searchInput.placeholder = target ? tl('{name} içinde ara · uygulama bul', { name: target.name }) : tl('Uygulama bul');
 
   // Hızlı başlat
   $('tiles').replaceChildren(
@@ -1402,14 +1450,14 @@ function renderApps() {
   renderRecent();
 
   // Bu bilgisayardaki uygulamalar (arama kutusuna göre süzülür)
-  $('browserNote').textContent = `· web siteleri ${appsData.browser} açılır`;
+  $('browserNote').textContent = appsData.chrome === false ? tl('· web siteleri varsayılan tarayıcıda açılır') : tl("· web siteleri Chrome'da açılır");
   const filter = trLower(searchInput.value.trim());
   const items = appsData.installed.filter((a) => !filter || trLower(a.name).includes(filter));
   const list = $('appList');
   if (!items.length) {
     const li = document.createElement('li');
     li.className = 'muted-row';
-    li.textContent = filter ? 'Eşleşen uygulama yok. "Ara"ya basarsan seçili serviste aranır.' : 'Başlat menüsünde uygulama bulunamadı.';
+    li.textContent = filter ? tl('Eşleşen uygulama yok. "Ara"ya basarsan seçili serviste aranır.') : tl('Başlat menüsünde uygulama bulunamadı.');
     list.replaceChildren(li);
     return;
   }
@@ -1419,7 +1467,7 @@ function renderApps() {
       const b = document.createElement('button');
       const initial = document.createElement('span');
       initial.className = 'initial';
-      initial.textContent = a.name.trim().charAt(0).toLocaleUpperCase('tr');
+      initial.textContent = upper(a.name.trim().charAt(0));
       const name = document.createElement('span');
       name.className = 'name';
       name.textContent = a.name;
@@ -1435,7 +1483,7 @@ function renderApps() {
 
 function launchApp(id, el) {
   if (!sendJson({ type: 'launch', id, fullscreen: settings.autoFullscreen })) {
-    toast('Bilgisayara bağlı değil');
+    toast(tl('Bilgisayara bağlı değil'));
     return;
   }
   recordRecent(id);
@@ -1450,7 +1498,7 @@ function onApps(m) {
 }
 
 function onLaunched(m) {
-  toast(m.search ? `${m.name} içinde aranıyor…` : `${m.name} açılıyor…`);
+  toast(m.search ? tl('{name} içinde aranıyor…', { name: m.name }) : tl('{name} açılıyor…', { name: m.name }));
   // Video/müzik servisi açıldıysa kumandaya geç: bir sonraki iş muhtemelen oynat/duraklat
   if (m.media) setTimeout(() => showView('remote'), 700);
 }
@@ -1461,7 +1509,7 @@ $('searchForm').addEventListener('submit', (e) => {
   const q = searchInput.value.trim();
   if (!q) return;
   if (!sendJson({ type: 'search', id: searchTarget, q })) {
-    toast('Bilgisayara bağlı değil');
+    toast(tl('Bilgisayara bağlı değil'));
     return;
   }
   haptic();
@@ -1469,7 +1517,7 @@ $('searchForm').addEventListener('submit', (e) => {
 });
 
 // ============================================================ ayarlar
-const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1 };
+const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false };
 const settings = { ...SETTINGS_DEFAULT };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('settings') || '{}'));
@@ -1500,6 +1548,11 @@ function applySettings() {
   $('setAutoRemote').checked = settings.autoRemote;
   $('setSens').value = settings.sens;
   $('setSensOut').textContent = `${Number(settings.sens).toFixed(1)}×`;
+  for (const b of document.querySelectorAll('#setKbLayout [data-v]')) b.classList.toggle('on', b.dataset.v === settings.kbLayout);
+  if (kbEl.dataset.kb !== settings.kbLayout) renderKb(); // düzen değişti: klavye yeniden çizilir
+  for (const b of document.querySelectorAll('#setLang [data-v]')) b.classList.toggle('on', b.dataset.v === langPref());
+  $('nudge').hidden = !settings.nudge;
+  $('setNudge').checked = settings.nudge;
   $('setAirSens').value = settings.airSens;
   $('setAirSensOut').textContent = `${Number(settings.airSens).toFixed(1)}×`;
   air.setSens(Number(settings.airSens));
@@ -1523,6 +1576,22 @@ const bindSetting = (id, key, parse) =>
 bindSetting('setSens', 'sens', (el) => Number(el.value));
 bindSetting('setScroll', 'scroll', (el) => Number(el.value));
 bindSetting('setAirSens', 'airSens', (el) => Number(el.value));
+for (const b of document.querySelectorAll('#setKbLayout [data-v]')) {
+  b.onclick = () => {
+    settings.kbLayout = b.dataset.v;
+    saveSettings();
+    applySettings();
+    haptic();
+  };
+}
+// Dil değişince sayfa yeniden yüklenir (tüm metinler yeni dilde kurulur)
+for (const b of document.querySelectorAll('#setLang [data-v]')) {
+  b.onclick = () => {
+    haptic();
+    setLangPref(b.dataset.v);
+    location.reload();
+  };
+}
 for (const b of document.querySelectorAll('#setScreen [data-v]')) {
   b.onclick = () => {
     settings.screenMin = b.dataset.v;
@@ -1531,7 +1600,7 @@ for (const b of document.querySelectorAll('#setScreen [data-v]')) {
     haptic();
   };
 }
-for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote']]) {
+for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote'], ['setNudge', 'nudge']]) {
   $(id).addEventListener('change', () => {
     settings[key] = $(id).checked;
     saveSettings();
@@ -1548,7 +1617,7 @@ $('bedBtn').onclick = () => {
   applySettings();
 };
 setInterval(applySettings, 60_000); // "akşamları otomatik" için
-$('aboutLine').textContent = 'CouchRemote · ayarlar bu telefonda saklanır';
+$('aboutLine').textContent = tl('CouchRemote · ayarlar bu telefonda saklanır');
 
 // ============================================================ alttan açılan paneller
 let sheetCloseTimer = 0;
@@ -1678,7 +1747,7 @@ async function copyText(text, okMsg) {
     await navigator.clipboard.writeText(text);
     toast(okMsg);
   } catch {
-    toast('Kopyalanamadı');
+    toast(tl('Kopyalanamadı'));
   }
 }
 function renderSiri() {
@@ -1695,17 +1764,17 @@ function renderSiri() {
     label.append(small);
     row.append(label);
     row.insertAdjacentHTML('beforeend', '<svg class="ic sm"><use href="#i-clipboard"/></svg>');
-    row.onclick = () => copyText(url, 'Adres kopyalandı');
+    row.onclick = () => copyText(url, tl('Adres kopyalandı'));
     box.append(row);
   }
 }
 $('openSiri').onclick = () => {
   closeSheets();
   openSheet('siriSheet');
-  if (!siriInfo && !sendJson({ type: 'shortcut-info' })) toast('Bilgisayara bağlı değil');
+  if (!siriInfo && !sendJson({ type: 'shortcut-info' })) toast(tl('Bilgisayara bağlı değil'));
   else if (siriInfo) renderSiri();
 };
-$('siriCopyToken').onclick = () => (siriInfo ? copyText(`Bearer ${siriInfo.token}`, 'Jeton başlığı kopyalandı') : toast('Bilgi yükleniyor…'));
+$('siriCopyToken').onclick = () => (siriInfo ? copyText(`Bearer ${siriInfo.token}`, tl('Jeton başlığı kopyalandı')) : toast(tl('Bilgi yükleniyor…')));
 $('settingsBtn').onclick = () => openSheet('settingsSheet');
 $('timerPill').onclick = () => openSheet('powerSheet');
 
@@ -1723,7 +1792,7 @@ function confirmDialog(text) {
 }
 
 // ============================================================ güç menüsü
-const POWER_TOAST = { screenoff: 'Ekran kapatıldı', lock: 'Bilgisayar kilitlendi', sleep: 'Bilgisayar uyutuluyor', restart: 'Yeniden başlatılıyor', shutdown: 'Bilgisayar kapatılıyor' };
+const POWER_TOAST = { screenoff: tl('Ekran kapatıldı'), lock: tl('Bilgisayar kilitlendi'), sleep: tl('Bilgisayar uyutuluyor'), restart: tl('Yeniden başlatılıyor'), shutdown: tl('Bilgisayar kapatılıyor') };
 for (const b of document.querySelectorAll('[data-power]')) {
   pressFeedback(b);
   b.onclick = async () => {
@@ -1734,7 +1803,7 @@ for (const b of document.querySelectorAll('[data-power]')) {
       confirm = true;
     }
     if (!sendJson({ type: 'power', action, confirm })) {
-      toast('Bilgisayara bağlı değil');
+      toast(tl('Bilgisayara bağlı değil'));
       return;
     }
     toast(POWER_TOAST[action]);
@@ -1762,18 +1831,18 @@ for (const b of document.querySelectorAll('#timerAction [data-action]')) {
   };
 }
 $('timerStart').onclick = () => {
-  if (!sendJson({ type: 'timer', minutes: timerMin, action: timerAction })) return toast('Bilgisayara bağlı değil');
+  if (!sendJson({ type: 'timer', minutes: timerMin, action: timerAction })) return toast(tl('Bilgisayara bağlı değil'));
   haptic();
   closeSheets();
-  toast(`Zamanlayıcı kuruldu: ${timerMin} dk`);
+  toast(tl('Zamanlayıcı kuruldu: {min} dk', { min: timerMin }));
 };
 $('timerCancel').onclick = () => {
   if (sendJson({ type: 'timer', cancel: true })) {
     haptic();
-    toast('Zamanlayıcı iptal edildi');
+    toast(tl('Zamanlayıcı iptal edildi'));
   }
 };
-const TIMER_WHAT = { stop: 'sonra medya durur, ekran kapanır', sleep: 'sonra bilgisayar uyur', shutdown: 'sonra bilgisayar kapanır' };
+const TIMER_WHAT = { stop: tl('sonra medya durur, ekran kapanır'), sleep: tl('sonra bilgisayar uyur'), shutdown: tl('sonra bilgisayar kapanır') };
 function fmtTimer(sec) {
   sec = Math.ceil(sec);
   const h = Math.floor(sec / 3600);
@@ -1784,7 +1853,7 @@ function fmtTimer(sec) {
 function onTimer(m) {
   timerState = m;
   timerAt = performance.now();
-  if (m.fired) toast('Uyku zamanlayıcısı doldu');
+  if (m.fired) toast(tl('Uyku zamanlayıcısı doldu'));
   renderTimer();
 }
 function renderTimer() {
@@ -1873,7 +1942,7 @@ function renderOutList() {
       haptic();
       sendJson({ type: 'audio-device', id: d.id });
       closeSheets();
-      toast(`Ses çıkışı: ${main}`);
+      toast(tl('Ses çıkışı: {name}', { name: main }));
     };
     box.append(row);
   }
@@ -1886,18 +1955,18 @@ function requestShot(monitor = shotMonitor) {
   shotMonitor = monitor;
   if (!sendJson({ type: 'screenshot', ...(monitor === null ? {} : { monitor }) })) {
     $('shotLoad').hidden = false;
-    $('shotLoad').textContent = 'Bilgisayara bağlı değil';
+    $('shotLoad').textContent = tl('Bilgisayara bağlı değil');
     return;
   }
   $('shotLoad').hidden = false;
-  $('shotLoad').textContent = 'Ekran alınıyor…';
+  $('shotLoad').textContent = tl('Ekran alınıyor…');
   $('shotRefresh').disabled = true;
 }
 function renderShotMonitors(count) {
   const box = $('shotMons');
   box.hidden = count < 2;
   if (count < 2) return;
-  const items = [['Tümü', null], ...Array.from({ length: count }, (_, i) => [String(i + 1), i])];
+  const items = [[tl('Tümü'), null], ...Array.from({ length: count }, (_, i) => [String(i + 1), i])];
   box.replaceChildren(
     ...items.map(([label, idx]) => {
       const b = document.createElement('button');
@@ -1916,7 +1985,7 @@ function onShot(m) {
   renderShotMonitors(m.monitors ?? 1);
   if (m.error || !m.jpeg) {
     $('shotLoad').hidden = false;
-    $('shotLoad').textContent = m.error || 'Ekran alınamadı';
+    $('shotLoad').textContent = m.error || tl('Ekran alınamadı');
     return;
   }
   const bin = atob(m.jpeg);
@@ -1957,7 +2026,7 @@ $('shotShare').onclick = async () => {
   const file = new File([shotBlob], `ekran-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.jpg`, { type: 'image/jpeg' });
   try {
     if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file] });
-    else toast('Görüntüye uzun basıp "Fotoğraflara Kaydet"i seç');
+    else toast(tl('Görüntüye uzun basıp "Fotoğraflara Kaydet"i seç'));
   } catch {
     // paylaşım iptal edildi
   }
@@ -1982,12 +2051,12 @@ function buildMixRow(a) {
   top.className = 'mix-top';
   const name = document.createElement('span');
   name.className = 'mix-name';
-  name.textContent = a.name;
+  name.textContent = tl(a.name);
   const pct = document.createElement('span');
   pct.className = 'mix-pct';
   const mute = document.createElement('button');
   mute.className = 'mix-mute';
-  mute.setAttribute('aria-label', `${a.name} sesini aç/kapat`);
+  mute.setAttribute('aria-label', tl('{name} sesini aç/kapat', { name: tl(a.name) }));
   mute.innerHTML = '<svg class="ic sm on-icon"><use href="#i-vol-down"/></svg><svg class="ic sm off-icon"><use href="#i-mute"/></svg>';
   top.append(mute, name, pct);
   const range = document.createElement('input');
@@ -1995,7 +2064,7 @@ function buildMixRow(a) {
   range.min = 0;
   range.max = 100;
   range.step = 1;
-  range.setAttribute('aria-label', `${a.name} ses seviyesi`);
+  range.setAttribute('aria-label', tl('{name} ses seviyesi', { name: tl(a.name) }));
   row.append(top, range);
 
   range.addEventListener('pointerdown', () => mixDragging.add(a.id));
@@ -2030,7 +2099,7 @@ function updateMixRow(refs, a) {
   refs.mute.classList.toggle('off', a.muted);
   if (!mixDragging.has(a.id)) {
     refs.range.value = Math.round(a.level * 100);
-    refs.pct.textContent = a.muted ? 'Sessiz' : `${Math.round(a.level * 100)}%`;
+    refs.pct.textContent = a.muted ? tl('Sessiz') : `${Math.round(a.level * 100)}%`;
   }
 }
 function renderMixer(rebuild) {
@@ -2057,8 +2126,8 @@ function onMixer(m) {
   const rebuild = mixKey(next) !== mixKey(mixApps);
   mixApps = next;
   $('mixBtn').hidden = mixApps.length === 0;
-  const names = mixApps.filter((a) => a.active).map((a) => a.name);
-  $('mixSummary').textContent = names.length ? names.slice(0, 3).join(', ') : `${mixApps.length} uygulama`;
+  const names = mixApps.filter((a) => a.active).map((a) => tl(a.name));
+  $('mixSummary').textContent = names.length ? names.slice(0, 3).join(', ') : tl('{n} uygulama', { n: mixApps.length });
   if (!$('mixerSheet').hidden) renderMixer(rebuild);
 }
 $('mixBtn').onclick = () => {
@@ -2078,16 +2147,16 @@ $('outBtn').onclick = () => {
 // "Tam ekran" ve ses düğmeleri Kumanda ekranında hep var; burada sadece uygulamaya özel olanlar.
 const ARROWS = { back: { key: 'left' }, fwd: { key: 'right' } }; // Netflix, Prime, Disney+, tabii, Exxen: ok tuşları 10 sn
 const PROFILES = {
-  netflix: { name: 'Netflix', seek: ARROWS, buttons: [{ label: 'İntroyu atla', char: 's', accent: true }, { label: 'Sonraki bölüm', char: 'N' }, { label: 'Sessiz', char: 'm' }] },
-  youtube: { name: 'YouTube', seek: { back: { char: 'j' }, fwd: { char: 'l' } }, buttons: [{ label: 'Altyazı', char: 'c' }, { label: 'Yavaşlat', char: '<' }, { label: 'Hızlandır', char: '>' }, { label: 'Sinema modu', char: 't' }, { label: 'Mini oynatıcı', char: 'i' }, { label: 'Önceki video', char: 'P' }, { label: 'Sonraki video', char: 'N', accent: true }] },
-  ytmusic: { name: 'YouTube Music', buttons: [{ label: 'Karışık', char: 's' }, { label: 'Tekrar', char: 'r' }, { label: 'Sessiz', char: 'm' }] },
-  primevideo: { name: 'Prime Video', seek: ARROWS, buttons: [{ label: 'Altyazı', char: 'c' }, { label: 'Sessiz', char: 'm' }] },
-  disneyplus: { name: 'Disney+', seek: ARROWS, buttons: [{ label: 'Sessiz', char: 'm' }] },
-  tabii: { name: 'tabii', seek: ARROWS, buttons: [{ label: 'Sessiz', char: 'm' }] },
-  exxen: { name: 'Exxen', seek: ARROWS, buttons: [{ label: 'Sessiz', char: 'm' }] },
-  twitch: { name: 'Twitch', buttons: [{ label: 'Sinema modu', char: 't', mods: ['alt'] }, { label: 'Sessiz', char: 'm' }] },
-  spotify: { name: 'Spotify', buttons: [{ label: 'Karışık', char: 's', mods: ['ctrl'] }, { label: 'Tekrar', char: 'r', mods: ['ctrl'] }] },
-  vlc: { name: 'VLC', seek: { back: { key: 'left', mods: ['alt'] }, fwd: { key: 'right', mods: ['alt'] } }, buttons: [{ label: 'Altyazı', char: 'v' }, { label: 'Ses kanalı', char: 'b' }, { label: 'Yavaşlat', char: '[' }, { label: 'Hızlandır', char: ']' }, { label: 'Normal hız', char: '=' }, { label: 'Önceki', char: 'p' }, { label: 'Sonraki', char: 'n' }, { label: 'En-boy oranı', char: 'a' }] },
+  netflix: { name: 'Netflix', seek: ARROWS, buttons: [{ label: tl('İntroyu atla'), char: 's', accent: true }, { label: tl('Sonraki bölüm'), char: 'N' }, { label: tl('Sessiz'), char: 'm' }] },
+  youtube: { name: 'YouTube', seek: { back: { char: 'j' }, fwd: { char: 'l' } }, buttons: [{ label: tl('Altyazı'), char: 'c' }, { label: tl('Yavaşlat'), char: '<' }, { label: tl('Hızlandır'), char: '>' }, { label: tl('Sinema modu'), char: 't' }, { label: tl('Mini oynatıcı'), char: 'i' }, { label: tl('Önceki video'), char: 'P' }, { label: tl('Sonraki video'), char: 'N', accent: true }] },
+  ytmusic: { name: 'YouTube Music', buttons: [{ label: tl('Karışık'), char: 's' }, { label: tl('Tekrar'), char: 'r' }, { label: tl('Sessiz'), char: 'm' }] },
+  primevideo: { name: 'Prime Video', seek: ARROWS, buttons: [{ label: tl('Altyazı'), char: 'c' }, { label: tl('Sessiz'), char: 'm' }] },
+  disneyplus: { name: 'Disney+', seek: ARROWS, buttons: [{ label: tl('Sessiz'), char: 'm' }] },
+  tabii: { name: 'tabii', seek: ARROWS, buttons: [{ label: tl('Sessiz'), char: 'm' }] },
+  exxen: { name: 'Exxen', seek: ARROWS, buttons: [{ label: tl('Sessiz'), char: 'm' }] },
+  twitch: { name: 'Twitch', buttons: [{ label: tl('Sinema modu'), char: 't', mods: ['alt'] }, { label: tl('Sessiz'), char: 'm' }] },
+  spotify: { name: 'Spotify', buttons: [{ label: tl('Karışık'), char: 's', mods: ['ctrl'] }, { label: tl('Tekrar'), char: 'r', mods: ['ctrl'] }] },
+  vlc: { name: 'VLC', seek: { back: { key: 'left', mods: ['alt'] }, fwd: { key: 'right', mods: ['alt'] } }, buttons: [{ label: tl('Altyazı'), char: 'v' }, { label: tl('Ses kanalı'), char: 'b' }, { label: tl('Yavaşlat'), char: '[' }, { label: tl('Hızlandır'), char: ']' }, { label: tl('Normal hız'), char: '=' }, { label: tl('Önceki'), char: 'p' }, { label: tl('Sonraki'), char: 'n' }, { label: tl('En-boy oranı'), char: 'a' }] },
 };
 let currentProfile = null;
 let currentFullscreen = false;
@@ -2110,7 +2179,7 @@ function onContext(m) {
   // Bir servis öne geldiğinde (bağlanırken gelen ilk durum hariç) kumandaya geç
   if (p && !first && was === 'none' && settings.autoRemote && views.kbd.hidden) showView('remote'); // yazarken sekme değişmesin
   if (!p) return;
-  $('ctxTitle').textContent = `${p.name} için`;
+  $('ctxTitle').textContent = tl('{name} için', { name: p.name });
   $('ctxBtns').replaceChildren(
     ...p.buttons.map((b) => {
       const el = document.createElement('button');
@@ -2126,7 +2195,7 @@ function onContext(m) {
 
 function renderFullscreenPill() {
   const label = $('fsPill')?.querySelector('span');
-  if (label) label.textContent = currentFullscreen ? 'Küçült' : 'Tam ekran';
+  if (label) label.textContent = currentFullscreen ? tl('Küçült') : tl('Tam ekran');
 }
 
 // ±10 sn: uygulamanın kendi tuşu varsa (ör. YouTube j / l) ona gider, yoksa genel medya kontrolüne
@@ -2143,7 +2212,7 @@ function seekBy(sec) {
 // ============================================================ aktar: pano
 let clipWaiter = null;
 $('clipGet').onclick = async () => {
-  if (!connected) return toast('Bilgisayara bağlı değil');
+  if (!connected) return toast(tl('Bilgisayara bağlı değil'));
   haptic();
   const textPromise = new Promise((resolve, reject) => {
     clipWaiter = { resolve, reject };
@@ -2157,13 +2226,13 @@ $('clipGet').onclick = async () => {
     } else {
       await navigator.clipboard.writeText(await textPromise);
     }
-    toast('PC panosu telefona kopyalandı');
+    toast(tl('PC panosu telefona kopyalandı'));
   } catch {
     try {
       $('clipText').value = await textPromise;
-      toast('Metin kutuya kondu, oradan kopyalayabilirsin');
+      toast(tl('Metin kutuya kondu, oradan kopyalayabilirsin'));
     } catch (e) {
-      toast(e.message === 'zaman aşımı' ? 'Pano alınamadı' : e.message);
+      toast(e.message === 'zaman aşımı' ? tl('Pano alınamadı') : e.message);
     }
   }
 };
@@ -2177,22 +2246,22 @@ $('clipSend').onclick = async () => {
   haptic();
   try {
     const t = await navigator.clipboard.readText();
-    if (!t) return toast('Telefonun panosu boş');
-    if (!sendJson({ type: 'clipboard-set', text: t })) toast('Bilgisayara bağlı değil');
+    if (!t) return toast(tl('Telefonun panosu boş'));
+    if (!sendJson({ type: 'clipboard-set', text: t })) toast(tl('Bilgisayara bağlı değil'));
   } catch {
-    toast('Pano okunamadı; metni kutuya yapıştır');
+    toast(tl('Pano okunamadı; metni kutuya yapıştır'));
   }
 };
 function sendClipText(paste) {
   const t = $('clipText').value;
-  if (!t) return toast('Önce bir metin yaz veya yapıştır');
+  if (!t) return toast(tl('Önce bir metin yaz veya yapıştır'));
   if (sendJson({ type: 'clipboard-set', text: t, paste })) haptic();
-  else toast('Bilgisayara bağlı değil');
+  else toast(tl('Bilgisayara bağlı değil'));
 }
 $('clipTextSend').onclick = () => sendClipText(false);
 $('clipTextPaste').onclick = () => sendClipText(true);
 function onClipboardSet(m) {
-  toast(m.ok ? (m.paste ? 'Gönderildi ve yapıştırıldı' : 'PC panosuna kopyalandı') : 'Pano ayarlanamadı');
+  toast(m.ok ? (m.paste ? tl('Gönderildi ve yapıştırıldı') : tl('PC panosuna kopyalandı')) : tl('Pano ayarlanamadı'));
 }
 
 // ============================================================ aktar: dosya gönderme
@@ -2231,7 +2300,7 @@ function uploadOne(file, token) {
     bar.append(fill);
     const state = document.createElement('div');
     state.className = 'up-state';
-    state.textContent = 'Gönderiliyor…';
+    state.textContent = tl('Gönderiliyor…');
     li.append(name, bar, state);
     const list = $('uploads');
     list.hidden = false;
@@ -2252,17 +2321,17 @@ function uploadOne(file, token) {
         const r = JSON.parse(xhr.responseText);
         li.classList.add('done');
         fill.style.width = '100%';
-        state.textContent = `Kaydedildi: ${r.name}`;
+        state.textContent = tl('Kaydedildi: {name}', { name: r.name });
       } else {
         li.classList.add('fail');
         if (xhr.status === 401) uploadToken = null;
-        state.textContent = xhr.status === 413 ? 'Dosya çok büyük (en fazla 2 GB)' : 'Gönderilemedi';
+        state.textContent = xhr.status === 413 ? tl('Dosya çok büyük (en fazla 2 GB)') : tl('Gönderilemedi');
       }
       resolve();
     };
     xhr.onerror = () => {
       li.classList.add('fail');
-      state.textContent = 'Bağlantı kesildi';
+      state.textContent = tl('Bağlantı kesildi');
       resolve();
     };
     xhr.send(file);
@@ -2276,12 +2345,12 @@ $('filePick').addEventListener('change', async () => {
   try {
     token = await getUploadToken();
   } catch {
-    return toast('Bilgisayara bağlı değil');
+    return toast(tl('Bilgisayara bağlı değil'));
   }
   for (const f of files) await uploadOne(f, token);
   haptic();
 });
-$('openUploads').onclick = () => (sendJson({ type: 'open-uploads' }) ? toast('Klasör bilgisayarda açıldı') : toast('Bilgisayara bağlı değil'));
+$('openUploads').onclick = () => (sendJson({ type: 'open-uploads' }) ? toast(tl('Klasör bilgisayarda açıldı')) : toast(tl('Bilgisayara bağlı değil')));
 
 // ============================================================ PIN ile eşleşme
 function showPin(reason) {
@@ -2318,7 +2387,7 @@ $('pinBtn').onclick = async () => {
   if (pinBusy) return;
   const pin = $('pinInput').value.trim();
   if (!/^\d{6}$/.test(pin)) {
-    $('pinErr').textContent = '6 haneli PIN gir.';
+    $('pinErr').textContent = tl('6 haneli PIN gir.');
     shakePin();
     return;
   }
@@ -2332,7 +2401,7 @@ $('pinBtn').onclick = async () => {
     report('paired', { pairedVia: 'pin' });
     start();
   } catch (e) {
-    $('pinErr').textContent = e.message;
+    $('pinErr').textContent = tl(e.message);
     shakePin();
     $('pinInput').value = '';
     renderPinBoxes();
@@ -2389,13 +2458,13 @@ async function init() {
     try {
       identity = await pair({ code: startCode });
       exp.pairedVia = 'start_url kodu';
-      toast('Eşleşme tamam ✓');
+      toast(tl('Eşleşme tamam ✓'));
     } catch (e) {
       exp.pairError = `${e.code ?? ''} ${e.message}`;
-      showPin(e.code === 'expired' ? 'Eşleşme kodunun süresi dolmuş. PC\'deki yönetim sayfasında görünen PIN\'i gir.' : undefined);
+      showPin(e.code === 'expired' ? tl('Eşleşme kodunun süresi dolmuş. PC\'deki yönetim sayfasında görünen PIN\'i gir.') : undefined);
     }
   } else {
-    showPin('Bu ana ekran uygulamasına eşleşme kodu ulaşmadı. PC\'deki yönetim sayfasında görünen PIN\'i gir.');
+    showPin(tl('Bu ana ekran uygulamasına eşleşme kodu ulaşmadı. PC\'deki yönetim sayfasında görünen PIN\'i gir.'));
   }
   // Kod bir kez kullanıldı; adres çubuğunda kalmasın
   if (startCode) history.replaceState(null, '', '/app');
@@ -2408,3 +2477,130 @@ applySettings();
 // Yönetim sayfasındaki tasarım önizlemesi (sadece PC'de, /preview) için ekranlara erişim
 if (location.pathname === '/preview') window.__preview = { onGameArt, air, setAirMode, onShot, onApps, onMixer, onAudioDevices, onSiri: (m) => { siriInfo = m; renderSiri(); }, show, showView, onMedia, onApps, onVolume, onContext, onTimer, openSheet };
 else init();
+
+
+// ============================================================ LG TV (PC aracı)
+tvUi = initTv({ $, sendJson, toast, haptic, tl, openSheet: (id) => openSheet(id), closeSheets: () => closeSheets(), pressFeedback, showView: (n) => showView(n), getView: () => currentViewName, getPc: () => pcConn });
+tvUi.refresh();
+if (window.__preview) Object.assign(window.__preview, { tv: tvUi, setConn });
+
+// ============================================================ erişilebilirlik
+// Süs simgeleri ekran okuyucudan gizlenir; düğmelerin adı metinlerinden / aria-label'dan gelir
+for (const s of document.querySelectorAll('svg.ic')) {
+  s.setAttribute('aria-hidden', 'true');
+  s.setAttribute('focusable', 'false');
+}
+// Ayar kaydırıcılarının adı satır başlığından
+for (const r of document.querySelectorAll('.set-row input[type=range]')) {
+  const label = r.closest('.set-row')?.querySelector('span');
+  if (label && !r.getAttribute('aria-label')) r.setAttribute('aria-label', (label.firstChild?.textContent || label.textContent).trim());
+}
+// Paneller: iletişim kutusu rolü, başlığa bağlı ad, odak panele alınabilir
+for (const sh of document.querySelectorAll('.sheet')) {
+  sh.setAttribute('role', 'dialog');
+  sh.setAttribute('aria-modal', 'true');
+  sh.tabIndex = -1;
+  const h = sh.querySelector('h3');
+  if (h) {
+    h.id ||= `${sh.id}Title`;
+    sh.setAttribute('aria-labelledby', h.id);
+  }
+}
+$('keyPop')?.setAttribute('aria-hidden', 'true');
+
+// Seçili durum ekran okuyucuya bildirilir: segment düğmeleri, çipler, değiştirici tuşlar, sessiz
+const PRESSABLE = '.seg button, .chip-btn, .sk.mod, .kk.shift, #muteBtn';
+const isPressed = (el) => (el.id === 'muteBtn' ? el.classList.contains('muted') : el.classList.contains('on'));
+const syncPressed = (el) => el.setAttribute('aria-pressed', String(isPressed(el)));
+document.querySelectorAll(PRESSABLE).forEach(syncPressed);
+new MutationObserver((records) => {
+  for (const m of records) {
+    if (m.type === 'attributes') {
+      if (m.target.matches?.(PRESSABLE)) syncPressed(m.target);
+    } else {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1) continue;
+        if (n.matches?.(PRESSABLE)) syncPressed(n);
+        n.querySelectorAll?.(PRESSABLE).forEach(syncPressed);
+      }
+    }
+  }
+}).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true });
+
+// Odak yönetimi: panel açılınca odak panele, kapanınca açan düğmeye döner; Esc kapatır (harici klavye / Anahtar Denetimi)
+let sheetOpener = null;
+const baseOpen = openSheet;
+openSheet = (id) => {
+  sheetOpener = document.activeElement;
+  baseOpen(id);
+  $(id).focus({ preventScroll: true });
+};
+const baseClose = closeSheets;
+closeSheets = (fromDrag) => {
+  baseClose(fromDrag);
+  if (sheetOpener?.isConnected) sheetOpener.focus({ preventScroll: true });
+  sheetOpener = null;
+};
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('confirm').hidden) $('confirmNo').click();
+  else if (!$('shotView').hidden) $('shotClose').click();
+  else if (!$('backdrop').hidden) closeSheets();
+});
+
+// Fare tuşları: Enter / Boşluk ile basılır (harici klavye, Anahtar Denetimi)
+for (const el of document.querySelectorAll('.mb')) {
+  const bit = Number(el.dataset.bit);
+  el.addEventListener('keydown', (e) => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.repeat) return;
+    e.preventDefault();
+    el.classList.add('down');
+    buttons |= bit;
+    sendState(now());
+  });
+  el.addEventListener('keyup', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    el.classList.remove('down');
+    buttons &= ~bit;
+    sendState(now());
+  });
+}
+// Touchpad klavyeyle: oklar imleci oynatır (Shift = hızlı), Enter sol tık, Shift+Enter sağ tık
+for (const el of [$('pad'), $('miniPad')]) {
+  el.addEventListener('keydown', (e) => {
+    const dir = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+    if (dir) {
+      e.preventDefault();
+      const step = e.shiftKey ? 120 : 24;
+      sendInput(T.AIR, dir[0] * step, dir[1] * step, now());
+    } else if (e.key === 'Enter' && !e.repeat) {
+      e.preventDefault();
+      click(e.shiftKey ? 2 : 1, now());
+    }
+  });
+}
+// İmleç yön düğmeleri (Ayarlar › Erişilebilirlik): dokunuşla basılı tutunca tekrarlar; VoiceOver etkinleştirmesi (click) tek adım atar
+let nudgeByPointer = false;
+for (const b of document.querySelectorAll('#nudge .nb')) {
+  const [dx, dy] = b.dataset.d.split(',').map(Number);
+  const step = () => sendInput(T.AIR, dx * 22, dy * 22, now());
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    nudgeByPointer = true;
+    b.setPointerCapture(e.pointerId);
+    b.classList.add('down');
+    haptic();
+    withRepeat(step);
+  });
+  const up = () => {
+    b.classList.remove('down');
+    stopRepeat();
+  };
+  b.addEventListener('pointerup', up);
+  b.addEventListener('pointercancel', up);
+  b.addEventListener('click', () => {
+    if (!nudgeByPointer) step(); // dokunuşsuz etkinleştirme (VoiceOver / klavye)
+    nudgeByPointer = false;
+  });
+}
+for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-current', b.classList.contains('on') ? 'page' : 'false');

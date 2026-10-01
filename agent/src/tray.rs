@@ -11,11 +11,11 @@ pub fn start(app: Arc<App>) {
     std::thread::Builder::new()
         .name("tepsi".into())
         .spawn(move || {
-            let connect = MenuItem::new("Telefonu bağla…", true, None);
-            let autostart = CheckMenuItem::new("Windows ile başlat", true, system::autostart_enabled(), None);
-            let revoke_all = MenuItem::new("Tüm telefonların eşleşmesini kaldır…", true, None);
-            let uninstall = MenuItem::new("Kaldır…", system::is_installed_copy(), None);
-            let quit = MenuItem::new("Çıkış", true, None);
+            let connect = MenuItem::new(crate::i18n::pick("Telefonu bağla…", "Connect a phone…"), true, None);
+            let autostart = CheckMenuItem::new(crate::i18n::pick("Windows ile başlat", "Start with Windows"), true, system::autostart_enabled(), None);
+            let revoke_all = MenuItem::new(crate::i18n::pick("Tüm telefonların eşleşmesini kaldır…", "Remove all phone pairings…"), true, None);
+            let uninstall = MenuItem::new(crate::i18n::pick("Kaldır…", "Uninstall…"), system::is_installed_copy(), None);
+            let quit = MenuItem::new(crate::i18n::pick("Çıkış", "Quit"), true, None);
             let menu = Menu::new();
             let _ = menu.append(&connect);
             let _ = menu.append(&autostart);
@@ -65,11 +65,20 @@ pub fn start(app: Arc<App>) {
                     let app3 = app2.clone();
                     std::thread::spawn(move || {
                         if system::message(
-                            "Bu bilgisayarla eşleşmiş TÜM telefonların bağlantısı kesilecek ve eşleşmeleri silinecek. Siri kestirmeleri de çalışmaz olacak.\n\nTelefonlarını yeniden eşleştirmen gerekir. Devam edilsin mi?",
+                            crate::i18n::pick(
+                                "Bu bilgisayarla eşleşmiş TÜM telefonların bağlantısı kesilecek ve eşleşmeleri silinecek. Siri kestirmeleri de çalışmaz olacak.\n\nTelefonlarını yeniden eşleştirmen gerekir. Devam edilsin mi?",
+                                "ALL phones paired with this computer will be disconnected and their pairings deleted. Siri shortcuts will stop working too.\n\nYou'll need to pair your phones again. Continue?",
+                            ),
                             true,
                         ) {
                             app3.revoke_all();
-                            system::message("Tüm eşleşmeler kaldırıldı. Telefonu yeniden bağlamak için tepsi menüsünden \"Telefonu bağla\"yı seç.", false);
+                            system::message(
+                                crate::i18n::pick(
+                                    "Tüm eşleşmeler kaldırıldı. Telefonu yeniden bağlamak için tepsi menüsünden \"Telefonu bağla\"yı seç.",
+                                    "All pairings were removed. To connect a phone again, choose \"Connect a phone\" from the tray menu.",
+                                ),
+                                false,
+                            );
                         }
                     });
                 } else if e.id == uninstall_id {

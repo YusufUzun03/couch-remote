@@ -209,6 +209,8 @@ pub fn setup_router(app: S) -> Router {
         .route("/icon-180.png", get(|State(a): State<S>| async move { png(&a, 180) }))
         .route("/logo.svg", get(|| async { asset("logo.svg") }))
         .route("/api/pair/touch", post(setup_touch))
+        .route("/i18n.js", get(|| async { asset("i18n.js") }))
+        .route("/i18n-en.js", get(|| async { asset("i18n-en.js") }))
         .layer(middleware::from_fn_with_state(app.clone(), guard_setup))
         .layer(middleware::from_fn_with_state(CSP_PAGE, sec_headers))
         .with_state(app)
@@ -260,8 +262,11 @@ pub fn app_router(app: S) -> Router {
         .route("/pair", get(app_page))
         .route("/app.js", get(|| async { asset("app.js") }))
         .route("/air.js", get(|| async { asset("air.js") }))
+        .route("/tv.js", get(|| async { asset("tv.js") }))
         .route("/app.css", get(|| async { asset("app.css") }))
         .route("/ui.css", get(|| async { asset("ui.css") }))
+        .route("/i18n.js", get(|| async { asset("i18n.js") }))
+        .route("/i18n-en.js", get(|| async { asset("i18n-en.js") }))
         .route("/sw.js", get(|| async { asset("sw.js") }))
         .route("/apple-touch-icon.png", get(|State(a): State<S>| async move { png(&a, 180) }))
         .route("/icon-180.png", get(|State(a): State<S>| async move { png(&a, 180) }))
@@ -448,6 +453,14 @@ pub const ACTIONS: &[(&str, &str, &str)] = &[
     ("timer", "v = dakika (1–600)", "Uyku zamanlayıcısı: medyayı durdurur, ekranı kapatır (ör. ?v=30)"),
     ("timer-cancel", "", "Zamanlayıcıyı iptal et"),
     ("screenshot", "monitor = 0, 1… (yoksa tüm ekranlar)", "Ekran görüntüsünü JPEG olarak döndürür (Kestirmeler'de görüntü olarak gelir)"),
+    ("tv-on", "tv = TV adı (yoksa ilk TV)", "TV'yi aç (Wake-on-LAN)"),
+    ("tv-off", "tv = TV adı", "TV'yi kapat"),
+    ("tv-volup", "tv = TV adı", "TV sesini aç"),
+    ("tv-voldown", "tv = TV adı", "TV sesini kıs"),
+    ("tv-mute", "tv = TV adı", "TV sesini kapat / aç (Samsung ve Android TV'de aç-kapa tuşu)"),
+    ("tv-volume", "v = 0–100, tv = TV adı", "TV ses seviyesini ayarla (yalnızca LG)"),
+    ("tv-launch", "v = uygulama kimliği, tv = TV adı", "TV'de uygulama aç (ör. v=netflix, Samsung'da v=11101200001)"),
+    ("tv-key", "v = tuş (HOME, BACK, ENTER, UP…), tv = TV adı", "TV kumandasından bir tuşa bas"),
     ("ping", "", "Bağlantı testi"),
 ];
 
@@ -527,6 +540,10 @@ async fn api_action(
             _ => return bad("v: 1 ile 600 arasında dakika olmalı"),
         },
         "timer-cancel" => crate::power::cancel_timer(&app),
+        tvid if tvid.starts_with("tv-") => match app.tv.shortcut(&tvid[3..], q.get("tv").map(String::as_str), v) {
+            Ok(name) => detail = json!(name),
+            Err(msg) => return api_json(StatusCode::BAD_REQUEST, json!({ "error": "tv", "message": msg })),
+        },
         other => match KEY_ACTIONS.iter().find(|(name, _)| *name == other) {
             Some((_, key)) => app.input.send(Cmd::TapKey(*key)),
             None => {
@@ -570,7 +587,10 @@ pub fn admin_router(app: S) -> Router {
         .route("/app.css", get(|| async { asset("app.css") }))
         .route("/app.js", get(|| async { asset("app.js") }))
         .route("/air.js", get(|| async { asset("air.js") }))
+        .route("/tv.js", get(|| async { asset("tv.js") }))
         .route("/ui.css", get(|| async { asset("ui.css") }))
+        .route("/i18n.js", get(|| async { asset("i18n.js") }))
+        .route("/i18n-en.js", get(|| async { asset("i18n-en.js") }))
         .route("/logo.svg", get(|| async { asset("logo.svg") }))
         .route("/apple-touch-icon.png", get(|State(a): State<S>| async move { png(&a, 180) }))
         .route("/api/new-pairing", post(|State(a): State<S>| async move {

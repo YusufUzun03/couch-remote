@@ -1,63 +1,67 @@
 # CouchRemote
 
-iPhone'unu Windows bilgisayarın için **touchpad, klavye ve TV kumandasına** çevir. Yataktan film aç, sesi kıs, imleci sür. Bilgisayara tek bir `.exe` kurulur; telefona **hiçbir uygulama kurulmaz** (Safari'den ana ekrana eklenen bir web uygulaması). Hiçbir veri internete çıkmaz.
+**English** · [Türkçe](README.tr.md)
 
-*English: turn your iPhone into a touchpad, keyboard and media remote for your Windows PC. One `.exe` on the PC, nothing to install on the phone (a PWA over your local network, HTTPS with a local name-constrained CA, no cloud).*
+Turn your **iPhone into a touchpad, keyboard and media remote for your Windows PC**. Start a movie from bed, change the volume, move the cursor. You install one `.exe` on the PC; **nothing is installed on the phone** (it's a web app you add to your Home Screen from Safari). No cloud, no account — everything stays on your local network.
 
-## Özellikler
+## Features
 
-- **Touchpad:** bir parmak imleç, iki parmak kaydırma (ataletli), üç parmak masaüstü hareketleri, sürükle-bırak
-- **Hava faresi:** telefonu çevirerek işaret et; eğimden bağımsız, titremesi süzülmüş
-- **Klavye:** ekranda tam Türkçe Q klavye + iPhone klavyesiyle yazma (dikte, otomatik düzeltme dahil)
-- **Kumanda:** çalan parça/video kartı, oynat/sar, yön halkası, uygulamaya özel düğmeler (YouTube, Netflix, VLC, Spotify…)
-- **Ses:** ana ses, uygulama başına ses (mikser), ses çıkış cihazı değiştirme
-- **Uygulamalar:** Netflix/YouTube/Spotify hızlı başlat, Başlat menüsü + Mağaza uygulamaları, Steam/Epic oyunları (kapaklarıyla)
-- **Aktar:** pano, dosya gönderme, ekran görüntüsü
-- **Güç:** kilitle, uyut, kapat, uyku zamanlayıcısı (ses yavaşça kısılır)
-- **Siri / Kestirmeler:** `POST /api/v1/action/{eylem}` ile Siri, Eylem Düğmesi, Kontrol Merkezi
-- **Yatak modu**, yay animasyonlu arayüz, yatay kullanım
+- **Touchpad:** one-finger cursor, inertial two-finger scrolling, three-finger desktop gestures, drag and drop
+- **Air mouse:** point by turning your phone; tilt-independent and tremor-filtered
+- **Keyboard:** full on-screen keyboard (Turkish Q or English QWERTY) or the iPhone keyboard (dictation and autocorrect work)
+- **Remote:** now-playing card, play/seek, D-pad, app-specific buttons (YouTube, Netflix, VLC, Spotify…)
+- **Audio:** master volume, per-app volume mixer, output device switching
+- **Apps:** quick launch for Netflix/YouTube/Spotify, Start menu and Store apps, Steam/Epic games (with covers)
+- **Transfer:** clipboard, files, screenshots
+- **Power:** lock, sleep, shut down, sleep timer (volume fades out gently)
+- **Siri / Shortcuts:** `POST /api/v1/action/{action}` for Siri, the Action Button and Control Center
+- **Bed mode**, spring-animated UI, landscape layout, **Turkish and English** interface
 
-Bir kez eşleştir; sonrasında uygulamayı açman yeterli.
+Pair once; after that you just open the app.
 
-## Kurulum
+## Install
 
-[KURULUM.md](KURULUM.md) rehberine bak (bilgisayara kurulum + iPhone eşleştirme, ~3 dk). Hazır `CouchRemote.exe` [Releases](../../releases) sayfasında.
+See [INSTALL.md](INSTALL.md) (install on the PC + pair your iPhone, ~3 min). Ready-made `CouchRemote.exe` is on the [Releases](../../releases) page.
 
-> Dosya henüz kod imzalı değil: Windows SmartScreen uyarısında "Ek bilgi → Yine de çalıştır" gerekir.
+> The file isn't code-signed yet: Windows SmartScreen will ask you to click "More info → Run anyway".
 
-## Nasıl çalışır
+## How it works
 
 ```
 iPhone (Safari PWA)  ⇄  WSS  ⇄  couch-agent.exe (Rust)  →  SendInput / Core Audio / SMTC / ...
-        yerel ağ, HTTPS (kendi yerel CA'mız), cihaz anahtarıyla imzalı kimlik doğrulama
+        local network, HTTPS (our own name-constrained local CA), signed device authentication
 ```
 
-- **Ajan:** Rust (`agent/`): axum, rustls, SendInput, WinRT medya, Core Audio, kendi mDNS yanıtlayıcısı
-- **Arayüz:** düz JavaScript + CSS (`web/`), derleme adımı yok; programın içine gömülür
-- **Güvenlik modeli:** [SECURITY.md](SECURITY.md)
-- **Plan ve karar günlüğü:** [PLAN.md](PLAN.md)
+- **Agent:** Rust (`agent/`): axum, rustls, SendInput, WinRT media, Core Audio, its own mDNS responder
+- **UI:** plain JavaScript + CSS (`web/`), no build step; embedded into the program
+- **Security model:** [SECURITY.en.md](SECURITY.en.md)
+- **Plan and decision log:** [PLAN.md](PLAN.md) (Turkish)
 
-## Kaynaktan derleme
+## Languages
 
-Gerekenler: Rust (stable), Windows + Visual Studio Build Tools, Node.js (testler için).
+The phone app and setup pages follow your phone's language (Turkish or English) and can be switched in Settings. The PC program's own menus and dialogs follow Windows' display language. To add a language, see `web/i18n.js` and `web/i18n-en.js` (the dictionary maps Turkish source strings to translations).
+
+## Build from source
+
+You need Rust (stable), Windows with the Visual Studio Build Tools, and Node.js (for the tests).
 
 ```powershell
 cd agent
-cargo run                      # geliştirme: web/ klasörünü diskten okur
-cargo test                     # birim testleri
+cargo run                      # development: reads web/ from disk
+cargo test                     # unit tests
 cd ..
 powershell -File tools\release.ps1   # dist\CouchRemote.exe
 ```
 
-Testler:
+Tests:
 
 ```powershell
 cd tools; npm install
-node air-test.mjs              # hava faresi çekirdeği (telefon gerekmez)
-node smoke-test.mjs            # uçtan uca (çalışan bir ajan gerekir)
-node preview-server.mjs        # arayüz önizlemesi: http://127.0.0.1:47890/preview
+node air-test.mjs              # air-mouse core (no phone needed)
+node smoke-test.mjs            # end-to-end (needs a running agent)
+node preview-server.mjs        # UI preview: http://127.0.0.1:47890/preview
 ```
 
-## Lisans
+## License
 
 [MIT](LICENSE) © 2026 Yusuf Uzun

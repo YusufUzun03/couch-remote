@@ -182,11 +182,19 @@ pub fn ensure_firewall_rule(exe: &Path) -> bool {
         return true;
     }
     message(
-        concat!(
-            "CouchRemote kuruluyor.\n\n",
-            "Telefonunun bu bilgisayara bağlanabilmesi için Windows güvenlik duvarına bir izin eklenecek ",
-            "(sadece evdeki özel ağın için).\n\n",
-            "Birazdan çıkacak pencerede \"Evet\"e tıkla.",
+        crate::i18n::pick(
+            concat!(
+                "CouchRemote kuruluyor.\n\n",
+                "Telefonunun bu bilgisayara bağlanabilmesi için Windows güvenlik duvarına bir izin eklenecek ",
+                "(sadece evdeki özel ağın için).\n\n",
+                "Birazdan çıkacak pencerede \"Evet\"e tıkla.",
+            ),
+            concat!(
+                "CouchRemote is being installed.\n\n",
+                "A rule will be added to the Windows firewall so your phone can connect to this computer ",
+                "(for your private home network only).\n\n",
+                "Click \"Yes\" in the window that appears next.",
+            ),
         ),
         false,
     );
@@ -267,7 +275,7 @@ pub fn install() -> Result<PathBuf> {
 
 /// "Uygulamalar" listesinden (`external`) veya tepsi menüsünden kaldırma. Kullanıcı vazgeçerse false.
 pub fn uninstall(external: bool) -> bool {
-    if !message("CouchRemote bu bilgisayardan kaldırılsın mı?", true) {
+    if !message(crate::i18n::pick("CouchRemote bu bilgisayardan kaldırılsın mı?", "Remove CouchRemote from this computer?"), true) {
         return false;
     }
     // H1: Windows Ayarlar'dan kaldırılırken program hâlâ çalışıyor olabilir; dosyası kilitli kalıp
@@ -277,7 +285,10 @@ pub fn uninstall(external: bool) -> bool {
     }
     crate::notify::remove_shortcut();
     let wipe_data = message(
-        "Eşleşmiş telefonlar ve ayarlar da silinsin mi?\n\n(Hayır dersen daha sonra yeniden kurduğunda telefonun eşleşmiş kalır.)",
+        crate::i18n::pick(
+            "Eşleşmiş telefonlar ve ayarlar da silinsin mi?\n\n(Hayır dersen daha sonra yeniden kurduğunda telefonun eşleşmiş kalır.)",
+            "Delete the paired phones and settings too?\n\n(If you choose No, your phone stays paired if you reinstall later.)",
+        ),
         true,
     );
     let _ = set_autostart(false);
@@ -293,6 +304,12 @@ pub fn uninstall(external: bool) -> bool {
             .args(["/C", &format!("timeout /t 2 /nobreak >nul & rmdir /s /q \"{}\"", dir.display())])
             .spawn();
     }
-    message("CouchRemote kaldırıldı.\n\nTelefondaki simgeyi silebilir, Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldırabilirsin.", false);
+    message(
+        crate::i18n::pick(
+            "CouchRemote kaldırıldı.\n\nTelefondaki simgeyi silebilir, Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldırabilirsin.",
+            "CouchRemote was removed.\n\nYou can delete the icon on your phone and remove the profile under Settings → General → VPN & Device Management.",
+        ),
+        false,
+    );
     true
 }
