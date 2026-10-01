@@ -77,14 +77,15 @@
 <!-- Safari'de açıldıysa: ana ekrana ekleme rehberi -->
 <section id="guide" class="page" hidden>
   <div class="hero-icon"><img src="/apple-touch-icon.png" alt=""></div>
-  <h1>Ana ekrana ekle</h1>
-  <p class="lead">CouchRemote ana ekrandan açıldığında tam ekran çalışır ve her seferinde kendiliğinden bağlanır.</p>
-  <ul class="list">
-    <li><span class="badge"><svg class="ic"><use href="#i-share"/></svg></span><div><b>Paylaş'a dokun</b><small>Safari'nin alt çubuğunda. Gerekirse önce "…" menüsünü aç.</small></div></li>
-    <li><span class="badge"><svg class="ic"><use href="#i-add"/></svg></span><div><b>Ana Ekrana Ekle</b><small>Listede görmüyorsan aşağı kaydır. "Web Uygulaması Olarak Aç" açık kalsın.</small></div></li>
-    <li><span class="badge"><svg class="ic"><use href="#i-home"/></svg></span><div><b>Couch simgesinden aç</b><small>Eşleşme ilk açılışta kendiliğinden yapılır. Bu sayfayı kapatabilirsin.</small></div></li>
-  </ul>
-  <p class="footnote">Ana ekrana eklemeyi bu sayfadan yap: eşleşme kodu bu sayfanın adresinde.</p>
+  <h1>Neredeyse bitti</h1>
+  <p class="lead">Ana ekrana ekleyince uygulama tam ekran açılır ve her seferinde kendiliğinden bağlanır.</p>
+  <ol class="guide-steps">
+    <li><span class="badge"><svg class="ic"><use href="#i-share"/></svg></span><div><b>Paylaş'a dokun</b><small>Safari'nin alt çubuğunda. Göremiyorsan önce <b>…</b> menüsünü aç.</small></div></li>
+    <li><span class="badge" style="--c:#30d158"><svg class="ic"><use href="#i-add"/></svg></span><div><b>Ana Ekrana Ekle</b><small>Listede görmüyorsan aşağı kaydır. <b>Web Uygulaması Olarak Aç</b> açık kalsın.</small></div></li>
+    <li><span class="badge" style="--c:#bf5af2"><svg class="ic"><use href="#i-home"/></svg></span><div><b>Couch simgesinden aç</b><small>Eşleşme ilk açılışta kendiliğinden yapılır. Bu sayfayı kapatabilirsin.</small></div></li>
+  </ol>
+  <p class="footnote">Ana ekrana eklemeyi <b>bu sayfadan</b> yap: eşleşme kodu bu sayfanın adresinde.</p>
+  <div class="tap-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v13M6.5 13.5L12 19l5.5-5.5"/></svg>Paylaş düğmesi aşağıda</div>
 </section>
 
 <!-- Eşleşme kodu yoksa / süresi dolduysa: PIN -->
@@ -92,7 +93,10 @@
   <div class="hero-icon small"><svg class="ic"><use href="#i-lock"/></svg></div>
   <h1>Eşleştir</h1>
   <p class="lead" id="pinReason">Bilgisayardaki CouchRemote sayfasında görünen 6 haneli PIN'i gir.</p>
-  <input id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+  <div class="pin-boxes" id="pinBoxes">
+    <i></i><i></i><i></i><i></i><i></i><i></i>
+    <input id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="6 haneli eşleşme PIN'i">
+  </div>
   <button id="pinBtn" class="btn-primary">Eşleştir</button>
   <p class="err" id="pinErr"></p>
 </section>

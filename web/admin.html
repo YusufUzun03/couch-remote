@@ -7,56 +7,122 @@
 <link rel="icon" href="/logo.svg">
 <style>
   :root {
-    --bg:#f2f2f7; --card:#fff; --fill:rgba(120,120,128,.12); --line:rgba(60,60,67,.14); --fg:#000; --muted:rgba(60,60,67,.62);
-    --accent:#007aff; --ok:#34c759; --warn:#ff9500; --bad:#ff3b30; --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+    --bg:#f2f2f7; --card:#fff; --card-2:#f7f7fa; --fill:rgba(120,120,128,.12); --line:rgba(60,60,67,.14); --fg:#000; --muted:rgba(60,60,67,.62);
+    --accent:#007aff; --ok:#34c759; --warn:#ff9500; --bad:#ff3b30; --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 30px rgba(0,0,0,.06);
+    --glow:rgba(10,132,255,.14); --hl:inset 0 1px 0 rgba(255,255,255,.8);
+    --spring:cubic-bezier(.34,1.45,.64,1); --out:cubic-bezier(.22,1,.36,1);
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg:#000; --card:#1c1c1e; --fill:rgba(120,120,128,.24); --line:rgba(84,84,88,.55); --fg:#fff; --muted:rgba(235,235,245,.6);
-      --accent:#0a84ff; --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --shadow:none; }
+    :root:not([data-theme="light"]) { --bg:#000; --card:#1c1c1e; --card-2:#232326; --fill:rgba(120,120,128,.24); --line:rgba(84,84,88,.55); --fg:#fff; --muted:rgba(235,235,245,.6);
+      --accent:#0a84ff; --ok:#30d158; --warn:#ff9f0a; --bad:#ff453a; --shadow:0 12px 30px rgba(0,0,0,.45); --glow:rgba(10,132,255,.22); --hl:inset 0 1px 0 rgba(255,255,255,.07); }
+  }
+  @supports (transition-timing-function: linear(0, 1)) {
+    :root { --spring: linear(0, .126, .3764, .6265, .821, .9475, 1.0156, 1.0425, 1.045, 1.0362, 1.0242, 1.0135, 1.0057, 1.001, .9986, .9979, .998, .9985, .9991, .9995, .9998, 1); }
   }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; padding:32px 16px 48px; }
-  .wrap { max-width:980px; margin:0 auto; }
-  header { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
-  header img { width:44px; height:44px; border-radius:11px; box-shadow:0 6px 16px rgba(10,132,255,.25); }
-  h1 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; }
-  #sub { color:var(--muted); font-size:14px; }
-  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); }
-  section, details { background:var(--card); border-radius:18px; padding:20px; min-width:0; box-shadow:var(--shadow); }
-  h2 { font-size:13px; font-weight:600; margin:0 0 12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  [hidden] { display:none !important; }
+  html { background:var(--bg); }
+  body { margin:0; color:var(--fg); font:15px/1.5 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; padding:34px 16px 56px; min-height:100vh;
+    background:radial-gradient(70% 380px at 50% -40px, var(--glow), transparent 70%), var(--bg); }
+  .wrap { max-width:1000px; margin:0 auto; }
+
+  header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  header img { width:46px; height:46px; border-radius:12px; box-shadow:0 8px 20px rgba(10,132,255,.3); }
+  h1 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; line-height:1.15; }
+  #sub { color:var(--muted); font-size:13.5px; }
+  .head-pill { margin-left:auto; display:flex; align-items:center; gap:8px; padding:7px 14px; border-radius:999px; background:var(--card); box-shadow:var(--shadow), var(--hl); font-size:13.5px; font-weight:600; white-space:nowrap; }
+  .head-pill i { width:9px; height:9px; border-radius:50%; background:var(--warn); }
+  .head-pill.on i { background:var(--ok); animation:ring 2.6s ease-out infinite; }
+  @keyframes ring { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 70%, 100% { box-shadow:0 0 0 8px transparent; } }
+
+  section, details.card { background:var(--card); border-radius:22px; padding:22px; min-width:0; box-shadow:var(--shadow), var(--hl); }
+  h2 { font-size:12.5px; font-weight:600; margin:0 0 12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
   .muted { color:var(--muted); font-size:13px; }
   code, .mono { font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:12.5px; word-break:break-all; }
-  button { background:var(--accent); color:#fff; border:0; border-radius:10px; padding:9px 16px; font:600 14px inherit; font-family:inherit; cursor:pointer; transition:opacity .15s, transform .1s; }
-  button:active { transform:scale(.98); opacity:.85; }
-  .row-actions { margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); margin-top:16px; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:11px; padding:9px 16px; font:600 14px inherit; font-family:inherit; cursor:pointer; transition:transform .4s var(--spring), opacity .15s, background-color .2s; }
+  button:hover { filter:brightness(1.06); }
+  button:active { transform:scale(.97); }
   button.ghost { background:transparent; color:var(--bad); padding:4px 10px; font-weight:500; }
   button.plain { background:var(--fill); color:var(--accent); }
+  .row-actions { margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
   table { width:100%; border-collapse:collapse; font-size:14px; }
   td { padding:9px 4px; border-top:.5px solid var(--line); vertical-align:top; }
   tr:first-child td { border-top:0; }
   td:first-child { color:var(--muted); width:42%; }
   .ok { color:var(--ok); } .bad { color:var(--bad); } .warn { color:var(--warn); }
   pre { background:var(--fill); border-radius:10px; padding:12px; overflow:auto; max-height:360px; font-size:12px; margin:0; }
-  .row { display:flex; gap:10px; align-items:center; justify-content:space-between; padding:10px 0; border-top:.5px solid var(--line); }
+  .row { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:11px 0; border-top:.5px solid var(--line); }
   .row:first-child { border-top:0; padding-top:0; }
+  .dev { display:flex; align-items:center; gap:12px; min-width:0; }
+  .dev .ico { width:38px; height:38px; border-radius:11px; flex:none; display:grid; place-items:center; color:#fff; background:linear-gradient(160deg, color-mix(in srgb, var(--accent) 80%, white), var(--accent) 55%, color-mix(in srgb, var(--accent) 80%, black)); box-shadow:0 6px 14px -6px var(--accent); }
+  .dev .ico svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
-  /* Telefonu bağla */
-  #connect { display:grid; grid-template-columns:auto 1fr; gap:32px; align-items:center; margin-bottom:16px; padding:28px; }
-  @media (max-width: 640px) { #connect { grid-template-columns:1fr; } }
-  #connect h2 { font-size:24px; font-weight:700; text-transform:none; letter-spacing:-.01em; color:var(--fg); margin-bottom:4px; }
-  .qr { background:#fff; border-radius:18px; padding:14px; width:272px; max-width:100%; box-shadow:0 0 0 .5px var(--line); }
+  /* ---------------------------------------------------------------- telefonu bağla */
+  #hero { margin-bottom:0; padding:30px; position:relative; overflow:hidden; background-image:radial-gradient(90% 120% at 0% 0%, var(--glow), transparent 60%); }
+  #heroConnect { display:grid; grid-template-columns:auto 1fr; gap:36px; align-items:center; animation:rise .6s var(--out) both; }
+  @media (max-width: 680px) { #heroConnect { grid-template-columns:1fr; justify-items:center; } .steps-col { width:100%; } }
+  @keyframes rise { from { opacity:0; transform:translateY(12px); } }
+  .qr { background:#fff; border-radius:22px; padding:14px; width:268px; max-width:100%; box-shadow:0 22px 50px -18px var(--accent), 0 0 0 .5px var(--line); animation:pop .7s var(--spring) both; }
   .qr svg { display:block; width:100%; height:auto; }
-  .steps { margin:16px 0 18px; padding:0; list-style:none; counter-reset:s; }
-  .steps li { position:relative; padding:0 0 0 38px; margin:10px 0; counter-increment:s; }
-  .steps li::before { content:counter(s); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff;
-    font-size:13px; font-weight:700; display:grid; place-items:center; }
-  .pin { font:600 28px/1 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing:5px; }
-  #banner { display:none; background:color-mix(in srgb, var(--warn) 14%, var(--card)); color:var(--fg); border-radius:14px; padding:14px 16px; margin-bottom:16px; }
+  @keyframes pop { from { opacity:0; transform:scale(.88); } }
+  .steps-col h3 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0 0 4px; }
+  .steps-col .lead { color:var(--muted); margin:0 0 20px; font-size:14.5px; }
+
+  /* ilerleme izleyici: adımlar telefondan olaylar geldikçe kendiliğinden işaretlenir */
+  .tracker { list-style:none; margin:0 0 16px; padding:0; position:relative; }
+  .tracker li { position:relative; display:flex; gap:14px; padding:0 0 18px; }
+  .tracker li:last-child { padding-bottom:0; }
+  .tracker li::before { content:""; position:absolute; left:15px; top:32px; bottom:2px; width:2px; border-radius:1px; background:var(--line); transition:background-color .5s; }
+  .tracker li:last-child::before { display:none; }
+  .tracker li.done::before { background:var(--ok); }
+  .mark { width:32px; height:32px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--fill); color:var(--muted); font-weight:700; font-size:14px; position:relative; transition:background-color .4s, color .4s, transform .5s var(--spring); }
+  .tracker li .num { display:block; }
+  .tracker li .tick { display:none; width:16px; height:16px; fill:none; stroke:#fff; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+  .tracker li.active .mark { background:var(--accent); color:#fff; box-shadow:0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .tracker li.active .mark::after { content:""; position:absolute; inset:-5px; border-radius:50%; border:2px solid var(--accent); opacity:0; animation:wave 1.8s var(--out) infinite; }
+  @keyframes wave { from { transform:scale(.9); opacity:.7; } to { transform:scale(1.5); opacity:0; } }
+  .tracker li.done .mark { background:var(--ok); color:#fff; transform:scale(1); animation:tick .55s var(--spring); }
+  .tracker li.done .num { display:none; }
+  .tracker li.done .tick { display:block; }
+  @keyframes tick { from { transform:scale(.6); } }
+  .tracker b { display:block; font-size:15.5px; font-weight:600; }
+  .tracker li.pending b { color:var(--muted); }
+  .tracker small { display:block; color:var(--muted); font-size:13.5px; margin-top:2px; }
+  .tracker li.done small { display:none; }
+  .code { display:inline-block; font:600 13px ui-monospace, "SF Mono", Consolas, monospace; background:var(--fill); padding:1px 8px; border-radius:7px; color:var(--fg); letter-spacing:.04em; }
+
+  details.pin-fb { border-top:.5px solid var(--line); padding-top:12px; }
+  details.pin-fb > summary { cursor:pointer; color:var(--accent); font-weight:600; font-size:14px; list-style:none; }
+  details.pin-fb > summary::-webkit-details-marker { display:none; }
+  details.pin-fb > summary::after { content:" ›"; }
+  details.pin-fb[open] > summary { margin-bottom:12px; }
+  .pin { font:600 30px/1 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing:6px; }
+
+  /* telefon bağlandı kutlaması */
+  #heroDone { display:none; text-align:center; padding:20px 0 6px; animation:rise .6s var(--out) both; }
+  .big-check { width:84px; height:84px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(160deg, color-mix(in srgb, var(--ok) 75%, white), var(--ok));
+    box-shadow:0 20px 44px -14px var(--ok); animation:pop .8s var(--spring) both; position:relative; }
+  .big-check::after { content:""; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--ok); opacity:0; animation:wave 1.6s var(--out) 2; }
+  .big-check svg { width:40px; height:40px; fill:none; stroke:#fff; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:44; stroke-dashoffset:44; animation:draw .6s .3s var(--out) forwards; }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  #heroDone h3 { font-size:26px; margin:0 0 6px; letter-spacing:-.02em; }
+  #heroDone p { color:var(--muted); margin:0 auto 18px; max-width:420px; }
+
+  /* eşleşmiş durumdaki sakin kart */
+  #heroPaired { display:none; align-items:center; gap:16px; flex-wrap:wrap; }
+  #heroPaired .mini-check { width:46px; height:46px; border-radius:50%; flex:none; display:grid; place-items:center; background:color-mix(in srgb, var(--ok) 18%, transparent); color:var(--ok); }
+  #heroPaired .mini-check svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+  #heroPaired .txt { flex:1; min-width:200px; }
+  #heroPaired b { font-size:17px; }
+
+  #banner { display:none; background:color-mix(in srgb, var(--warn) 14%, var(--card)); border-radius:16px; padding:14px 16px; margin-bottom:16px; box-shadow:var(--hl); animation:rise .5s var(--out) both; }
   #banner button { margin-left:10px; }
-  details { margin-top:16px; }
-  details > summary { cursor:pointer; color:var(--muted); font-weight:600; list-style-position:inside; }
-  details[open] > summary { margin-bottom:16px; }
-  details section { background:var(--bg); box-shadow:none; }
+  details.card { margin-top:16px; }
+  details.card > summary { cursor:pointer; color:var(--muted); font-weight:600; list-style-position:inside; }
+  details.card[open] > summary { margin-bottom:16px; }
+  details.card section { background:var(--card-2); box-shadow:none; }
+  @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
 </style>
 </head>
 <body>
@@ -64,17 +130,50 @@
   <header>
     <img src="/logo.svg" alt="">
     <div><h1>CouchRemote</h1><div id="sub">Yükleniyor…</div></div>
+    <div class="head-pill" id="headPill"><i></i><span id="pillText">Yükleniyor…</span></div>
   </header>
 
   <div id="banner"></div>
 
-  <section id="connect">
-    <div id="qrBox"></div>
-    <div>
-      <h2>Telefonunu bağla</h2>
-      <p class="muted" style="margin:0">Sadece bir kez. Sonrasında telefondaki simgeye dokunmak yeterli.</p>
-      <ol class="steps" id="steps"></ol>
-      <div id="pinBox"></div>
+  <section id="hero">
+    <!-- Eşleşme akışı -->
+    <div id="heroConnect">
+      <div id="qrBox"></div>
+      <div class="steps-col">
+        <h3 id="heroTitle">Telefonunu bağla</h3>
+        <p class="lead" id="heroLead">Sadece bir kez. Sonrasında telefondaki simgeye dokunmak yeterli.</p>
+        <ol class="tracker" id="tracker">
+          <li data-s="1" class="active"><span class="mark"><span class="num">1</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div><b>QR kodu okut</b><small>iPhone'un <b style="display:inline;font-weight:600">Kamera</b> uygulamasını QR koda tut, çıkan bağlantıya dokun.</small></div></li>
+          <li data-s="2" class="pending"><span class="mark"><span class="num">2</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div><b>Güvenlik profilini yükle</b><small>Açılan sayfadaki adımları izle (bir kez, ~1 dk). Profil adında şu kod görünmeli: <span class="code" id="caCode"></span></small></div></li>
+          <li data-s="3" class="pending"><span class="mark"><span class="num">3</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            <div><b>Ana ekrana ekle ve aç</b><small>Safari'de <b style="display:inline;font-weight:600">Paylaş → Ana Ekrana Ekle</b>, sonra <b style="display:inline;font-weight:600">Couch</b> simgesinden aç.</small></div></li>
+        </ol>
+        <details class="pin-fb" id="pinFb">
+          <summary>QR okutamıyor musun? PIN ile bağla</summary>
+          <div id="pinBox"></div>
+        </details>
+        <div class="row-actions" id="cancelAdd" hidden><button class="plain" id="cancelAddBtn">Vazgeç</button></div>
+      </div>
+    </div>
+
+    <!-- Kilitli (çok fazla hatalı PIN) -->
+    <div id="heroLocked" style="display:none"></div>
+
+    <!-- Telefon bağlandı -->
+    <div id="heroDone">
+      <div class="big-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h3 id="doneTitle">Telefon bağlandı</h3>
+      <p>Artık iPhone'daki <b>Couch</b> simgesinden kullanabilirsin. Bundan sonra uygulamayı açman yeterli, bağlantı kendiliğinden kurulur.</p>
+      <button id="doneBtn">Tamam</button>
+    </div>
+
+    <!-- Zaten eşleşmiş: sakin görünüm -->
+    <div id="heroPaired">
+      <span class="mini-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="txt"><b id="pairedTitle">Telefonun bağlı</b><div class="muted" id="pairedSub"></div></div>
+      <button class="plain" id="addPhone">Yeni telefon ekle</button>
     </div>
   </section>
 
@@ -89,9 +188,9 @@
     </section>
   </div>
 
-  <details id="adv">
+  <details class="card" id="adv">
     <summary>Gelişmiş</summary>
-    <div class="grid">
+    <div class="grid" style="margin-top:0">
       <section>
         <h2>Gecikme (canlı)</h2>
         <table id="latency"></table>
@@ -115,37 +214,91 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const post = (path, body) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Couch-Admin': '1' }, body: JSON.stringify(body ?? {}) });
   let lastQr = '';
+  let prevCount = null; // ilk durumda kutlama yapma
+  let addMode = false; // "Yeni telefon ekle"ye basıldı
+  let celebrating = false;
+  let celebrateTimer = 0;
 
   function yes(v, okText = 'evet', noText = 'hayır') {
     if (v === undefined || v === null) return '<span class="muted">–</span>';
     return v === true || v === 'ok' ? `<span class="ok">✓ ${okText}</span>` : v === false ? `<span class="bad">✗ ${noText}</span>` : `<span class="warn">${esc(v)}</span>`;
   }
 
+  // Hangi bölüm görünür: eşleşme akışı / kilit / kutlama / sakin "bağlı" kartı
+  function showHero(which) {
+    $('heroConnect').style.display = which === 'connect' ? '' : 'none';
+    $('heroLocked').style.display = which === 'locked' ? '' : 'none';
+    $('heroDone').style.display = which === 'done' ? 'block' : 'none';
+    $('heroPaired').style.display = which === 'paired' ? 'flex' : 'none';
+  }
+
+  function celebrate(name) {
+    celebrating = true;
+    addMode = false;
+    $('doneTitle').textContent = `${name || 'Telefon'} bağlandı`;
+    clearTimeout(celebrateTimer);
+    celebrateTimer = setTimeout(() => (celebrating = false), 12000);
+  }
+  $('doneBtn').onclick = () => {
+    celebrating = false;
+    poll();
+  };
+  $('addPhone').onclick = () => {
+    addMode = true;
+    poll();
+  };
+  $('cancelAddBtn').onclick = () => {
+    addMode = false;
+    poll();
+  };
+
+  function renderTracker(p) {
+    const done = [!!p.setupSeen, !!p.profileSeen, false];
+    let activeSet = false;
+    for (const li of $('tracker').children) {
+      const i = Number(li.dataset.s) - 1;
+      const isDone = done[i];
+      const isActive = !isDone && !activeSet;
+      if (isActive) activeSet = true;
+      li.className = isDone ? 'done' : isActive ? 'active' : 'pending';
+    }
+  }
+
   function renderConnect(s) {
+    const n = s.devices.length;
     const p = s.pairing;
+    if (celebrating) return showHero('done');
+    if (n > 0 && !addMode) {
+      const connected = s.connected > 0;
+      $('pairedTitle').textContent = n === 1 ? (connected ? 'Telefonun bağlı' : 'Telefonun eşleşmiş') : `${n} telefon eşleşmiş`;
+      $('pairedSub').textContent = connected ? 'Şu an kullanabilirsin.' : 'Telefondaki Couch simgesinden aç; kendiliğinden bağlanır.';
+      return showHero('paired');
+    }
     if (!p) {
       lastQr = '';
-      $('qrBox').innerHTML = '';
-      $('steps').innerHTML = '';
-      $('pinBox').innerHTML = s.pairingLocked
-        ? `<p class="bad" style="margin-top:0"><b>Çok fazla hatalı PIN denemesi yapıldı.</b></p><p class="muted">Güvenlik için eşleşme 5 dakika durduruldu. Denemeyi sen yapmadıysan ağında yabancı bir cihaz olabilir.</p><button id="newCode">Yine de yeni kod üret</button>`
-        : `<p class="muted">Eşleşme kodu yok.</p><button id="newCode">Yeni kod üret</button>`;
+      if (s.pairingLocked) {
+        $('heroLocked').innerHTML = `<h3 style="margin:0 0 6px;font-size:22px" class="bad">Eşleşme geçici olarak durduruldu</h3>
+          <p class="muted" style="margin:0 0 14px">Çok fazla hatalı PIN denemesi yapıldı; güvenlik için 5 dakika bekletiliyor. Denemeyi sen yapmadıysan ağında yabancı bir cihaz olabilir.</p><button id="newCode">Yine de yeni kod üret</button>`;
+      } else {
+        $('heroLocked').innerHTML = `<p class="muted" style="margin:0 0 12px">Eşleşme kodu yok.</p><button id="newCode">Yeni kod üret</button>`;
+      }
       $('newCode').onclick = () => post('/api/new-pairing').then(poll);
-      return;
+      return showHero('locked');
     }
+    showHero('connect');
+    $('cancelAdd').hidden = !(n > 0 && addMode);
+    $('caCode').textContent = s.caCode;
+    renderTracker(p);
     if (lastQr !== p.setupUrl) {
       lastQr = p.setupUrl;
       $('qrBox').innerHTML = `<div class="qr">${p.qr}</div>`;
-      $('steps').innerHTML = `<li>iPhone'un <b>Kamera</b>sını QR koda tut ve çıkan bağlantıya dokun.</li>
-           <li>Açılan sayfadaki adımlarla <b>güvenlik profilini</b> yükle (bir kez, ~1 dk). Profilin adında şu kod görünmeli: <b class="mono" style="font-size:14px">${esc(s.caCode)}</b></li>
-           <li>Safari'de <b>Paylaş → Ana Ekrana Ekle</b>, sonra <b>Couch</b> simgesinden aç.</li>`;
       $('pinBox').innerHTML = `
-        <p class="muted" style="margin:0 0 4px">Telefon PIN sorarsa:</p>
+        <p class="muted" style="margin:0 0 6px">Telefon PIN sorarsa:</p>
         <div class="pin" id="pin"></div>
-        <p class="muted" id="exp" style="margin:6px 0 10px"></p>
+        <p class="muted" id="exp" style="margin:8px 0 12px"></p>
         <button class="plain" id="newCode">Yeni kod üret</button>
-        <p class="muted" style="margin-top:12px">QR açılmazsa bu adresi telefonda aç: <code>${esc(p.ipUrl)}</code></p>
-        <p class="muted">Güvenlik: iPhone'da profil adı <b class="mono">CouchRemote · ${esc(s.caCode)}</b> değilse yükleme — aynı ağda araya giren biri olabilir.</p>`;
+        <p class="muted" style="margin-top:14px">QR açılmazsa bu adresi telefonda aç: <code>${esc(p.ipUrl)}</code></p>
+        <p class="muted">Güvenlik: iPhone'da profil adı <b class="mono">CouchRemote · ${esc(s.caCode)}</b> değilse yükleme; aynı ağda araya giren biri olabilir.</p>`;
       $('newCode').onclick = () => post('/api/new-pairing').then(poll);
     }
     $('pin').textContent = p.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
@@ -173,22 +326,31 @@
     }
   }
 
+  const PHONE_ICON = '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.5h2"/></svg>';
+
   function render(s) {
     const n = s.devices.length;
-    $('sub').textContent = `${s.connected ? '● ' + s.connected + ' telefon bağlı' : n ? 'Telefon bağlı değil' : 'Henüz eşleşmiş telefon yok'} · sürüm ${s.version ?? ''}`;
+    // Yeni telefon eşleşti: kutlama (ilk yüklemede değil, sayı gerçekten arttığında)
+    if (prevCount !== null && n > prevCount) celebrate(s.devices[n - 1]?.name);
+    prevCount = n;
+
+    $('sub').textContent = `sürüm ${s.version ?? ''}`;
+    const pill = $('headPill');
+    pill.classList.toggle('on', s.connected > 0);
+    $('pillText').textContent = s.connected ? `${s.connected} telefon bağlı` : n ? 'Telefon bağlı değil' : 'Henüz telefon yok';
     renderBanner(s);
     renderConnect(s);
 
     // cihazlar
     $('devices').innerHTML = n
-      ? s.devices.map((d) => `<div class="row"><div><b>${esc(d.name)}</b><div class="muted">Eşleşme: ${esc((d.pairedAt ?? '').slice(0, 10))} · son görülme: ${esc((d.lastSeen ?? '–').replace('T', ' ').slice(0, 16))}</div></div>
+      ? s.devices.map((d) => `<div class="row"><div class="dev"><span class="ico">${PHONE_ICON}</span><div><b>${esc(d.name)}</b><div class="muted">Eşleşme: ${esc((d.pairedAt ?? '').slice(0, 10))} · son görülme: ${esc((d.lastSeen ?? '–').replace('T', ' ').slice(0, 16))}</div></div></div>
           <button class="ghost" data-id="${esc(d.id)}">Kaldır</button></div>`).join('')
-      : '<p class="muted">Henüz eşleşmiş telefon yok. Yukarıdaki QR kodu okut.</p>';
+      : '<p class="muted" style="margin:0">Henüz eşleşmiş telefon yok. Yukarıdaki QR kodu okut.</p>';
     if (n) {
       $('devices').insertAdjacentHTML('beforeend', '<div class="row-actions"><button class="ghost danger" id="removeAll">Hepsini kaldır</button> <span class="muted">Telefon kaybolduysa veya çalındıysa: tüm eşleşmeleri siler ve Kestirmeler jetonunu yeniler.</span></div>');
       $('removeAll').onclick = () => confirm('Tüm telefonların eşleşmesi kaldırılsın ve Kestirmeler jetonu yenilensin mi?') && post('/api/remove-all-devices', {}).then(poll);
     }
-    for (const b of $('devices').querySelectorAll('button')) b.onclick = () => confirm('Bu telefonun eşleşmesi kaldırılsın mı?') && post('/api/remove-device', { id: b.dataset.id }).then(poll);
+    for (const b of $('devices').querySelectorAll('button[data-id]')) b.onclick = () => confirm('Bu telefonun eşleşmesi kaldırılsın mı?') && post('/api/remove-device', { id: b.dataset.id }).then(poll);
 
     // durum
     const net = s.networkPublic === true ? '<span class="bad">Genel (engellenebilir)</span>' : s.networkPublic === false ? '<span class="ok">Özel</span>' : '<span class="muted">kontrol ediliyor…</span>';
@@ -249,6 +411,7 @@
       }
       render(await r.json());
     } catch {
+      $('pillText').innerHTML = '<span class="bad">Çalışmıyor</span>';
       $('sub').innerHTML = '<span class="bad">CouchRemote çalışmıyor — başlat menüsünden veya masaüstünden aç.</span>';
     }
   }

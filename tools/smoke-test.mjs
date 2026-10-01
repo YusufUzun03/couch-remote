@@ -93,6 +93,11 @@ check('S2: kimliksiz rapor yazılamıyor', (await req('/api/report', { method: '
 const caCode = (await status()).caCode;
 const profile = await fetch(`http://${LAN_IP}:47800/ca.mobileconfig`, { headers: { Host: `${HOST}:47800` } }).then((r) => r.text()).catch(() => '');
 check('S3: profil adında doğrulama kodu', /^[0-9A-F]{4}-[0-9A-F]{4}$/.test(caCode) && profile.includes(`CouchRemote · ${caCode}`), caCode);
+// Kurulum sayfası: doğrulama kodu sayfanın içinde (telefon ekranındaki kodla karşılaştırılır), yer tutucu kalmamış
+const setupHtml = await fetch(`http://${LAN_IP}:47800/setup`, { headers: { Host: `${HOST}:47800` } }).then((r) => r.text()).catch(() => '');
+check('Kurulum sayfasında doğrulama kodu görünüyor', setupHtml.includes(caCode) && !setupHtml.includes('%%'), caCode);
+// Eşleşme ilerlemesi: profil indirilince yönetim sayfasındaki adım işaretlenir
+check('Eşleşme ilerlemesi: profil indirildi işaretlendi', (await status()).pairing?.profileSeen === true);
 // S5: PIN günlüğe yazılmıyor (bu çalıştırmada üretilen kodlar)
 const logText = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'couch.log'), 'utf8');
 const runStart = logText.lastIndexOf('çalışıyor —');
@@ -130,6 +135,7 @@ const setupUrl = (await status()).pairing.setupUrl;
 const code = new URL(setupUrl).searchParams.get('c');
 const touch = await req('/api/pair/touch', { method: 'POST', body: { code } });
 check('Eşleşme kodu süresi uzatılabiliyor', touch.status === 200 && JSON.parse(touch.body).ok === true);
+check('Eşleşme ilerlemesi: kurulum sayfası açıldı işaretlendi', (await status()).pairing?.setupSeen === true);
 const touchBad = await req('/api/pair/touch', { method: 'POST', body: { code: 'yanlis-kod-123' } });
 check('Yanlış kodla süre uzatılamıyor', JSON.parse(touchBad.body).ok === false);
 

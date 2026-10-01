@@ -13,6 +13,10 @@ pub struct Pairing {
     created: Instant,
     expires: Instant,
     pub pin_attempts: u32,
+    /// Telefon kurulum sayfasını açtı (QR okutuldu)
+    pub setup_seen: bool,
+    /// Telefon güvenlik profilini indirdi
+    pub profile_seen: bool,
 }
 
 impl Pairing {
@@ -24,6 +28,8 @@ impl Pairing {
             created: now,
             expires: now + TTL,
             pin_attempts: 0,
+            setup_seen: false,
+            profile_seen: false,
         }
     }
 

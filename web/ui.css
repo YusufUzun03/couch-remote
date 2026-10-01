@@ -450,3 +450,38 @@ body.bed #miniPad::before { opacity: 0.4; background-image: radial-gradient(rgba
 .mix-row { min-width: 0; }
 .mix-name { min-width: 0; }
 .settings .set-row > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* ================================================================ İLK KURULUM: rehber ve PIN */
+#guide, #pin { animation: rise 0.6s var(--ease-out) both; }
+#guide { padding-bottom: calc(env(safe-area-inset-bottom) + 90px); }
+.hero-icon img { width: 92px; height: 92px; border-radius: 22px; box-shadow: 0 16px 36px rgba(10, 132, 255, 0.35); animation: popIn 0.8s var(--spring) both; }
+.hero-icon.small { width: 72px; height: 72px; background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 80%, white), var(--accent)); color: #fff; box-shadow: 0 14px 30px -10px var(--accent); animation: popIn 0.8s var(--spring) both; }
+.guide-steps { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 12px; }
+.guide-steps li { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: var(--r-lg); background-color: var(--surface); background-image: var(--card); box-shadow: var(--hairline); animation: rise 0.6s var(--ease-out) both; }
+.guide-steps li:nth-child(1) { animation-delay: 0.1s; } .guide-steps li:nth-child(2) { animation-delay: 0.18s; } .guide-steps li:nth-child(3) { animation-delay: 0.26s; }
+.guide-steps b { display: block; font-size: 17px; font-weight: 600; }
+.guide-steps small { display: block; color: var(--label-2); font-size: 14.5px; margin-top: 3px; line-height: 1.4; }
+.guide-steps small b { display: inline; font-size: inherit; color: var(--label); }
+.guide-steps .badge { width: 40px; height: 40px; border-radius: 12px; }
+.guide-steps .badge .ic { width: 22px; height: 22px; }
+.footnote b { color: var(--label-2); }
+/* Safari'nin alt çubuğundaki Paylaş düğmesine işaret eden zıplayan ok */
+.tap-hint { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px); white-space: nowrap; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 9px 16px 9px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 88%, transparent); color: #fff; font-size: 13.5px; font-weight: 600; box-shadow: 0 12px 28px -10px var(--accent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: nudge 1.8s ease-in-out infinite; pointer-events: none; }
+.tap-hint svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes nudge { 50% { transform: translateX(-50%) translateY(6px); } }
+
+/* 6 kutulu PIN */
+.pin-boxes { position: relative; display: flex; gap: 9px; justify-content: center; margin: 4px 0 6px; }
+.pin-boxes i { flex: 1; max-width: 52px; height: 62px; border-radius: 14px; display: grid; place-items: center; font: 600 28px ui-monospace, "SF Mono", Menlo, monospace; font-style: normal;
+  background-color: var(--surface); background-image: var(--card); box-shadow: var(--hairline); color: var(--label); transition: box-shadow 0.25s var(--ease), transform 0.4s var(--spring), background-color 0.25s var(--ease); }
+.pin-boxes i.on { box-shadow: inset 0 0 0 2px var(--accent), var(--glow); transform: translateY(-2px); }
+.pin-boxes i.filled { transform: scale(1.0); background-color: color-mix(in srgb, var(--accent) 12%, var(--surface)); animation: popIn 0.35s var(--spring); }
+.pin-boxes input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; border: 0; background: transparent; color: transparent; caret-color: transparent; letter-spacing: 40px; }
+.pin-boxes.shake { animation: shake 0.45s var(--ease-out); }
+.pin-boxes.shake i { box-shadow: inset 0 0 0 1.5px var(--red); }
+.pin-boxes.ok i { box-shadow: inset 0 0 0 1.5px var(--green); background-color: color-mix(in srgb, var(--green) 14%, var(--surface)); }
+@keyframes shake { 20% { transform: translateX(-9px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+#pinBtn { margin-top: 18px; }
+#pinBtn:disabled { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) { .tap-hint { animation: none; } }

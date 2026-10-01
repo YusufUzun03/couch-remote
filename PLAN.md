@@ -538,7 +538,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [x] Uygulamalar: gradyanlı/derinlikli kutucuklar, **Steam oyun kapakları** (yerel önbellekten küçültülmüş JPEG, game-art komutu), yatay kapak kartları, "son kullanılanlar", yükleme iskeleti
 - [x] Aktar/ayarlar: renkli gradyan rozetler, yükleme çubuğunda ışıltı; çevrimdışı ekranında dalga animasyonu
 - [x] Yatak modu: efektler kısılır (kehribar, parlama yok); yatay düzen için ızgara; prefers-reduced-motion tüm hareketi kapatır
-- [ ] Eşleşme / PIN / rehber sayfaları (ilk kurulum) bu turda yeniden tasarlanmadı
+- [x] İlk kurulum akışı yenilendi (0.3.1): yönetim sayfasında canlı ilerleme izleyici (QR okutuldu → profil yüklendi → bağlandı, sunucu `setupSeen`/`profileSeen` bildirir), bağlanınca kutlama, "yeni telefon ekle" modu; iPhone kurulum sayfasında güvenlik kodu en üstte (`%%CA_CODE%%`) ve numaralı adım kartları; uygulama içi rehber (zıplayan Paylaş ipucu) ve 6 kutulu otomatik gönderen PIN ekranı
 - [ ] Epic oyun kapakları (yerel kapak önbelleği yok; renkli harf kartı gösterilir)
 ### Faz 3 — Profiller, Makrolar ve Kestirmeler (3–4 hafta)
 **Öne çekilen (Faz 1 sonu, kurulum denemesinden önce) — Uygulamalar sekmesi:**

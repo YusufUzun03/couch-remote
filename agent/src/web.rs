@@ -215,11 +215,14 @@ pub fn setup_router(app: S) -> Router {
 }
 
 async fn setup_page(State(app): State<S>) -> Response {
-    page("setup.html", &[("%%HOST%%", &app.host), ("%%APP_ORIGIN%%", &app.local_origin())])
+    page("setup.html", &[("%%HOST%%", &app.host), ("%%APP_ORIGIN%%", &app.local_origin()), ("%%CA_CODE%%", &app.ca_code)])
 }
 
 async fn mobileconfig(State(app): State<S>) -> Response {
     log!("Sertifika profili indirildi");
+    if let Some(p) = app.pairing.lk().as_mut() {
+        p.profile_seen = true;
+    }
     let st = app.state.lk();
     let body = crate::certs::mobile_config(&app.host, &st.id, &st.profile_uuid_outer, &st.profile_uuid_inner, &app.ca_der);
     Response::builder()
@@ -231,7 +234,13 @@ async fn mobileconfig(State(app): State<S>) -> Response {
 
 fn touch(app: &App, body: &Bytes) -> Response {
     let code = parse_json(body).and_then(|v| v["code"].as_str().map(str::to_owned)).unwrap_or_default();
-    let ok = app.pairing.lk().as_mut().is_some_and(|p| p.touch(&code));
+    let ok = app.pairing.lk().as_mut().is_some_and(|p| {
+        let valid = p.touch(&code);
+        if valid {
+            p.setup_seen = true; // yönetim sayfasında "QR okutuldu" adımı tamamlanır
+        }
+        valid
+    });
     json_resp(StatusCode::OK, json!({ "ok": ok }))
 }
 
@@ -618,6 +627,7 @@ async fn status(State(app): State<S>) -> Response {
             json!({
                 "pin": p.pin, "expiresIn": p.expires_in_secs(), "setupUrl": url, "qr": qr,
                 "ipUrl": format!("http://{}:{HTTP_PORT}/setup?c={}", app.lan_ip, p.code),
+                "setupSeen": p.setup_seen, "profileSeen": p.profile_seen,
             })
         })
     };
@@ -646,4 +656,19 @@ async fn status(State(app): State<S>) -> Response {
             "reports": app.reports.lk().iter().cloned().collect::<Vec<_>>(),
         }),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cihaz_adi_temizlenir() {
+        assert_eq!(clean_device_name("iPhone"), "iPhone");
+        // satır sonu ve kontrol karakterleri atılır: günlüğe sahte satır eklenemez
+        assert_eq!(clean_device_name("  iPhone\n[sahte satır]\r"), "iPhone[sahte satır]");
+        assert_eq!(clean_device_name(""), "iPhone");
+        assert_eq!(clean_device_name("\u{7}\u{1b}"), "iPhone");
+        assert_eq!(clean_device_name(&"a".repeat(100)).chars().count(), 40);
+    }
 }

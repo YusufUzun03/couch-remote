@@ -2289,22 +2289,64 @@ function showPin(reason) {
   show('pin');
   $('pinInput').focus();
 }
+// PIN kutuları: gerçek alan görünmez bir katman; rakamlar kutularda gösterilir, 6. rakamda otomatik gönderilir
+function renderPinBoxes() {
+  const v = $('pinInput').value.replace(/\D/g, '').slice(0, 6);
+  if ($('pinInput').value !== v) $('pinInput').value = v;
+  [...$('pinBoxes').querySelectorAll('i')].forEach((el, i) => {
+    el.textContent = v[i] ?? '';
+    el.classList.toggle('on', i === Math.min(v.length, 5) && document.activeElement === $('pinInput'));
+    el.classList.toggle('filled', i < v.length);
+  });
+  return v;
+}
+$('pinInput').addEventListener('input', () => {
+  const v = renderPinBoxes();
+  if (v.length === 6) {
+    haptic();
+    $('pinBtn').click();
+  } else {
+    $('pinErr').textContent = '';
+  }
+});
+$('pinInput').addEventListener('focus', renderPinBoxes);
+$('pinInput').addEventListener('blur', renderPinBoxes);
+$('pinBoxes').addEventListener('pointerdown', () => $('pinInput').focus());
+
+let pinBusy = false;
 $('pinBtn').onclick = async () => {
+  if (pinBusy) return;
   const pin = $('pinInput').value.trim();
   if (!/^\d{6}$/.test(pin)) {
     $('pinErr').textContent = '6 haneli PIN gir.';
+    shakePin();
     return;
   }
   $('pinErr').textContent = '';
+  pinBusy = true;
+  $('pinBtn').disabled = true;
   try {
     identity = await pair({ pin });
     exp.pairedVia = 'pin';
+    $('pinBoxes').classList.add('ok');
     report('paired', { pairedVia: 'pin' });
     start();
   } catch (e) {
     $('pinErr').textContent = e.message;
+    shakePin();
+    $('pinInput').value = '';
+    renderPinBoxes();
+  } finally {
+    pinBusy = false;
+    $('pinBtn').disabled = false;
   }
 };
+function shakePin() {
+  const b = $('pinBoxes');
+  b.classList.remove('shake');
+  void b.offsetWidth; // animasyonu yeniden başlat
+  b.classList.add('shake');
+}
 
 // ============================================================ açılış
 // Eşleşme kodunun ömrünü uzatır (kayan süre). Kod geçersizse sessizce yok sayılır.

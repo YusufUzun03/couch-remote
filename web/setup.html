@@ -11,81 +11,120 @@
   :root {
     --bg: #f2f2f7; --surface: #fff; --fill: rgba(120,120,128,.12); --sep: rgba(60,60,67,.18);
     --label: #000; --label-2: rgba(60,60,67,.6); --label-3: rgba(60,60,67,.3);
-    --accent: #007aff; --green: #34c759; --orange: #ff9500;
+    --accent: #007aff; --green: #34c759; --orange: #ff9500; --red: #ff3b30;
+    --glow: rgba(10,132,255,.16); --shadow: 0 1px 2px rgba(0,0,0,.04), 0 12px 28px rgba(0,0,0,.06); --hl: inset 0 1px 0 rgba(255,255,255,.8);
+    --spring: cubic-bezier(.34,1.45,.64,1); --out: cubic-bezier(.22,1,.36,1);
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #000; --surface: #1c1c1e; --fill: rgba(120,120,128,.24); --sep: rgba(84,84,88,.6);
       --label: #fff; --label-2: rgba(235,235,245,.6); --label-3: rgba(235,235,245,.3);
-      --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; }
+      --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; --red: #ff453a; --glow: rgba(10,132,255,.26); --shadow: 0 12px 28px rgba(0,0,0,.4); --hl: inset 0 1px 0 rgba(255,255,255,.07); }
+  }
+  @supports (transition-timing-function: linear(0, 1)) {
+    :root { --spring: linear(0, .126, .3764, .6265, .821, .9475, 1.0156, 1.0425, 1.045, 1.0362, 1.0242, 1.0135, 1.0057, 1.001, .9986, .9979, .998, .9985, .9991, .9995, .9998, 1); }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { margin: 0; background: var(--bg); color: var(--label); font: 17px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
-         padding: calc(env(safe-area-inset-top) + 32px) 16px calc(env(safe-area-inset-bottom) + 32px); }
+  [hidden] { display: none !important; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--label); font: 17px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+         padding: calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 36px);
+         background: radial-gradient(90% 320px at 50% -30px, var(--glow), transparent 70%), var(--bg); min-height: 100vh; }
   .wrap { max-width: 520px; margin: 0 auto; }
-  .logo { display: block; width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 18px; box-shadow: 0 10px 28px rgba(10,132,255,.28); }
+  .logo { display: block; width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 19px; box-shadow: 0 14px 32px rgba(10,132,255,.35); animation: pop .8s var(--spring) both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.85); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
   h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; text-align: center; margin: 0 0 6px; }
-  .lead { color: var(--label-2); text-align: center; margin: 0 0 26px; font-size: 16px; }
-  .section { color: var(--label-2); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0 16px 6px; }
-  .list { list-style: none; margin: 0 0 22px; padding: 0; background: var(--surface); border-radius: 14px; overflow: hidden; }
-  .list li { display: flex; gap: 14px; padding: 14px 16px; position: relative; }
-  .list li + li::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: .5px; background: var(--sep); }
-  .num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 15px; display: grid; place-items: center; flex: none; }
-  .list b { display: block; font-weight: 600; font-size: 16px; }
-  .list small { display: block; color: var(--label-2); font-size: 14px; margin-top: 3px; }
-  .path { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px; }
-  .chip { background: var(--fill); border-radius: 7px; padding: 3px 8px; font-size: 13px; font-weight: 500; }
-  .sep { color: var(--label-3); font-size: 13px; }
-  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 50px; margin-top: 12px; border-radius: 12px;
-         background: var(--accent); color: #fff; font: 600 17px -apple-system, system-ui, sans-serif; text-decoration: none; border: 0; }
-  .btn.secondary { background: var(--fill); color: var(--accent); }
-  .btn:active { opacity: .8; transform: scale(.99); }
+  .lead { color: var(--label-2); text-align: center; margin: 0 0 24px; font-size: 16px; }
+
+  /* Güvenlik doğrulama kartı: bilgisayardaki kodla karşılaştırılır */
+  .verify { background: var(--surface); border-radius: 20px; padding: 16px 18px; margin-bottom: 22px; box-shadow: var(--shadow), var(--hl); display: flex; align-items: center; gap: 14px; animation: rise .6s .1s var(--out) both; }
+  .verify .shield { width: 44px; height: 44px; border-radius: 13px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--green) 70%, white), var(--green)); box-shadow: 0 8px 16px -8px var(--green); }
+  .verify .shield svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .verify small { display: block; color: var(--label-2); font-size: 13.5px; line-height: 1.35; }
+  .verify b { font-size: 15.5px; font-weight: 600; }
+  .code { display: inline-block; margin-top: 4px; font: 700 20px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .08em; background: var(--fill); border-radius: 9px; padding: 3px 10px; }
+
+  .section { color: var(--label-2); font-size: 13px; letter-spacing: .02em; margin: 0 16px 8px; font-weight: 600; }
+  .steps { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 12px; counter-reset: s; }
+  .step { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow), var(--hl); display: flex; gap: 14px; position: relative; animation: rise .6s var(--out) both; }
+  .step:nth-child(1) { animation-delay: .15s; } .step:nth-child(2) { animation-delay: .22s; } .step:nth-child(3) { animation-delay: .29s; }
+  .num { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px;
+         background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 78%, white), var(--accent)); box-shadow: 0 8px 16px -8px var(--accent); transition: background .4s, transform .5s var(--spring); }
+  .num svg { display: none; width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .step.done .num { background: linear-gradient(160deg, color-mix(in srgb, var(--green) 75%, white), var(--green)); box-shadow: 0 8px 16px -8px var(--green); animation: tick .55s var(--spring); }
+  .step.done .num span { display: none; } .step.done .num svg { display: block; }
+  @keyframes tick { from { transform: scale(.6); } }
+  .step b { display: block; font-weight: 600; font-size: 17px; }
+  .step small { display: block; color: var(--label-2); font-size: 14.5px; margin-top: 4px; line-height: 1.4; }
+  .step small b { display: inline; font-size: inherit; color: var(--label); }
+  .path { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 10px; }
+  .chip { background: var(--fill); border-radius: 9px; padding: 4px 10px; font-size: 13.5px; font-weight: 500; }
+  .sep { color: var(--label-3); font-size: 14px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: 14px; border-radius: 14px;
+         background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0)), var(--accent); color: #fff; font: 600 17px -apple-system, system-ui, sans-serif; text-decoration: none; border: 0;
+         box-shadow: 0 12px 26px -12px var(--accent), inset 0 .5px 0 rgba(255,255,255,.3); transition: transform .4s var(--spring), opacity .2s; }
+  .btn.secondary { background: var(--fill); color: var(--accent); box-shadow: none; }
+  .btn:active { transform: scale(.97); }
   .btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .note { font-size: 13px; color: var(--label-2); margin-top: 8px; }
-  #status { display: flex; gap: 12px; align-items: center; background: var(--surface); border-radius: 14px; padding: 14px 16px; }
-  #status .ind { width: 26px; height: 26px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; }
-  #status.checking .ind { border: 2.5px solid var(--fill); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  .tip { background: color-mix(in srgb, var(--orange) 13%, var(--surface)); border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13.5px; color: var(--label-2); line-height: 1.4; }
+
+  /* Durum: sertifikaya güvenildi mi? */
+  #status { display: flex; gap: 14px; align-items: center; background: var(--surface); border-radius: 20px; padding: 16px 18px; box-shadow: var(--shadow), var(--hl); transition: background-color .4s; }
+  #status .ind { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; position: relative; }
+  #status.checking .ind { border: 3px solid var(--fill); border-top-color: var(--accent); animation: spin .8s linear infinite; }
   #status.waiting .ind { background: var(--orange); }
-  #status.ok .ind { background: var(--green); }
-  #status .ind svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-  #status b { display: block; font-size: 16px; font-weight: 600; }
+  #status.waiting .ind::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--orange); opacity: 0; animation: wave 2s var(--out) infinite; }
+  #status.ok { background: color-mix(in srgb, var(--green) 14%, var(--surface)); }
+  #status.ok .ind { background: var(--green); animation: tick .6s var(--spring); }
+  #status .ind svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+  #status b { display: block; font-size: 16.5px; font-weight: 600; }
   #status small { color: var(--label-2); font-size: 14px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { #status.checking .ind { animation-duration: 3s; } }
+  @keyframes wave { from { transform: scale(.9); opacity: .7; } to { transform: scale(1.6); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <img class="logo" src="/logo.svg" alt="">
   <h1>Telefonunu bağla</h1>
-  <p class="lead">Sadece bir kez yapılır. Sonrasında uygulama her açılışta kendiliğinden bağlanır.</p>
+  <p class="lead">Sadece bir kez yapılır, yaklaşık 2 dakika. Sonrasında uygulama her açılışta kendiliğinden bağlanır.</p>
 
-  <div class="section">Güvenlik profili</div>
-  <ol class="list">
-    <li>
-      <span class="num">1</span>
-      <div style="flex:1">
+  <div class="verify">
+    <span class="shield"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span>
+    <div>
+      <b>Güvenlik kodu</b>
+      <small>Aşağıda yükleyeceğin profilin adında bu kod yazmalı. Farklıysa yükleme.</small>
+      <span class="code">%%CA_CODE%%</span>
+    </div>
+  </div>
+
+  <div class="section">3 adım</div>
+  <ol class="steps">
+    <li class="step" id="s1">
+      <span class="num"><span>1</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="flex:1;min-width:0">
         <b>Profili indir</b>
-        <small>Çıkan pencerede <b style="display:inline">İzin Ver</b>, sonra <b style="display:inline">Kapat</b>'a dokun.</small>
-        <a class="btn" href="/ca.mobileconfig">
+        <small>Çıkan pencerede <b>İzin Ver</b>, sonra <b>Kapat</b>'a dokun.</small>
+        <a class="btn" id="dl" href="/ca.mobileconfig">
           <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Profili indir
         </a>
       </div>
     </li>
-    <li>
-      <span class="num">2</span>
-      <div>
+    <li class="step" id="s2">
+      <span class="num"><span>2</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="min-width:0">
         <b>Profili yükle</b>
         <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Profil İndirildi</span><span class="sep">›</span><span class="chip">Yükle</span></div>
-        <small><b style="display:inline">Güvenlik kontrolü:</b> profilin adındaki "CouchRemote · XXXX-XXXX" kodu bilgisayar ekranındaki kodla aynı olmalı. Farklıysa yükleme.</small>
-        <small>Kırmızı "Doğrulanmadı" yazısı normal: profili bir şirket değil, senin bilgisayarın oluşturdu. İçinde sadece bu bilgisayara güvenli bağlanmak için bir sertifika var.</small>
+        <div class="tip">Kırmızı "Doğrulanmadı" yazısı normal: profili bir şirket değil, senin bilgisayarın oluşturdu. İçinde yalnızca bu bilgisayara güvenli bağlanmak için bir sertifika var.</div>
       </div>
     </li>
-    <li>
-      <span class="num">3</span>
-      <div>
+    <li class="step" id="s3">
+      <span class="num"><span>3</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="min-width:0">
         <b>Sertifikaya güven</b>
         <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Genel</span><span class="sep">›</span><span class="chip">Hakkında</span><span class="sep">›</span><span class="chip">Sertifika Güven Ayarları</span></div>
-        <small>En alttaki <b style="display:inline">CouchRemote Yerel CA</b> anahtarını aç. Sadece <b style="display:inline">%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
+        <small>En alttaki <b>CouchRemote Yerel CA</b> anahtarını aç. Sadece <b>%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
       </div>
     </li>
   </ol>
@@ -111,6 +150,12 @@
     document.getElementById('stTitle').textContent = title;
     document.getElementById('stText').textContent = text;
   }
+  function markDone(...ids) {
+    for (const id of ids) document.getElementById(id).classList.add('done');
+  }
+
+  // Profil indirilince 1. adım tamamlanır (Ayarlar'a geçilir); gerisini sertifika kontrolü doğrular
+  document.getElementById('dl').addEventListener('click', () => setTimeout(() => markDone('s1'), 400));
 
   async function check(auto) {
     if (checking) return;
@@ -119,8 +164,9 @@
     try {
       const r = await fetch(APP_ORIGIN + '/api/hello', { cache: 'no-store' });
       if (!r.ok) throw new Error(r.status);
+      markDone('s1', 's2', 's3');
       setStatus('ok', 'Hazır', 'Son adım açılıyor…');
-      setTimeout(() => (location.href = APP_ORIGIN + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 700);
+      setTimeout(() => (location.href = APP_ORIGIN + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 900);
     } catch {
       setStatus('waiting', 'Profil bekleniyor',
         auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.');
