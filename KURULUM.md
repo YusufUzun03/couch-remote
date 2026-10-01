@@ -31,6 +31,23 @@ Bundan sonra uygulamayı açman yeterli; bağlantı kendiliğinden kurulur.
 - **Televizyon:** LG, Samsung ve Android/Google TV (deneysel) telefondan kumanda edilir. Ayarlar › Cihazlar › Televizyonlar'dan TV'ler otomatik bulunur. Sol üstteki cihaz adına dokunup Bilgisayar ve TV'ler arasında geçersin; seçili TV'yi Kumanda, Touchpad ve Klavye sekmeleri sürer. Güç menüsündeki **Sahneler** (Film modu, Uyku modu) ve Siri kestirmeleri (`tv-off`, `tv-volup`…) de çalışır.
 - **iPad:** geniş ekranda düzen kendiliğinden uyum sağlar.
 
+## Televizyonu da kumanda et
+LG, Samsung ve Android/Google TV (deneysel) desteklenir. Bilgisayar, TV'ye bağlanıp aracılık eder; yani TV kullanılırken bilgisayar açık ve aynı ağda olmalı.
+
+1. Telefonda **Ayarlar › Cihazlar › Televizyonlar** (veya sol üstteki cihaz adına dokun › **TV ekle…**). TV açıkken ağ taranır; bulunan TV'ye dokun. Bulunamazsa TV'nin adresini elle yaz. Marka kendiliğinden tanınır.
+2. İlk bağlanışta TV ekranında bir soru çıkar: kumandayla **Evet / İzin ver**'i seç. Android TV'de TV ekranında 6 karakterlik bir kod görünür, telefona yaz.
+3. Sol üstteki cihaz adına dokunup **Bilgisayar** ile TV'ler arasında geçiş yap. Bir TV seçiliyken Kumanda, Touchpad ve Klavye sekmeleri o TV'yi sürer.
+4. Güç menüsündeki **Sahneler**: *Film modu* (TV'yi açıp kumandasına geçer), *Uyku modu*, *Her şeyi kapat*.
+
+<p align="center">
+  <img src="docs/img/tr-devices.jpg" width="190" alt="Cihaz seçici">
+  <img src="docs/img/tr-tv-remote.jpg" width="190" alt="TV kumandası">
+  <img src="docs/img/tr-add-tv.jpg" width="190" alt="TV ekleme">
+  <img src="docs/img/tr-scenes.jpg" width="190" alt="Sahneler">
+</p>
+
+Kapalı TV'yi telefondan açmak için TV'de **Mobil cihazla aç / Wi-Fi ile aç** ayarı açık olmalı. Siri kestirmeleri için: `tv-on`, `tv-off`, `tv-volup`, `tv-mute`… (Ayarlar › Siri ve Kestirmeler).
+
 ## Sorun olursa
 - **"Bilgisayara ulaşılamıyor":** bilgisayar uyku modunda olabilir; uyandırıp birkaç saniye bekle. İkisi de aynı Wi-Fi'de mi bak.
 - **Bağlanmıyor:** Windows ağ profilini **Özel** yap (Ayarlar → Ağ ve internet → Wi-Fi/Ethernet → Özellikler → Özel). "Telefonunu bağla" sayfası bunu uyarır ve tek tıkla düzeltir.

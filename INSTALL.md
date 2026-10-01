@@ -32,6 +32,23 @@ From now on you just open the app; it connects by itself.
 - **iPad:** the layout adapts to larger screens.
 - **Language:** follows your phone; change it in Settings → Language.
 
+## Control your TV too
+LG, Samsung and Android/Google TV (experimental) are supported. The computer connects to the TV and relays your commands, so the computer must be on and on the same network while you use the TV.
+
+1. On your phone: **Settings › Devices › Televisions** (or tap the device name at the top left › **Add a TV…**). The network is scanned while the TV is on; tap the TV that appears. If it isn't found, type the TV's address. The brand is detected automatically.
+2. The first time, the TV shows a question: choose **Yes / Allow** with its remote. Android TV shows a 6-character code on screen; type it on your phone.
+3. Tap the device name at the top left to switch between the **computer** and your TVs. With a TV selected, the Remote, Touchpad and Keyboard tabs drive that TV.
+4. **Scenes** in the power menu: *Movie mode* (turns the TV on and switches to its remote), *Sleep mode*, *Turn everything off*.
+
+<p align="center">
+  <img src="docs/img/en-devices.jpg" width="190" alt="Device picker">
+  <img src="docs/img/en-tv-remote.jpg" width="190" alt="TV remote">
+  <img src="docs/img/en-add-tv.jpg" width="190" alt="Adding a TV">
+  <img src="docs/img/en-scenes.jpg" width="190" alt="Scenes">
+</p>
+
+To turn a TV on from your phone while it is off, enable **Turn on via mobile / Wi-Fi** in the TV's settings. For Siri shortcuts use `tv-on`, `tv-off`, `tv-volup`, `tv-mute`… (Settings › Siri & Shortcuts).
+
 ## Troubleshooting
 - **"Can't reach your computer":** the PC may be asleep; wake it and wait a few seconds. Check that both devices are on the same Wi-Fi.
 - **It won't connect:** set the Windows network profile to **Private** (Settings → Network & internet → Wi-Fi/Ethernet → Properties). The "Connect your phone" page warns you and fixes it in one click.

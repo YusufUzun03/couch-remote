@@ -1,0 +1,6 @@
+# cargo audit ayarı
+[advisories]
+# RUSTSEC-2023-0071 (rsa "Marvin" zamanlama yan kanalı): rsa kütüphanesi yalnızca Android TV eşleşme sertifikası için
+# 2048 bit anahtar ÜRETMEK ve anahtarın açık sayılarını okumak için kullanılır. Şifre çözme/imzalama (özel anahtar
+# işlemi) rustls/ring tarafından yapılır; saldırıya açık bir şifre çözme sorgulayıcısı yoktur. Düzeltilmiş sürüm henüz yok.
+ignore = ["RUSTSEC-2023-0071"]

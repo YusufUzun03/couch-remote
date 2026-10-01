@@ -536,7 +536,6 @@ input[type=range]:focus-visible { outline-offset: 6px; border-radius: 8px; }
 }
 
 /* ================================================================ LG TV KUMANDASI */
-#devSeg { align-self: center; min-width: 240px; }
 #v-remote.tv-mode { display: flex !important; flex-direction: column; column-count: auto; gap: 12px; }
 #v-remote.tv-mode > .pc-only { display: none !important; }
 #tvRemote { display: flex; flex-direction: column; gap: 12px; }

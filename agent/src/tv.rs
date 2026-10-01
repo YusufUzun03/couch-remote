@@ -19,7 +19,8 @@ use tokio::sync::mpsc;
 use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{client_async, WebSocketStream};
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
+use tokio_tungstenite::{client_async_with_config, WebSocketStream};
 
 mod android;
 mod samsung;
@@ -217,6 +218,8 @@ pub struct Tv {
     tasks: Arc<Mutex<HashMap<String, mpsc::UnboundedSender<Cmd>>>>,
 }
 
+static SCANNING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 type Tasks = Arc<Mutex<HashMap<String, mpsc::UnboundedSender<Cmd>>>>;
 
 fn spawn_tv(hub: &Arc<Hub>, tasks: &Tasks, cfg: Cfg) {
@@ -230,12 +233,42 @@ fn lan_ip(s: &str) -> Option<Ipv4Addr> {
     (ip.is_private() || ip.is_link_local()).then_some(ip)
 }
 
-/// ARP tablosundan MAC (TV aynı ağda ve yakın zamanda konuşulmuş olmalı); uyandırma (Wake-on-LAN) için
-fn arp_mac(ip: Ipv4Addr) -> Option<String> {
+/// `arp -a` çıktısını (adres, MAC) çiftlerine ayır; MAC küçük harf ve ':' ayraçlı
+fn parse_arp(text: &str) -> Vec<(Ipv4Addr, String)> {
+    text.lines()
+        .filter_map(|l| {
+            let mut w = l.split_whitespace();
+            let ip: Ipv4Addr = w.next()?.parse().ok()?;
+            let mac = w.next()?;
+            let ok = mac.len() == 17 && mac.matches('-').count() == 5 && mac.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-');
+            ok.then(|| (ip, mac.to_lowercase().replace('-', ":")))
+        })
+        .collect()
+}
+
+/// ARP tablosu (TV aynı ağda ve yakın zamanda konuşulmuş olmalı). Windows'un kendi arp.exe'si tam yolla çağrılır
+fn arp_table() -> Vec<(Ipv4Addr, String)> {
     use std::os::windows::process::CommandExt;
-    let out = std::process::Command::new("arp").args(["-a", &ip.to_string()]).creation_flags(0x0800_0000).output().ok()?;
-    let text = String::from_utf8_lossy(&out.stdout).to_string();
-    text.split_whitespace().find(|w| w.len() == 17 && w.matches('-').count() == 5 && w.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')).map(|w| w.replace('-', ":"))
+    let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+    let out = std::process::Command::new(format!("{root}\\System32\\arp.exe")).arg("-a").creation_flags(0x0800_0000).output();
+    out.map(|o| parse_arp(&String::from_utf8_lossy(&o.stdout))).unwrap_or_default()
+}
+
+/// Uyandırma (Wake-on-LAN) için MAC
+fn arp_mac(ip: Ipv4Addr) -> Option<String> {
+    arp_table().into_iter().find(|(i, _)| *i == ip).map(|(_, m)| m)
+}
+
+/// TV'nin adresi değiştiyse (router DHCP): ağı yoklayıp MAC'inden yeni adresi bul
+async fn rediscover(cfg: &Cfg, hub: &Hub) -> Option<Ipv4Addr> {
+    let mac = cfg.mac.as_ref()?.to_lowercase().replace('-', ":");
+    let _ = scan().await; // ağdaki cihazları konuşturur, ARP tablosu güncellenir
+    let ip = tokio::task::spawn_blocking(arp_table).await.ok()?.into_iter().find(|(_, m)| *m == mac)?.0;
+    let ip_s = ip.to_string();
+    if ip_s == cfg.ip || lan_ip(&ip_s).is_none() || hub.cfgs.lk().iter().any(|c| c.ip == ip_s) {
+        return None;
+    }
+    (detect(ip).await == Some(cfg.brand.as_str())).then_some(ip)
 }
 
 /// Uygulama kimliği: kimlik harfleri/rakamları, ayrıca Android TV bağlantıları (https://… veya şema:)
@@ -307,9 +340,13 @@ impl Tv {
         // Genel komutlar (belirli bir TV'ye bağlı değil)
         match op {
             "scan" => {
+                if SCANNING.swap(true, std::sync::atomic::Ordering::AcqRel) {
+                    return; // zaten taranıyor
+                }
                 let events = self.hub.events.clone();
                 tokio::spawn(async move {
                     let found = scan().await;
+                    SCANNING.store(false, std::sync::atomic::Ordering::Release);
                     events.publish("tv-scan", json!({ "found": found }));
                 });
                 return;
@@ -476,7 +513,7 @@ async fn open(ip: Ipv4Addr, port: u16, tls: bool, path: &str) -> anyhow::Result<
         Box::new(tcp)
     };
     let url = format!("{}://{ip}:{port}{path}", if tls { "wss" } else { "ws" });
-    let (ws, _) = timeout(Duration::from_secs(4), client_async(url.into_client_request()?, io)).await??;
+    let (ws, _) = timeout(Duration::from_secs(4), client_async_with_config(url.into_client_request()?, io, Some(WebSocketConfig::default().max_message_size(Some(1 << 20)).max_frame_size(Some(1 << 20))))).await??;
     Ok(ws)
 }
 
@@ -634,6 +671,7 @@ async fn run(mut rx: mpsc::UnboundedReceiver<Cmd>, hub: Arc<Hub>, cfg: Cfg) {
     cx.view.state = "off";
     cx.publish();
     let mut retry = true;
+    let mut fails = 0u32;
     loop {
         let Some(cfg) = cx.cfg.clone() else { return };
         let ip: Ipv4Addr = cfg.ip.parse().unwrap_or(Ipv4Addr::UNSPECIFIED);
@@ -650,10 +688,30 @@ async fn run(mut rx: mpsc::UnboundedReceiver<Cmd>, hub: Arc<Hub>, cfg: Cfg) {
                 },
             };
         }
+        if cx.view.state == "on" {
+            fails = 0;
+        } else if retry {
+            fails += 1;
+        }
         cx.view = View { state: if cx.cfg.as_ref().is_some_and(|c| c.key_enc.is_some()) { "off" } else { "unpaired" }, ..Default::default() };
         cx.publish();
         if !rejoin {
             continue;
+        }
+        // Üst üste başarısız: adres değişmiş olabilir (DHCP). MAC biliniyorsa yeni adresi bul (ilk kez 3. denemede, sonra her 4 denemede)
+        if fails >= 3 && fails % 4 == 3 {
+            if let Some(c) = cx.cfg.clone() {
+                if let Some(nip) = rediscover(&c, &cx.hub).await {
+                    if let Some(m) = cx.cfg.as_mut() {
+                        m.ip = nip.to_string();
+                        cx.hub.save(m);
+                    }
+                    crate::log!("TV adresi değişmiş, yeni adres bulundu: {nip}");
+                    fails = 0;
+                    retry = true;
+                    continue;
+                }
+            }
         }
         // TV kapalı: anahtar varsa 12 sn'de bir dene; anahtar yoksa (eşleşme yapılmadı) komut bekle
         let wait = if cx.cfg.as_ref().is_some_and(|c| c.key_enc.is_some()) { Duration::from_secs(12) } else { Duration::from_secs(86400) };
@@ -806,6 +864,15 @@ async fn session(mut ws: Ws, ip: Ipv4Addr, cx: &mut Ctx, rx: &mut mpsc::Unbounde
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn arp_tablosu_ayristirilir() {
+        let t = "\r\nInterface: 192.168.1.20 --- 0x7\r\n  Internet Address      Physical Address      Type\r\n  192.168.1.1           aa-bb-cc-00-11-22     dynamic\r\n  192.168.1.50          A8-23-FE-12-34-56     dynamic\r\n  224.0.0.22            01-00-5e-00-00-16     static\r\n";
+        let r = parse_arp(t);
+        assert_eq!(r.len(), 3);
+        assert_eq!(r[1], ("192.168.1.50".parse().unwrap(), "a8:23:fe:12:34:56".to_string()));
+        assert!(parse_arp("Interface: 1.2.3.4 --- 0x7").is_empty());
+    }
 
     #[test]
     fn yalnizca_yerel_ag_adresi_kabul_edilir() {

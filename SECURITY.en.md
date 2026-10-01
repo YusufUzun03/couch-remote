@@ -29,7 +29,8 @@ This document explains what the app protects against, what it deliberately does 
 | A removed phone staying connected | Its open connection is cut immediately when the pairing is removed |
 | A single bug crashing the whole program | Locks don't poison; panics are written to the log |
 | TV bridge (LG, Samsung, Android TV) | The phone sends commands to the PC, not the TV; the PC translates only a fixed command list (no free-form address/URI), the TV address must be a local-network address, the pairing key is DPAPI-encrypted. The TV's self-signed certificate is not verified (local network, as with all LG clients) |
-| Dependency vulnerabilities | Scanned with `cargo audit`: no known vulnerabilities |
+| TV connection drops / address changes | The TV is retried every 12 s; after repeated failures its new address is looked up by MAC (local-network addresses only, never another saved TV's address). WebSocket messages from the TV are capped at 1 MB |
+| Dependency vulnerabilities | Scanned with `cargo audit`: no known vulnerabilities. The one exception is RUSTSEC-2023-0071 in the `rsa` crate (timing side channel): it is only used to generate the Android TV pairing certificate key; private-key operations are done by `ring`, so we are not affected (`agent/.cargo/audit.toml`) |
 
 ## What we deliberately do not protect against
 

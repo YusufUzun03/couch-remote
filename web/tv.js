@@ -459,7 +459,7 @@ export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets,
       b.className = 'set-row link';
       const s = document.createElement('span');
       const bn = BRANDS[f.brand] || 'LG webOS';
-      s.append(Object.assign(document.createElement('b'), { textContent: known ? known.name : bn + ' TV' }), Object.assign(document.createElement('small'), { textContent: String(f.ip) }));
+      s.append(Object.assign(document.createElement('b'), { textContent: known ? known.name : (f.brand === 'android' ? bn : bn + ' TV') }), Object.assign(document.createElement('small'), { textContent: String(f.ip) }));
       b.append(s);
       b.onclick = () => add(String(f.ip));
       box.append(b);

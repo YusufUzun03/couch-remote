@@ -29,7 +29,8 @@ Bu belge, uygulamanın neye karşı korunduğunu, neye karşı **korunmadığın
 | Kaldırılan telefonun bağlı kalması | Eşleşme kaldırılınca açık bağlantı anında kesilir |
 | Programın tek bir hatayla çökmesi | Kilitler zehirlenmez; paniklar günlüğe yazılır |
 | TV köprüsü (LG, Samsung, Android TV) | Telefon TV'ye değil PC'ye komut yollar; PC yalnızca sabit bir komut listesini çevirir (serbest adres/URI geçmez), TV adresi yalnızca yerel ağ adresi olabilir, eşleşme anahtarı DPAPI ile şifreli. TV'nin öz imzalı sertifikası doğrulanmaz (yerel ağ, tüm LG istemcilerinde böyle) |
-| Bağımlılık açıkları | `cargo audit` ile tarandı: bilinen açık yok |
+| TV bağlantısı kopar / adresi değişir | TV'ye 12 sn'de bir yeniden bağlanılır; üst üste başarısız olursa MAC adresinden yeni adres aranır (yalnızca yerel ağ adresleri, başka kayıtlı TV'nin adresi alınmaz). TV'den gelen WebSocket mesajları 1 MB ile sınırlıdır |
+| Bağımlılık açıkları | `cargo audit` ile tarandı: bilinen açık yok. Tek istisna `rsa` kütüphanesindeki RUSTSEC-2023-0071 (zamanlama yan kanalı): kütüphane yalnızca Android TV eşleşme sertifikası için anahtar üretir, özel anahtarla şifre çözme/imzalama `ring` tarafından yapılır; bu yüzden etkilenmeyiz (`agent/.cargo/audit.toml`) |
 
 ## Neye karşı korunmuyoruz (bilerek)
 

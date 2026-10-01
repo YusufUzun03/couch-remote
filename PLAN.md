@@ -593,6 +593,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [x] TV markaları (0.6.0): Samsung Tizen (8002/8001 WebSocket, jeton) ve Android/Google TV (Remote v2: RSA istemci sertifikası + 6 karakter kod eşleşmesi) sürücüleri `agent/src/tv/`; markadan bağımsız `Act` eylemleri, arayüz yeteneklere (`caps`) göre düzenlenir. Yalnızca sahte TV'lerle test edildi (`tools/mock-tvs.mjs`); Android TV deneysel
 - [x] Marka otomatik tanıma (0.6.2): tarama SSDP + mDNS ile aday toplar, portlardan marka tanınır; elle adres de otomatik
 - [x] 0.7.0: seçili TV'yi Touchpad/hava faresi/Klavye de sürer (işaretçisiz TV'lerde parmak = yön tuşları), Siri/Kestirmeler `tv-*` eylemleri, Sahneler (Film/Uyku/Her şeyi kapat), iPad/geniş ekran düzeni
+- [x] 0.7.1: güvenlik turu (cargo audit: rsa RUSTSEC-2023-0071 gerekçeli istisna, WebSocket mesaj sınırı, arp.exe tam yol, tek eşzamanlı tarama), TV adresi değişince MAC'ten yeniden bulma, ölü CSS temizliği, kullanıcı rehberine ekran görüntüleri (`docs/img/`)
 - [ ] Sıradaki: birden fazla bilgisayar (telefonda cihaz listesi) — şimdilik istenmiyor; Roku/diğer markalar — şimdilik istenmiyor
 
 ### Faz 6 — Gerçek iOS Uygulaması (Mac gerekir)
