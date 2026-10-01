@@ -1,6 +1,7 @@
 // CouchRemote Faz 0 — iPhone web uygulaması: eşleşme, WSS bağlantısı, touchpad, gecikme ölçümü, iOS deneyleri.
 import { AirMouse } from '/air.js';
-import { initTv } from '/tv.js';
+import { initTv, bindClickpad } from '/tv.js';
+import { BRAND } from '/brand-icons.js';
 import { t as tl, lang, ready, translateDom, langPref, setLangPref } from '/i18n.js';
 
 await ready; // İngilizce sözlük yüklenir (Türkçede anında geçer)
@@ -196,6 +197,16 @@ function setConn(stateName, text) {
   }
 }
 
+// Bağlantı koptuğunda ekranı kapatmadan ince şerit; denetimler soluklaşır
+function showBanner(on) {
+  $('connBanner').hidden = !on;
+  document.body.classList.toggle('offline', on);
+}
+$('connRetry').onclick = () => {
+  retry = 0;
+  connect();
+};
+
 function connect() {
   clearTimeout(retryTimer);
   if (ws && ws.readyState <= 1) return;
@@ -213,6 +224,7 @@ function connect() {
         connected = true;
         retry = 0;
         $('offline').hidden = true;
+        showBanner(false);
         setConn('ok', m.name || m.host);
         if (!views.apps.hidden) requestApps(true);
         pingBurst();
@@ -273,7 +285,8 @@ function connect() {
     setConn('down', tl('Bağlantı yok'));
     if (document.visibilityState !== 'visible') return;
     retry++;
-    if (retry >= 3) $('offline').hidden = false;
+    showBanner(true);
+    if (retry >= 10) $('offline').hidden = false;
     retryTimer = setTimeout(connect, Math.min(250 * 2 ** retry, 3000));
   };
   ws.onerror = () => {};
@@ -586,6 +599,7 @@ async function onFirstTouch() {
   if (firstTouchReported) return;
   firstTouchReported = true;
   pad.classList.add('used');
+  try { localStorage.setItem('padHinted', '1'); } catch {}
   await requestWakeLock();
   report('first-touch', { wakeLockResult, fps });
 }
@@ -1224,11 +1238,13 @@ function currentPosition() {
 function renderMedia() {
   if (views.remote.hidden) return;
   const active = !!media.active;
+  $('np').hidden = !active; // çalan bir şey yoksa kart hiç görünmez
   $('np').classList.toggle('empty', !active || !$('npThumb').getAttribute('src'));
   $('npTitle').textContent = active ? media.title || tl('Başlıksız') : tl('Çalan bir şey yok');
   $('npArtist').textContent = active ? media.artist || '' : tl('Bilgisayarda bir şey oynatınca burada görünür');
   $('npApp').textContent = active ? media.app || '' : '';
   $('ppBtn').classList.toggle('playing', active && !!media.playing);
+  $('ppLabel').textContent = active && media.playing ? tl('Duraklat') : tl('Oynat');
   const dur = media.duration || 0;
   $('npBar').hidden = !(active && dur > 0);
   if (!seeking) {
@@ -1259,11 +1275,21 @@ seek.addEventListener('change', () => {
 let appsData = null;
 let appsLoadedAt = 0;
 let searchTarget = 'youtube';
+let showAllApps = false;
 const searchInput = $('searchInput');
 
 function requestApps(force) {
   if (!force && appsData && performance.now() - appsLoadedAt < 60_000) return;
+  appsBusy = true;
+  syncBusy();
+  clearTimeout(appsBusyTimer);
+  appsBusyTimer = setTimeout(() => { appsBusy = false; syncBusy(); }, 8000); // yanıt gelmezse çubuk takılı kalmasın
   sendJson({ type: 'apps' });
+}
+let appsBusy = false;
+let appsBusyTimer = 0;
+function syncBusy() {
+  $('topProgress').hidden = !(appsBusy || document.body.classList.contains('tv-busy'));
 }
 
 function trLower(s) {
@@ -1320,6 +1346,17 @@ function fillCover(el, id) {
     el.classList.add('has-art');
   }
 }
+// Servis simgesi: marka işareti varsa o (beyaz, düz renkli kare üstünde), yoksa kısa monogram
+function brandMark(icon, a) {
+  const d = BRAND[a.id];
+  if (d) {
+    icon.classList.add('has-logo');
+    icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${d}"/></svg>`;
+  } else {
+    icon.textContent = a.mark;
+  }
+}
+
 function coverArt(g) {
   const el = document.createElement('div');
   el.className = 'cover-art ' + g.store;
@@ -1372,7 +1409,7 @@ function renderRecent() {
         icon = document.createElement('div');
         icon.className = 'tile-icon mini';
         icon.style.setProperty('--c', it.color);
-        icon.textContent = it.mark;
+        brandMark(icon, it);
       } else if (it.kind === 'game') {
         icon = coverArt(it.game);
         icon.classList.add('mini');
@@ -1408,6 +1445,7 @@ function renderApps() {
       return b;
     }),
   );
+  $('searchChips').hidden = !searchInput.value.trim();
   const target = searchable.find((a) => a.id === searchTarget);
   searchInput.placeholder = target ? tl('{name} içinde ara · uygulama bul', { name: target.name }) : tl('Uygulama bul');
 
@@ -1420,7 +1458,7 @@ function renderApps() {
       const icon = document.createElement('div');
       icon.className = 'tile-icon';
       icon.style.setProperty('--c', a.color);
-      icon.textContent = a.mark;
+      brandMark(icon, a);
       const name = document.createElement('span');
       name.textContent = a.name;
       b.append(icon, name);
@@ -1461,8 +1499,11 @@ function renderApps() {
     list.replaceChildren(li);
     return;
   }
+  const COLLAPSED = 6;
+  const collapsed = !filter && !showAllApps && items.length > COLLAPSED + 2;
+  const shown = collapsed ? items.slice(0, COLLAPSED) : items;
   list.replaceChildren(
-    ...items.map((a) => {
+    ...shown.map((a) => {
       const li = document.createElement('li');
       const b = document.createElement('button');
       const initial = document.createElement('span');
@@ -1479,6 +1520,18 @@ function renderApps() {
       return li;
     }),
   );
+  if (collapsed || (showAllApps && !filter && items.length > COLLAPSED + 2)) {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.className = 'more-row';
+    b.textContent = collapsed ? tl('Tümünü göster ({n})', { n: items.length }) : tl('Daha az göster');
+    b.onclick = () => {
+      showAllApps = !showAllApps;
+      renderApps();
+    };
+    li.append(b);
+    list.append(li);
+  }
 }
 
 function launchApp(id, el) {
@@ -1492,6 +1545,9 @@ function launchApp(id, el) {
 }
 
 function onApps(m) {
+  appsBusy = false;
+  clearTimeout(appsBusyTimer);
+  syncBusy();
   appsData = m;
   appsLoadedAt = performance.now();
   renderApps();
@@ -1517,7 +1573,7 @@ $('searchForm').addEventListener('submit', (e) => {
 });
 
 // ============================================================ ayarlar
-const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false };
+const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false, theme: 'dark', accent: 'blue' };
 const settings = { ...SETTINGS_DEFAULT };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('settings') || '{}'));
@@ -1536,10 +1592,26 @@ const isNight = () => {
   const h = new Date().getHours();
   return h >= 22 || h < 7;
 };
+// Tema ve vurgu rengi: yatak modu her zaman koyu; "otomatik" telefonun sistem temasını izler
+const lightQuery = matchMedia('(prefers-color-scheme: light)');
+function applyTheme(bed) {
+  let mode = settings.theme === 'auto' ? (lightQuery.matches ? 'light' : 'dark') : settings.theme === 'light' ? 'light' : 'dark';
+  if (bed) mode = 'dark';
+  const root = document.documentElement;
+  root.dataset.mode = mode;
+  root.dataset.accent = settings.accent || 'blue';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mode === 'light' ? '#f2f2f7' : '#000000');
+  for (const b of document.querySelectorAll('#setTheme [data-v]')) b.classList.toggle('on', b.dataset.v === settings.theme);
+  for (const b of document.querySelectorAll('#setAccent [data-v]')) {
+    b.classList.toggle('on', b.dataset.v === (settings.accent || 'blue'));
+    b.setAttribute('aria-pressed', String(b.dataset.v === (settings.accent || 'blue')));
+  }
+}
+lightQuery.addEventListener?.('change', () => applySettings());
 function applySettings() {
   const bed = settings.bed || (settings.bedAuto && isNight());
   document.body.classList.toggle('bed', bed);
-  $('bedBtn').classList.toggle('on', bed);
+  applyTheme(bed);
   document.body.classList.toggle('lefty', settings.lefty);
   $('hud').classList.toggle('off', !settings.hud);
   $('lat').hidden = !settings.hud; // H7: üst çubukta yer kaplamasın
@@ -1592,6 +1664,22 @@ for (const b of document.querySelectorAll('#setLang [data-v]')) {
     location.reload();
   };
 }
+for (const b of document.querySelectorAll('#setTheme [data-v]')) {
+  b.onclick = () => {
+    settings.theme = b.dataset.v;
+    saveSettings();
+    applySettings();
+    haptic();
+  };
+}
+for (const b of document.querySelectorAll('#setAccent [data-v]')) {
+  b.onclick = () => {
+    settings.accent = b.dataset.v;
+    saveSettings();
+    applySettings();
+    haptic();
+  };
+}
 for (const b of document.querySelectorAll('#setScreen [data-v]')) {
   b.onclick = () => {
     settings.screenMin = b.dataset.v;
@@ -1608,14 +1696,6 @@ for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['set
     haptic();
   });
 }
-$('bedBtn').onclick = () => {
-  haptic();
-  const on = !document.body.classList.contains('bed');
-  settings.bed = on;
-  if (!on) settings.bedAuto = false; // gece elle kapatıldıysa otomatik de kapansın
-  saveSettings();
-  applySettings();
-};
 setInterval(applySettings, 60_000); // "akşamları otomatik" için
 $('aboutLine').textContent = tl('CouchRemote · ayarlar bu telefonda saklanır');
 
@@ -1736,7 +1816,11 @@ for (const sheet of document.querySelectorAll('.sheet')) {
   sheet.addEventListener('pointerup', end);
   sheet.addEventListener('pointercancel', end);
 }
-$('powerBtn').onclick = () => openSheet('powerSheet');
+$('padHelp').onclick = () => openSheet('padHelpSheet');
+$('openPower').onclick = () => {
+  closeSheets();
+  openSheet('powerSheet');
+};
 
 // ---- Siri ve Kestirmeler kurulum ekranı: jeton ve adresler tek dokunuşla kopyalanır
 const SIRI_EXAMPLES = { volume: '?v=30', launch: '?v=netflix', search: '?app=youtube&v=lofi', timer: '?v=30' };
@@ -2194,7 +2278,7 @@ function onContext(m) {
 }
 
 function renderFullscreenPill() {
-  const label = $('fsPill')?.querySelector('span');
+  const label = $('fsLabel');
   if (label) label.textContent = currentFullscreen ? tl('Küçült') : tl('Tam ekran');
 }
 
@@ -2211,7 +2295,7 @@ function seekBy(sec) {
 
 // ============================================================ aktar: pano
 let clipWaiter = null;
-$('clipGet').onclick = async () => {
+async function clipFromPc() {
   if (!connected) return toast(tl('Bilgisayara bağlı değil'));
   haptic();
   const textPromise = new Promise((resolve, reject) => {
@@ -2235,14 +2319,14 @@ $('clipGet').onclick = async () => {
       toast(e.message === 'zaman aşımı' ? tl('Pano alınamadı') : e.message);
     }
   }
-};
+}
 function onClipboard(m) {
   if (!clipWaiter) return;
   if (m.error) clipWaiter.reject(new Error(m.error));
   else clipWaiter.resolve(m.text || '');
   clipWaiter = null;
 }
-$('clipSend').onclick = async () => {
+async function clipFromPhone() {
   haptic();
   try {
     const t = await navigator.clipboard.readText();
@@ -2251,14 +2335,28 @@ $('clipSend').onclick = async () => {
   } catch {
     toast(tl('Pano okunamadı; metni kutuya yapıştır'));
   }
-};
+}
 function sendClipText(paste) {
   const t = $('clipText').value;
   if (!t) return toast(tl('Önce bir metin yaz veya yapıştır'));
   if (sendJson({ type: 'clipboard-set', text: t, paste })) haptic();
   else toast(tl('Bilgisayara bağlı değil'));
 }
-$('clipTextSend').onclick = () => sendClipText(false);
+// Yön seçici: Telefon → PC (yaz/yapıştır, gönder) veya PC → Telefon (PC panosunu al)
+let clipDir = 'toPc';
+function renderClipDir() {
+  for (const b of document.querySelectorAll('#clipDir [data-v]')) b.classList.toggle('on', b.dataset.v === clipDir);
+  $('clipMain').textContent = clipDir === 'toPc' ? tl('PC panosuna gönder') : tl("PC'nin panosunu al");
+  $('clipText').hidden = clipDir !== 'toPc';
+  $('clipTextPaste').hidden = clipDir !== 'toPc';
+}
+for (const b of document.querySelectorAll('#clipDir [data-v]')) b.onclick = () => { clipDir = b.dataset.v; haptic(); renderClipDir(); };
+$('clipMain').onclick = () => {
+  if (clipDir === 'toPhone') return clipFromPc();
+  if ($('clipText').value) return sendClipText(false);
+  return clipFromPhone(); // kutu boşsa telefonun panosu gönderilir
+};
+renderClipDir();
 $('clipTextPaste').onclick = () => sendClipText(true);
 function onClipboardSet(m) {
   toast(m.ok ? (m.paste ? tl('Gönderildi ve yapıştırıldı') : tl('PC panosuna kopyalandı')) : tl('Pano ayarlanamadı'));
@@ -2480,6 +2578,7 @@ else init();
 
 
 // ============================================================ LG TV (PC aracı)
+bindClickpad($('dpad'), (d) => { haptic(); sendJson({ type: 'key', key: d, mods: [], target: 'media' }); });
 tvUi = initTv({ $, sendJson, toast, haptic, tl, openSheet: (id) => openSheet(id), closeSheets: () => closeSheets(), pressFeedback, showView: (n) => showView(n), getView: () => currentViewName, getPc: () => pcConn });
 tvUi.refresh();
 if (window.__preview) Object.assign(window.__preview, { tv: tvUi, setConn });
@@ -2494,6 +2593,14 @@ for (const s of document.querySelectorAll('svg.ic')) {
 for (const r of document.querySelectorAll('.set-row input[type=range]')) {
   const label = r.closest('.set-row')?.querySelector('span');
   if (label && !r.getAttribute('aria-label')) r.setAttribute('aria-label', (label.firstChild?.textContent || label.textContent).trim());
+}
+// Her panelde sağ üstte "Bitti" (iOS tarzı kapatma)
+for (const sh of document.querySelectorAll('.sheet')) {
+  const done = document.createElement('button');
+  done.className = 'sheet-done';
+  done.textContent = tl('Bitti');
+  done.addEventListener('click', () => closeSheets());
+  sh.prepend(done);
 }
 // Paneller: iletişim kutusu rolü, başlığa bağlı ad, odak panele alınabilir
 for (const sh of document.querySelectorAll('.sheet')) {
@@ -2604,3 +2711,8 @@ for (const b of document.querySelectorAll('#nudge .nb')) {
   });
 }
 for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-current', b.classList.contains('on') ? 'page' : 'false');
+
+// Touchpad ipucu yalnızca ilk kullanıma kadar görünür
+try { if (localStorage.getItem('padHinted')) $('pad').classList.add('used'); } catch {}
+
+document.addEventListener('busychange', syncBusy);

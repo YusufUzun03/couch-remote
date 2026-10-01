@@ -8,11 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Couch">
 <meta name="theme-color" content="#000000">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="dark light">
 <link rel="manifest" href="%%MANIFEST_HREF%%">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/design.css">
 <title>CouchRemote</title>
 </head>
 <body>
@@ -25,6 +26,8 @@
     <symbol id="i-remote" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10 9.4v5.2l4.6-2.6z" fill="currentColor"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5A.8.8 0 0 0 8 5.2z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-rew" viewBox="0 0 24 24"><path d="M11.5 7v10a.6.6 0 0 1-.95.5L4 12.5a.6.6 0 0 1 0-1l6.55-5A.6.6 0 0 1 11.5 7z" fill="currentColor" stroke="none"/><path d="M20.5 7v10a.6.6 0 0 1-.95.5L13 12.5a.6.6 0 0 1 0-1l6.55-5a.6.6 0 0 1 .95.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-ff" viewBox="0 0 24 24"><path d="M12.5 7v10a.6.6 0 0 0 .95.5L20 12.5a.6.6 0 0 0 0-1l-6.55-5a.6.6 0 0 0-.95.5z" fill="currentColor" stroke="none"/><path d="M3.5 7v10a.6.6 0 0 0 .95.5L11 12.5a.6.6 0 0 0 0-1L4.45 6.5a.6.6 0 0 0-.95.5z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M5.5 6v12" /><path d="M19 6.6v10.8a.6.6 0 0 1-.9.5L9.3 12.5a.6.6 0 0 1 0-1L18.1 6.1a.6.6 0 0 1 .9.5z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M18.5 6v12" /><path d="M5 6.6v10.8a.6.6 0 0 0 .9.5l8.8-5.4a.6.6 0 0 0 0-1L5.9 6.1a.6.6 0 0 0-.9.5z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-back10" viewBox="0 0 24 24"><path d="M4.6 9.5A8 8 0 1 1 4 12.5"/><path d="M4 5.5v4.2h4.2"/><text x="12.6" y="15.4" font-size="7.4" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none" font-family="-apple-system, system-ui, sans-serif">10</text></symbol>
@@ -53,14 +56,15 @@
     <symbol id="i-return" viewBox="0 0 24 24"><path d="M19.5 5v6.5a3 3 0 0 1-3 3H5"/><path d="M9 10.5l-4 4 4 4"/></symbol>
     <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8 10.5H6.5A1.5 1.5 0 0 0 5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5H16"/></symbol>
     <symbol id="i-add" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
-    <symbol id="i-home" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol>
     <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20.5h8"/></symbol>
     <symbol id="i-desktop" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></symbol>
     <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2.5 8.8a14 14 0 0 1 19 0M5.5 12.2a9.5 9.5 0 0 1 13 0M8.6 15.5a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/><path d="M4 4l16 16"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
     <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3.5v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/></symbol>
-    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2L5.5 5.5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.8v9.7h13V9.8"/><path d="M10 19.5v-5h4v5"/></symbol>
     <symbol id="i-transfer" viewBox="0 0 24 24"><path d="M7 4.5v13M3.5 8L7 4.5 10.5 8"/><path d="M17 19.5v-13M13.5 16l3.5 3.5 3.5-3.5"/></symbol>
     <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2.5"/><path d="M9 4.5V4a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4v.5M9 10h6M9 14h6M9 18h3"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></symbol>
@@ -83,7 +87,7 @@
   <ol class="guide-steps">
     <li><span class="badge"><svg class="ic"><use href="#i-share"/></svg></span><div><b>Paylaş'a dokun</b><small>Safari'nin alt çubuğunda. Göremiyorsan önce <b>…</b> menüsünü aç.</small></div></li>
     <li><span class="badge" style="--c:#30d158"><svg class="ic"><use href="#i-add"/></svg></span><div><b>Ana Ekrana Ekle</b><small>Listede görmüyorsan aşağı kaydır. <b>Web Uygulaması Olarak Aç</b> açık kalsın.</small></div></li>
-    <li><span class="badge" style="--c:#bf5af2"><svg class="ic"><use href="#i-home"/></svg></span><div><b>Couch simgesinden aç</b><small>Eşleşme ilk açılışta kendiliğinden yapılır. Bu sayfayı kapatabilirsin.</small></div></li>
+    <li><span class="badge" style="--c:#bf5af2"><svg class="ic"><use href="#i-house"/></svg></span><div><b>Couch simgesinden aç</b><small>Eşleşme ilk açılışta kendiliğinden yapılır. Bu sayfayı kapatabilirsin.</small></div></li>
   </ol>
   <p class="footnote">Ana ekrana eklemeyi <b>bu sayfadan</b> yap: eşleşme kodu bu sayfanın adresinde.</p>
   <div class="tap-hint" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v13M6.5 13.5L12 19l5.5-5.5"/></svg>Paylaş düğmesi aşağıda</div>
@@ -116,15 +120,19 @@
       <span id="lat"></span>
       <button id="timerPill" hidden><svg class="ic sm"><use href="#i-timer"/></svg><span></span></button>
     </div>
-    <button class="icon-btn" id="bedBtn" aria-label="Yatak modu"><svg class="ic"><use href="#i-moon"/></svg></button>
-    <button class="icon-btn" id="powerBtn" aria-label="Güç ve uyku zamanlayıcısı"><svg class="ic"><use href="#i-power"/></svg></button>
     <button class="icon-btn" id="settingsBtn" aria-label="Ayarlar"><svg class="ic"><use href="#i-gear"/></svg></button>
   </header>
+  <div id="topProgress" hidden aria-hidden="true"><i></i></div>
+  <div id="connBanner" hidden role="status">
+    <svg class="ic sm" aria-hidden="true"><use href="#i-wifi-off"/></svg>
+    <span>Bilgisayara ulaşılamıyor</span>
+    <button id="connRetry">Yeniden dene</button>
+  </div>
   <div id="hud" class="off"></div>
 
   <!-- Touchpad -->
   <div class="view" id="v-pad">
-    <div class="pad-mode"><div class="seg mini" id="padMode"><button data-v="touch">Touchpad</button><button data-v="air">Hava faresi</button></div></div>
+    <div class="pad-mode"><div class="seg mini" id="padMode"><button data-v="touch">Touchpad</button><button data-v="air">Hava faresi</button></div><button class="icon-btn pad-help" id="padHelp" aria-label="Jestler">?</button></div>
     <div id="pad" role="application" aria-label="Touchpad" aria-describedby="hint" tabindex="0" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Enter">
       <i class="finger-glow" id="fingerGlow"></i>
       <div id="airHint">
@@ -134,11 +142,7 @@
         <p>İki parmak: kaydır · bırakınca imleç durur</p>
         <p class="air-note" id="airNote"></p>
       </div>
-      <div id="hint">
-        <p><b>Bir parmak</b> imleç · dokun: tık · çift dokun + sürükle: seç</p>
-        <p><b>İki parmak</b> kaydır · iki parmakla dokun: sağ tık</p>
-        <p><b>Üç parmak</b> ← → masaüstü · ↑ tüm pencereler · ↓ masaüstünü göster</p>
-      </div>
+      <div id="hint"><p>Kaydır: imleç · Dokun: tık · İki parmakla kaydır: sayfa</p></div>
     </div>
     <div id="nudge" hidden role="group" aria-label="İmleç yön düğmeleri">
       <button class="nb" data-d="0,-1" aria-label="İmleç yukarı"><svg class="ic"><use href="#i-up"/></svg></button>
@@ -147,8 +151,8 @@
       <button class="nb" data-d="1,0" aria-label="İmleç sağa"><svg class="ic"><use href="#i-right"/></svg></button>
     </div>
     <footer id="btns">
-      <div class="mb" data-bit="1" role="button" tabindex="0"><svg class="ic"><use href="#i-mouse-l"/></svg><span>Sol tık</span></div>
-      <div class="mb" data-bit="2" role="button" tabindex="0"><svg class="ic"><use href="#i-mouse-r"/></svg><span>Sağ tık</span></div>
+      <div class="mb" data-bit="1" role="button" tabindex="0"><span>Sol tık</span></div>
+      <div class="mb" data-bit="2" role="button" tabindex="0"><span>Sağ tık</span></div>
     </footer>
   </div>
 
@@ -182,7 +186,7 @@
 
   <!-- Kumanda -->
   <div class="view" id="v-remote" hidden>
-    <div id="np" class="empty pc-only">
+    <div id="np" class="empty pc-only" hidden>
       <div class="np-top">
         <div class="np-art">
           <img id="npThumb" alt="">
@@ -199,19 +203,6 @@
         <div class="times"><span id="npPos">0:00</span><span id="npDur">0:00</span></div>
       </div>
     </div>
-    <div id="ctx" class="pc-only" hidden>
-      <div class="ctx-title" id="ctxTitle"></div>
-      <div class="ctx-row" id="ctxBtns"></div>
-    </div>
-    <div class="transport pc-only">
-      <button class="t" data-media="prev" aria-label="Önceki"><svg class="ic"><use href="#i-prev"/></svg></button>
-      <button class="t" data-seekby="-10" aria-label="10 saniye geri"><svg class="ic"><use href="#i-back10"/></svg></button>
-      <button class="t big" data-media="playpause" id="ppBtn" aria-label="Oynat/Duraklat">
-        <svg class="ic play"><use href="#i-play"/></svg><svg class="ic pause"><use href="#i-pause"/></svg>
-      </button>
-      <button class="t" data-seekby="10" aria-label="10 saniye ileri"><svg class="ic"><use href="#i-fwd10"/></svg></button>
-      <button class="t" data-media="next" aria-label="Sonraki"><svg class="ic"><use href="#i-next"/></svg></button>
-    </div>
     <div id="dpad" class="pc-only">
       <button class="d dir-up" data-key="up" aria-label="Yukarı"><svg class="ic"><use href="#i-up"/></svg></button>
       <button class="d dir-left" data-key="left" aria-label="Sol"><svg class="ic"><use href="#i-left"/></svg></button>
@@ -219,14 +210,20 @@
       <button class="d dir-right" data-key="right" aria-label="Sağ"><svg class="ic"><use href="#i-right"/></svg></button>
       <button class="d dir-down" data-key="down" aria-label="Aşağı"><svg class="ic"><use href="#i-down"/></svg></button>
     </div>
-    <div class="pills pc-only">
-      <button class="pill" data-key="esc"><svg class="ic"><use href="#i-back"/></svg>Geri</button>
-      <button class="pill" data-combo="f" id="fsPill"><svg class="ic"><use href="#i-fullscreen"/></svg><span>Tam ekran</span></button>
-      <button class="pill" data-key="space"><svg class="ic"><use href="#i-space"/></svg>Boşluk</button>
+    <div class="rrow pc-only">
+      <div class="rcell"><button class="rb" data-key="esc" aria-label="Geri"><svg class="ic"><use href="#i-back"/></svg></button><span class="rlabel">Geri</span></div>
+      <div class="rcell"><button class="rb" data-combo="f" id="fsPill" aria-label="Tam ekran"><svg class="ic"><use href="#i-fullscreen"/></svg></button><span class="rlabel" id="fsLabel">Tam ekran</span></div>
+      <div class="rcell"><button class="rb prim" data-media="playpause" id="ppBtn" aria-label="Oynat/Duraklat"><svg class="ic play"><use href="#i-play"/></svg><svg class="ic pause"><use href="#i-pause"/></svg></button><span class="rlabel" id="ppLabel">Oynat</span></div>
+      <div class="rcell"><button class="rb" id="muteBtn" aria-label="Sessiz"><svg class="ic on-icon"><use href="#i-vol-down"/></svg><svg class="ic off-icon"><use href="#i-mute"/></svg></button><span class="rlabel">Sessiz</span></div>
+    </div>
+    <div class="srow pc-only">
+      <button data-media="prev" aria-label="Önceki"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button data-seekby="-10" aria-label="10 saniye geri"><svg class="ic"><use href="#i-back10"/></svg></button>
+      <button data-seekby="10" aria-label="10 saniye ileri"><svg class="ic"><use href="#i-fwd10"/></svg></button>
+      <button data-media="next" aria-label="Sonraki"><svg class="ic"><use href="#i-next"/></svg></button>
     </div>
     <div id="soundCard" class="pc-only">
     <div class="volume">
-      <button id="muteBtn" aria-label="Sessiz"><svg class="ic on-icon"><use href="#i-vol-down"/></svg><svg class="ic off-icon"><use href="#i-mute"/></svg></button>
       <input id="volSlider" type="range" min="0" max="100" step="1" value="0" aria-label="Ses seviyesi">
       <span id="volPct">–</span>
     </div>
@@ -236,6 +233,11 @@
     </div>
     </div>
 
+    <div id="ctx" class="pc-only" hidden>
+      <div class="ctx-title" id="ctxTitle" hidden></div>
+      <div class="ctx-row" id="ctxBtns"></div>
+    </div>
+
     <!-- LG TV kumandası (PC aracı olarak çalışır) -->
     <div id="tvRemote" hidden>
       <div class="tv-head">
@@ -243,6 +245,7 @@
         <button class="pill" id="tvSetup" aria-label="TV ayarları"><svg class="ic"><use href="#i-tv"/></svg></button>
       </div>
       <div class="tv-note" id="tvNote" hidden>
+        <svg class="ic" aria-hidden="true"><use href="#i-tv"/></svg>
         <p id="tvNoteText"></p>
         <form class="tv-type" id="tvCodeForm" action="#" hidden>
           <input id="tvCode" type="text" maxlength="6" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="A1B2C3" aria-label="TV eşleşme kodu">
@@ -251,11 +254,6 @@
         <button class="pill accent" id="tvNoteBtn"></button>
       </div>
       <div id="tvBody">
-        <div class="tv-row">
-          <button class="pill" id="tvOff"><svg class="ic"><use href="#i-power"/></svg>TV'yi kapat</button>
-          <button class="pill" data-tv="key" data-name="HOME"><svg class="ic"><use href="#i-home"/></svg>Ana ekran</button>
-          <button class="pill" data-tv="key" data-name="BACK"><svg class="ic"><use href="#i-back"/></svg>Geri</button>
-        </div>
         <div id="tvDpad">
           <button class="d dir-up" data-tv="key" data-name="UP" aria-label="Yukarı"><svg class="ic"><use href="#i-up"/></svg></button>
           <button class="d dir-left" data-tv="key" data-name="LEFT" aria-label="Sol"><svg class="ic"><use href="#i-left"/></svg></button>
@@ -263,21 +261,25 @@
           <button class="d dir-right" data-tv="key" data-name="RIGHT" aria-label="Sağ"><svg class="ic"><use href="#i-right"/></svg></button>
           <button class="d dir-down" data-tv="key" data-name="DOWN" aria-label="Aşağı"><svg class="ic"><use href="#i-down"/></svg></button>
         </div>
-        <div class="transport tv-transport">
-          <button class="t" data-tv="rew" aria-label="Geri sar"><svg class="ic"><use href="#i-prev"/></svg></button>
+        <div class="rrow">
+          <div class="rcell"><button class="rb" data-tv="key" data-name="BACK" aria-label="Geri"><svg class="ic"><use href="#i-back"/></svg></button><span class="rlabel">Geri</span></div>
+          <div class="rcell"><button class="rb" data-tv="key" data-name="HOME" aria-label="Ana ekran"><svg class="ic"><use href="#i-house"/></svg></button><span class="rlabel">Ana ekran</span></div>
+          <div class="rcell"><button class="rb" id="tvMute" aria-label="Sessiz"><svg class="ic on-icon"><use href="#i-vol-down"/></svg><svg class="ic off-icon"><use href="#i-mute"/></svg></button><span class="rlabel">Sessiz</span></div>
+          <div class="rcell"><button class="rb" id="tvOff" aria-label="TV'yi kapat"><svg class="ic"><use href="#i-power"/></svg></button><span class="rlabel">Kapat</span></div>
+        </div>
+        <div class="srow tv-transport">
+          <button class="t" data-tv="rew" aria-label="Geri sar"><svg class="ic"><use href="#i-rew"/></svg></button>
           <button class="t big" data-tv="play" aria-label="Oynat"><svg class="ic"><use href="#i-play"/></svg></button>
           <button class="t" data-tv="pause" aria-label="Duraklat"><svg class="ic"><use href="#i-pause"/></svg></button>
-          <button class="t" data-tv="ff" aria-label="İleri sar"><svg class="ic"><use href="#i-next"/></svg></button>
+          <button class="t" data-tv="ff" aria-label="İleri sar"><svg class="ic"><use href="#i-ff"/></svg></button>
         </div>
         <div class="volume tv-volume" data-cap="vol">
-          <button id="tvMute" aria-label="Sessiz"><svg class="ic on-icon"><use href="#i-vol-down"/></svg><svg class="ic off-icon"><use href="#i-mute"/></svg></button>
           <input id="tvVol" type="range" min="0" max="100" step="1" value="0" aria-label="TV ses seviyesi">
           <span id="tvVolPct">–</span>
         </div>
         <div class="tv-row">
           <button class="pill" data-tv="vol-down">Ses −</button>
           <button class="pill" data-tv="vol-up">Ses +</button>
-          <button class="pill" id="tvMuteKey" data-nocap="vol">Sessiz</button>
           <button class="pill" data-tv="ch-down">Kanal −</button>
           <button class="pill" data-tv="ch-up">Kanal +</button>
         </div>
@@ -329,14 +331,11 @@
       <button class="row-btn" id="shotOpen"><span class="badge"><svg class="ic"><use href="#i-photo"/></svg></span><div><b>Ekran görüntüsü al</b><small>Bilgisayarın ekranı telefonda açılır; kaydedebilir veya paylaşabilirsin</small></div></button>
     </div>
     <div class="section-title">Pano</div>
-    <div class="card-list">
-      <button class="row-btn" id="clipGet"><span class="badge"><svg class="ic"><use href="#i-download"/></svg></span><div><b>PC'nin panosunu al</b><small>Bilgisayarda kopyaladığın metin telefona kopyalanır</small></div></button>
-      <button class="row-btn" id="clipSend"><span class="badge"><svg class="ic"><use href="#i-upload"/></svg></span><div><b>Telefonun panosunu gönder</b><small>Telefonda kopyaladığın metin bilgisayarın panosuna gider</small></div></button>
-    </div>
-    <textarea id="clipText" rows="3" placeholder="Veya buraya yaz / yapıştır" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
-    <div class="pills">
-      <button class="pill" id="clipTextSend">PC panosuna gönder</button>
-      <button class="pill accent" id="clipTextPaste">Gönder ve yapıştır</button>
+    <div class="clip-card">
+      <div class="seg" id="clipDir" role="group" aria-label="Pano yönü"><button data-v="toPc">Telefon → PC</button><button data-v="toPhone">PC → Telefon</button></div>
+      <textarea id="clipText" rows="3" placeholder="Yaz veya yapıştır" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+      <button class="btn-primary" id="clipMain">PC panosuna gönder</button>
+      <button class="link-btn" id="clipTextPaste">Gönder ve yapıştır</button>
     </div>
     <div class="section-title">Dosya gönder</div>
     <div class="card-list">
@@ -351,7 +350,7 @@
     <button data-view="pad" class="on"><svg class="ic"><use href="#i-touchpad"/></svg><span>Touchpad</span></button>
     <button data-view="kbd"><svg class="ic"><use href="#i-keyboard"/></svg><span>Klavye</span></button>
     <button data-view="remote"><svg class="ic"><use href="#i-remote"/></svg><span>Kumanda</span></button>
-    <button data-view="apps"><svg class="ic"><use href="#i-home"/></svg><span>Uygulamalar</span></button>
+    <button data-view="apps"><svg class="ic"><use href="#i-grid"/></svg><span>Uygulamalar</span></button>
     <button data-view="share"><svg class="ic"><use href="#i-transfer"/></svg><span>Aktar</span></button>
   </nav>
 </section>
@@ -361,12 +360,7 @@
   <div class="box">
     <div class="hero-icon small"><svg class="ic"><use href="#i-wifi-off"/></svg></div>
     <h2 id="offTitle">Bilgisayara ulaşılamıyor</h2>
-    <p>Bağlantı kendiliğinden yeniden deneniyor.</p>
-    <ul>
-      <li>Bilgisayar kapalı veya uyku modunda olabilir</li>
-      <li>CouchRemote çalışmıyor olabilir</li>
-      <li>iPhone başka bir Wi-Fi ağına bağlı olabilir</li>
-    </ul>
+    <p>Bilgisayar açık ve aynı Wi-Fi ağında mı? Bağlantı kendiliğinden yeniden denenir.</p>
     <button id="retryBtn" class="btn-primary">Şimdi dene</button>
   </div>
 </section>
@@ -425,6 +419,28 @@
   <p class="hint-sm">Bilgisayarın varsayılan hoparlörü değişir. Ses yönlendirmesini başka bir program yönetiyorsa (ör. SteelSeries Sonar) o program seçimi geri alabilir.</p>
 </section>
 
+<section class="sheet" id="padHelpSheet" hidden>
+  <div class="grabber"></div>
+  <h3>Jestler</h3>
+  <div class="section-title">Touchpad</div>
+  <div class="card-list settings">
+    <div class="set-row"><span>Bir parmakla kaydır<small>İmleci oynatır</small></span></div>
+    <div class="set-row"><span>Dokun<small>Sol tık</small></span></div>
+    <div class="set-row"><span>Çift dokun ve sürükle<small>Seçer veya sürükler</small></span></div>
+    <div class="set-row"><span>İki parmakla kaydır<small>Sayfayı kaydırır</small></span></div>
+    <div class="set-row"><span>İki parmakla dokun<small>Sağ tık</small></span></div>
+    <div class="set-row"><span>Üç parmakla ← →<small>Masaüstleri arasında geç</small></span></div>
+    <div class="set-row"><span>Üç parmakla ↑ / ↓<small>Tüm pencereler / masaüstünü göster</small></span></div>
+  </div>
+  <div class="section-title">Hava faresi</div>
+  <div class="card-list settings">
+    <div class="set-row"><span>Basılı tut ve telefonu çevir<small>İmleç telefonun yönüne gider; bırakınca durur</small></span></div>
+    <div class="set-row"><span>Hızlı dokun<small>Tık</small></span></div>
+    <div class="set-row"><span>Çift dokun ve tut<small>Sürükle</small></span></div>
+    <div class="set-row"><span>İki parmak<small>Kaydır</small></span></div>
+  </div>
+</section>
+
 <section class="sheet" id="devSheet" hidden>
   <div class="grabber"></div>
   <h3>Cihaz seç</h3>
@@ -474,7 +490,15 @@
 <section class="sheet" id="settingsSheet" hidden>
   <div class="grabber"></div>
   <h3>Ayarlar</h3>
-  <div class="section-title first">Touchpad</div>
+  <div class="card-list settings">
+    <button class="set-row link" id="openPower"><span>Güç ve sahneler<small>Uyut, kilitle, uyku zamanlayıcısı, film modu</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
+  </div>
+  <div class="section-title">Cihazlar ve kısayollar</div>
+  <div class="card-list settings">
+    <button class="set-row link" id="openTv"><span>Televizyonlar<small id="tvRowNote">Televizyonu telefondan kumanda et</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
+    <button class="set-row link" id="openSiri"><span>Siri ve Kestirmeler<small>"Hey Siri, TV modunu aç", Eylem Düğmesi, Kontrol Merkezi</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
+  </div>
+  <div class="section-title">Touchpad</div>
   <div class="card-list settings">
     <div class="set-row"><span>İmleç hızı</span><input type="range" id="setSens" min="0.4" max="2.2" step="0.1"><output id="setSensOut"></output></div>
     <div class="set-row"><span>Hava faresi hızı<small>Telefonu çevirdikçe imlecin ne kadar gideceği</small></span><input type="range" id="setAirSens" min="0.4" max="2.5" step="0.1"><output id="setAirSensOut"></output></div>
@@ -482,38 +506,49 @@
     <label class="set-row"><span>Doğal kaydırma<small>Parmak yukarı → sayfa aşağı (iPhone gibi)</small></span><input type="checkbox" switch id="setNatural"></label>
     <label class="set-row"><span>Sol el modu<small>Sol/Sağ tık düğmelerinin yeri değişir</small></span><input type="checkbox" switch id="setLefty"></label>
   </div>
-  <div class="section-title">Genel</div>
+  <div class="section-title">Klavye</div>
   <div class="card-list settings">
-    <div class="set-row col"><span>Dil<small>Otomatik: telefonunun diline göre</small></span>
-      <div class="seg small" id="setLang" role="group" aria-label="Dil"><button data-v="auto">Otomatik</button><button data-v="tr">Türkçe</button><button data-v="en">English</button></div>
-    </div>
     <div class="set-row col"><span>Ekran klavyesi düzeni<small>Bilgisayarındaki klavye düzenine uygun olanı seç</small></span>
       <div class="seg small" id="setKbLayout" role="group" aria-label="Ekran klavyesi düzeni"><button data-v="tr">Türkçe Q</button><button data-v="us">English (US)</button></div>
     </div>
+  </div>
+  <div class="section-title">Görünüm</div>
+  <div class="card-list settings">
+    <div class="set-row col"><span>Tema<small>Yatak modu açıkken her zaman koyu</small></span>
+      <div class="seg small" id="setTheme" role="group" aria-label="Tema"><button data-v="auto">Otomatik</button><button data-v="dark">Koyu</button><button data-v="light">Açık</button></div>
+    </div>
+    <div class="set-row col"><span>Vurgu rengi</span>
+      <div class="swatches" id="setAccent" role="group" aria-label="Vurgu rengi">
+        <button data-v="blue" style="--sw:#0a84ff" aria-label="Mavi"></button>
+        <button data-v="purple" style="--sw:#bf5af2" aria-label="Mor"></button>
+        <button data-v="pink" style="--sw:#ff375f" aria-label="Pembe"></button>
+        <button data-v="orange" style="--sw:#ff9f0a" aria-label="Turuncu"></button>
+        <button data-v="green" style="--sw:#30d158" aria-label="Yeşil"></button>
+        <button data-v="graphite" style="--sw:#8e8e93" aria-label="Grafit"></button>
+      </div>
+    </div>
+    <div class="set-row col"><span>Dil<small>Otomatik: telefonunun diline göre</small></span>
+      <div class="seg small" id="setLang" role="group" aria-label="Dil"><button data-v="auto">Otomatik</button><button data-v="tr">Türkçe</button><button data-v="en">English</button></div>
+    </div>
+    <label class="set-row"><span>Yatak modu<small>Karanlıkta göz yormayan kehribar renkler</small></span><input type="checkbox" switch id="setBed"></label>
+    <label class="set-row"><span>Akşamları otomatik<small>22:00 – 07:00 arasında yatak modu</small></span><input type="checkbox" switch id="setBedAuto"></label>
+  </div>
+  <div class="section-title">Davranış</div>
+  <div class="card-list settings">
     <div class="set-row col"><span>Ekran açık kalsın<small>Bu süre dokunmazsan telefon normal şekilde kilitlenebilir</small></span>
       <div class="seg small" id="setScreen"><button data-v="5">5 dk</button><button data-v="10">10 dk</button><button data-v="30">30 dk</button><button data-v="always">Her zaman</button></div>
     </div>
     <label class="set-row"><span>Servis öne gelince kumandaya geç<small>Bilgisayarda Netflix, YouTube gibi bir servis açılınca telefon Kumanda sekmesine geçer</small></span><input type="checkbox" switch id="setAutoRemote"></label>
     <label class="set-row"><span>Servis açılınca tam ekran<small>Netflix, YouTube gibi servisler açılınca tam ekrana geçer</small></span><input type="checkbox" switch id="setFullscreen"></label>
-  </div>
-  <div class="section-title">Cihazlar</div>
-  <div class="card-list settings">
-    <button class="set-row link" id="openTv"><span>Televizyonlar<small id="tvRowNote">Televizyonu telefondan kumanda et</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
-  </div>
-  <div class="section-title">Siri ve Kısayollar</div>
-  <div class="card-list settings">
-    <button class="set-row link" id="openSiri"><span>Siri ve Kestirmeler<small>"Hey Siri, TV modunu aç", Eylem Düğmesi, Kontrol Merkezi</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
-  </div>
-  <div class="section-title">Görünüm</div>
-  <div class="card-list settings">
-    <label class="set-row"><span>Yatak modu<small>Karanlıkta göz yormayan kehribar renkler</small></span><input type="checkbox" switch id="setBed"></label>
-    <label class="set-row"><span>Akşamları otomatik<small>22:00 – 07:00 arasında yatak modu</small></span><input type="checkbox" switch id="setBedAuto"></label>
     <label class="set-row"><span>Titreşim</span><input type="checkbox" switch id="setHaptics"></label>
-    <label class="set-row"><span>Gecikme ayrıntıları</span><input type="checkbox" switch id="setHud"></label>
   </div>
   <div class="section-title">Erişilebilirlik</div>
   <div class="card-list settings">
     <label class="set-row"><span>İmleç yön düğmeleri<small>VoiceOver veya Anahtar Denetimi kullanıyorsan: touchpad yerine yön düğmeleriyle imleci oynat</small></span><input type="checkbox" switch id="setNudge"></label>
+  </div>
+  <div class="section-title">Gelişmiş</div>
+  <div class="card-list settings">
+    <label class="set-row"><span>Gecikme ayrıntıları</span><input type="checkbox" switch id="setHud"></label>
   </div>
   <p class="hint-sm center" id="aboutLine"></p>
 </section>

@@ -13,6 +13,27 @@ const STATE = {
   unpaired: 'Eşleşme gerekli',
 };
 
+/** Clickpad: parmakla kaydırınca yön tuşu (Siri Remote gibi), dokununca düğmeler çalışır */
+export function bindClickpad(root, onDir) {
+  const STEP = 30;
+  let p = null;
+  let swiped = false;
+  root.addEventListener('pointerdown', (e) => { p = { x: e.clientX, y: e.clientY }; swiped = false; });
+  root.addEventListener('pointermove', (e) => {
+    if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < STEP) return;
+    onDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+    p = { x: e.clientX, y: e.clientY };
+    swiped = true;
+  });
+  const end = () => { p = null; };
+  root.addEventListener('pointerup', end);
+  root.addEventListener('pointercancel', end);
+  // Kaydırma sonrası gelen tıklama bir düğmeye basmış sayılmasın
+  root.addEventListener('click', (e) => { if (swiped) { e.stopPropagation(); e.preventDefault(); swiped = false; } }, true);
+}
+
 export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets, pressFeedback, showView, getView, getPc }) {
   const root = $('v-remote');
   let tvs = [];
@@ -49,6 +70,8 @@ export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets,
 
   function renderTv() {
     const t = cur();
+    document.body.classList.toggle('tv-busy', !!t && (t.state === 'connecting' || t.state === 'pairing'));
+    document.dispatchEvent(new Event('busychange'));
     if (!t) return;
     $('tvName').textContent = t.name || 'TV';
     const st = $('tvState');
@@ -203,7 +226,7 @@ export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets,
       else send({ op });
     });
   }
-  $('tvMuteKey').onclick = () => { haptic(); send({ op: 'mute', mute: true }); };
+  bindClickpad($('tvDpad'), (d) => { haptic(); send({ op: 'key', name: d.toUpperCase() }); });
   $('tvCodeForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const code = $('tvCode').value.trim();

@@ -1,0 +1,336 @@
+/* CouchRemote — tasarım temeli (v4 "sade ve profesyonel").
+   app.css + ui.css'in üstüne biner. Kararlar:
+   - Yüzeyler düz: OLED siyah zemin, düz koyu gri kartlar. Bulanık cam yalnızca alt sekmeler, üst çubuk ve açılan paneller.
+   - Parlama, ışıma, degrade, noktalı doku ve süs animasyonları yok. Hareket yalnızca durum değişimini anlatır.
+   - Renk: monokrom. Vurgu rengi sadece "aktif olan" ve tek birincil eylem için.
+   - Yazı: iOS sistem yazısı (SF Pro), 5 boyut, 3 ağırlık. İkon: tek çizgi ailesi; geçiş ve durum simgeleri dolgulu. */
+
+/* ================================================================ token'lar */
+:root {
+  /* yüzey merdiveni (zemin → kart → yükseltilmiş kart → doldurma) */
+  --bg: #000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --surface-3: #3a3a3c;
+  --stroke: rgba(255, 255, 255, 0.07);
+  --sep: rgba(84, 84, 88, 0.45);
+
+  /* düz yüzey: degrade, parlama ve gölge yok; yalnızca çok ince kenar çizgisi */
+  --card: none;
+  --hairline: inset 0 0 0 0.5px var(--stroke);
+  --lift: 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+  --glow: none;
+  --ambient: 0;
+  --tint: transparent;
+
+  /* metin: üç kademe, hepsi AA kontrast */
+  --label: #fff;
+  --label-2: rgba(235, 235, 245, 0.68);
+  --label-3: rgba(235, 235, 245, 0.6);
+
+  /* boşluk (4 pt ızgara) ve köşe yarıçapı */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 20px;
+
+  /* tipografi ölçeği: yalnızca bu 5 boyut */
+  --t-title: 700 28px/1.14 -apple-system, "SF Pro Display", system-ui, sans-serif;
+  --t-headline: 600 17px/1.3 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --t-body: 400 17px/1.35 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --t-sub: 400 15px/1.35 -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --t-caption: 500 13px/1.3 -apple-system, "SF Pro Text", system-ui, sans-serif;
+}
+
+/* ================================================================ süsleri kaldır */
+#ambient { display: none; }
+#pad::before, #miniPad::before { display: none; }
+#pad, #miniPad { background-image: none; }
+#dot.ok { animation: none; }
+.np-art-ph .ic { animation: none; }
+.view > *, .view:not([hidden]) > * { animation: none; }  /* ekran geçişi yalnızca ekranın kendisinde (fade + kısa kayma) */
+
+/* parlak degrade dolguları düz renge */
+.btn-primary, .ctx-btn.accent, .chip-btn.on, .pill.accent, .shot-btn.accent { background-image: none; box-shadow: none; }
+.tile-icon::after { display: none; }
+.tile-icon, .badge { background-image: none; }
+.hero-icon img { box-shadow: none; }
+.hero-icon.small { background: var(--accent); box-shadow: none; }
+.tap-hint { box-shadow: none; animation: none; }
+.air-ring { background: none; }
+#pad.pointing .air-ring { box-shadow: none; }
+#np { background-image: none; }
+
+/* yüzeyler: düz renk + ince çizgi */
+#np, .volume, #ctx, .card-list, .list, #dpad, #tvDpad, #tvPad, .pill, .mb, #typer, #clipText, .power-grid .pw, .timer-now, #hud,
+.searchbar, #pad, #miniPad, .out-row, .mix-row, .guide-steps li, #offline .box {
+  background-image: none;
+}
+
+/* cam yalnızca sabit çubuk ve paneller; kenarda tek çizgi, parlak üst kenar yok */
+.sheet { box-shadow: 0 -1px 0 var(--stroke), 0 -24px 60px rgba(0, 0, 0, 0.5); background-image: none; background-color: color-mix(in srgb, var(--surface) 86%, transparent); }
+#tabs { background-image: none; }
+
+/* ================================================================ tipografi */
+html, body { font: var(--t-body); }
+.section-title { font: var(--t-caption); letter-spacing: 0.01em; text-transform: none; color: var(--label-2); }
+.sheet h3 { font: var(--t-title); font-size: 22px; letter-spacing: -0.015em; margin-block: var(--s2) var(--s3); }
+.hint-sm, .note-sm { font: var(--t-caption); color: var(--label-2); line-height: 1.4; }
+.set-row small, .row-btn small { font: var(--t-caption); color: var(--label-2); }
+
+/* ================================================================ aktif durum tek vurgu */
+/* ikincil denetimler gri; renk yalnızca seçili/birincil */
+.chip-btn { background-color: var(--surface-2); color: var(--label); }
+.chip-btn.on { background-color: var(--accent-fill, var(--accent)); color: var(--on-accent, #fff); }
+.pill { background-color: var(--surface-2); }
+.pill.accent { background-color: var(--accent-fill, var(--accent)); color: var(--on-accent, #fff); }
+
+/* ================================================================ AŞAMA 1 — İSKELET */
+/* Üst çubuk: cihaz hapı + tek ayar butonu */
+#bar { padding-inline: var(--s4); gap: var(--s2); }
+.icon-btn { background-color: var(--surface-2); box-shadow: none; }
+.icon-btn:active { background-color: var(--surface-3); }
+
+/* Bağlantı şeridi: ekranı kapatmadan bilgi ver, denetimleri soluklaştır */
+#connBanner { display: flex; align-items: center; gap: var(--s2); margin: 0 var(--s4) var(--s2); padding: 10px 12px 10px 14px; border-radius: var(--r); background: color-mix(in srgb, var(--red) 16%, var(--surface)); color: var(--label); font: var(--t-sub); }
+#connBanner[hidden] { display: none; }
+#connBanner .ic { color: var(--red); flex: none; }
+#connBanner span { flex: 1; min-width: 0; }
+#connBanner button { flex: none; font: var(--t-caption); font-weight: 600; color: var(--accent); padding: 6px 4px; }
+body.offline .view { opacity: 0.4; pointer-events: none; transition: opacity 0.3s var(--ease); }
+body.offline .status #dot { background: var(--red); }
+
+/* Alt sekmeler: standart iOS (dolgusuz; seçili = vurgu rengi) */
+#tabs { box-shadow: 0 -0.5px 0 var(--sep); }
+#tabs::before { display: none; }
+#tabs button { color: #8e8e93; }
+#tabs button.on { background: none; color: var(--accent); }
+#tabs button .ic { transition: none; }
+#tabs button.on .ic, #tabs button:active .ic { transform: none; }
+#tabs button span { font-size: 10.5px; font-weight: 500; }
+#tabs button.on span { font-weight: 600; }
+
+/* Paneller: gruplu liste stili */
+.sheet { padding-top: 6px; }
+.sheet .grabber { margin-bottom: var(--s2); }
+.sheet h3 { text-align: center; font: var(--t-headline); font-size: 17px; letter-spacing: 0; margin: 2px 0 var(--s4); }
+.sheet-done { position: absolute; top: 14px; right: var(--s4); font: var(--t-headline); color: var(--accent); padding: 6px 4px; }
+.sheet .section-title { font-size: 12.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); margin: var(--s5) var(--s4) var(--s2) var(--s4); }
+.sheet .section-title.first, .sheet h3 + .section-title { margin-top: var(--s2); }
+.sheet .card-list { margin-inline: 0; border-radius: var(--r); }
+.set-row { min-height: 52px; }
+.set-row b, .set-row > span { font: var(--t-body); }
+.sheet { background-color: color-mix(in srgb, var(--surface) 95%, transparent); }
+.sheet .grabber { margin-bottom: var(--s3); }
+.sheet h3 { margin-top: var(--s2); }
+
+/* ================================================================ AŞAMA 2 — KUMANDA (Siri Remote tarzı) */
+/* Clickpad: dış halka = yön, orta = Tamam; parmakla kaydırınca da gezinir */
+#dpad, #tvDpad {
+  position: relative; width: min(74vw, 272px); height: auto; aspect-ratio: 1; margin: var(--s2) auto; transform: none;
+  border-radius: 50%; background-color: var(--surface); box-shadow: none; touch-action: none; flex: none;
+}
+#dpad::before, #tvDpad::before { display: none; }
+#dpad .d, #tvDpad .d { position: absolute; display: grid; place-items: center; background: none; box-shadow: none; color: var(--label-3); border-radius: 50%; transition: background-color 0.15s var(--ease), color 0.15s var(--ease); }
+#dpad .d .ic, #tvDpad .d .ic { width: 24px; height: 24px; }
+#dpad .dir-up, #tvDpad .dir-up { top: 3%; left: 33%; width: 34%; height: 22%; }
+#dpad .dir-down, #tvDpad .dir-down { bottom: 3%; left: 33%; top: auto; width: 34%; height: 22%; }
+#dpad .dir-left, #tvDpad .dir-left { left: 3%; top: 33%; width: 22%; height: 34%; }
+#dpad .dir-right, #tvDpad .dir-right { right: 3%; left: auto; top: 33%; width: 22%; height: 34%; }
+#dpad .ok, #tvDpad .ok { left: 27%; top: 27%; width: 46%; height: 46%; background: var(--surface-2); color: var(--label-2); font: var(--t-caption); font-weight: 600; }
+#dpad .d.down, #tvDpad .d.down { transform: none; background: var(--fill-strong); color: var(--label); }
+#dpad .ok.down, #tvDpad .ok.down { background: var(--surface-3); color: var(--label); transform: none; }
+
+/* Daire düğmeler: ikon + küçük etiket */
+.rrow { display: flex; justify-content: space-between; padding: 0 var(--s2); }
+.rcell { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 25%; }
+.rb { position: relative; width: 64px; height: 64px; border-radius: 50%; background: var(--surface-2); color: var(--label); display: grid; place-items: center; box-shadow: none; transition: transform 0.2s var(--ease), background-color 0.15s var(--ease); }
+.rb .ic { width: 26px; height: 26px; }
+.rb.down { transform: scale(0.94); background: var(--surface-3); }
+.rb.prim { background: var(--label); color: var(--bg); }
+.rb.prim.down { background: var(--label-2); }
+.rlabel { font: var(--t-caption); font-size: 12px; color: var(--label-2); }
+#muteBtn.rb, #tvMute.rb { width: 64px; height: 64px; }
+#muteBtn.muted, #tvMute.muted { background: var(--surface-3); }
+#muteBtn .off-icon, #tvMute .off-icon { color: var(--red); }
+/* oynat/duraklat ikonları üst üste biner */
+#ppBtn.rb .ic { position: absolute; width: 28px; height: 28px; }
+
+/* Atlama sırası: yalın ikonlar */
+.srow { display: flex; justify-content: space-between; align-items: center; padding: 0 var(--s4); }
+.srow button { width: 52px; height: 44px; display: grid; place-items: center; color: var(--label-2); border-radius: 12px; }
+.srow button.down { background: var(--fill); color: var(--label); transform: none; }
+.srow .ic, .srow .t .ic { width: 26px; height: 26px; }
+.srow.tv-transport .t { width: 52px; height: 44px; background: none; color: var(--label-2); border-radius: 12px; }
+.srow.tv-transport .t.big { background: none; color: var(--label-2); width: 52px; height: 44px; }
+
+/* Çalan kart: ince ve sakin */
+#np { padding: var(--s3); border-radius: var(--r); min-height: 0; gap: var(--s2); }
+.np-top { gap: var(--s3); }
+.np-art { width: 56px; height: 56px; border-radius: 12px; }
+#npTitle { font: var(--t-headline); letter-spacing: 0; -webkit-line-clamp: 1; }
+#npArtist { font: var(--t-sub); margin-top: 1px; }
+#npApp { display: none; }
+#npBar { gap: 2px; }
+#npSeek::-webkit-slider-runnable-track { height: 3px; }
+
+/* Servis kısayolları: başlıksız tek yatay sıra */
+#ctx { background: none; box-shadow: none; padding: 0; }
+#ctx .ctx-row { flex-wrap: nowrap; overflow-x: auto; gap: var(--s2); scrollbar-width: none; padding: 0 var(--s4); margin: 0 calc(var(--s4) * -1); }
+#ctx .ctx-row::-webkit-scrollbar { display: none; }
+.ctx-btn { flex: none; height: 38px; padding: 0 var(--s4); border-radius: 19px; background: var(--surface-2); font: var(--t-sub); font-weight: 500; }
+.ctx-btn.accent { background: var(--accent-fill, var(--accent)); color: var(--on-accent, #fff); }
+
+/* Ses kartı: yalnızca kaydırıcı */
+.volume { padding: var(--s3) var(--s4); background: var(--surface); }
+#v-remote { gap: var(--s4); }
+
+/* Yatay telefon ve tablet ızgarası yeni sınıflarla */
+@media (orientation: landscape) and (max-height: 540px) {
+  #v-remote > .srow { grid-area: tr; }
+  #v-remote > .rrow { grid-area: pills; }
+  #dpad, #tvDpad { width: min(46vh, 220px); }
+  .rb { width: 52px; height: 52px; }
+}
+@media (min-width: 1000px) and (orientation: landscape) and (min-height: 600px) {
+  #v-remote:not(.tv-mode) > .srow { grid-area: tr; }
+  #v-remote:not(.tv-mode) > .rrow { grid-area: pills; }
+}
+#v-remote { gap: var(--s3); }
+#dpad, #tvDpad { width: min(62vw, 236px); }
+
+/* ================================================================ AŞAMA 3 — TOUCHPAD VE KLAVYE */
+.pad-mode { display: flex; align-items: center; gap: var(--s2); padding-right: var(--s4); }
+.pad-mode .seg { flex: 1; }
+.pad-help { flex: none; width: 36px; height: 36px; font: var(--t-headline); color: var(--label-2); }
+
+/* Pad: düz yüzey, parmağın altında yalnızca yumuşak bir nokta; ipucu tek satır ve ilk kullanımda kaybolur */
+#pad { border-radius: var(--r-lg); background-color: var(--surface); box-shadow: none; }
+#pad.active { box-shadow: inset 0 0 0 1px var(--stroke); }
+.finger-glow { background: radial-gradient(closest-side, rgba(255, 255, 255, 0.16), transparent) !important; }
+#hint { color: var(--label-3); font: var(--t-caption); }
+#hint p { margin: 0; }
+#hint b { font-weight: 600; color: var(--label-2); }
+
+/* Sol / Sağ: iki büyük düz düğme */
+#btns { gap: var(--s3); padding: var(--s3) var(--s4); }
+.mb { height: 58px; border-radius: var(--r); background-color: var(--surface-2); box-shadow: none; font: var(--t-headline); color: var(--label); display: grid; place-items: center; }
+.mb span { font: var(--t-headline); }
+.mb.down { background-color: var(--surface-3); transform: none; }
+
+/* Klavye: iOS koyu klavye */
+#v-kbd { --key: #636366; --key-fn: #3a3a3c; --key-text: #fff; --kb-bg: #1c1c1e; --key-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+#keyPop { background: #636366; }
+#kb { box-shadow: none; }
+
+/* PC tuş şeridi: dolgusuz metin tuşları, seçili değiştirici vurgu renginde */
+.sk { background: none; color: var(--label-2); font: var(--t-sub); font-weight: 500; }
+.sk.down { background: var(--fill); transform: none; }
+.sk.mod.on { background: var(--accent-fill, var(--accent)); color: var(--on-accent, #fff); }
+#miniPad { background-color: var(--surface); box-shadow: none; border-radius: var(--r); }
+
+/* ================================================================ AŞAMA 4 — UYGULAMALAR */
+/* Servis kutucukları: düz marka rengi + beyaz işaret; parlama ve gölge yok */
+.tile-icon { background: var(--c, var(--surface-2)); background-image: none; box-shadow: none; text-shadow: none; border-radius: 16px; font-weight: 700; color: #fff; }
+.tile-icon.has-logo svg { width: 54%; height: 54%; display: block; }
+.tile-icon.mini { border-radius: 10px; }
+body.bed .tile-icon { box-shadow: none; }
+.tile span { font: var(--t-caption); color: var(--label-2); }
+
+/* Oyun kapağı: kapak yoksa düz koyu kart + ad harfi */
+.cover-art { background: var(--surface-2) !important; background-image: none !important; box-shadow: none; border-radius: var(--r); }
+.cover-art b { color: var(--label-2); text-shadow: none; font-weight: 600; }
+.cover-name { font: var(--t-caption); color: var(--label-2); }
+
+/* Uygulama listesi: 'Tümünü göster' */
+.more-row { width: 100%; padding: var(--s4); text-align: center; color: var(--accent); font: var(--t-body); }
+
+/* ================================================================ AŞAMA 5 — AKTAR VE AYARLAR */
+/* Rozetler: iOS Ayarlar gibi nötr gri kare + beyaz ikon */
+.card-list .badge, .row-btn .badge { background: var(--surface-3); color: #fff; background-image: none; border-radius: 8px; }
+.card-list .badge.gray, .row-btn .badge.gray { background: var(--surface-3); }
+.row-btn b { font: var(--t-body); font-weight: 500; }
+.row-btn small { font: var(--t-caption); color: var(--label-2); }
+
+/* Pano: tek kart */
+.clip-card { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s3); background: var(--surface); border-radius: var(--r-lg); }
+.clip-card textarea { width: 100%; min-height: 84px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--label); padding: var(--s3); font: var(--t-body); resize: none; border: 0; box-shadow: none; }
+.clip-card textarea[hidden] { display: none; }
+.link-btn { align-self: center; color: var(--accent); font: var(--t-sub); font-weight: 500; padding: var(--s2) var(--s3); }
+.link-btn[hidden] { display: none; }
+.badge, .card-list .badge, .row-btn .badge { box-shadow: none; text-shadow: none; }
+
+/* ================================================================ AŞAMA 6 — DURUMLAR */
+/* Yükleniyor: hareketsiz sakin iskelet + ince üst ilerleme */
+.skel .tile-icon, .skel span, .skel-row i, .skel-row b { animation: none !important; background: var(--fill) !important; background-image: none !important; box-shadow: none; }
+#topProgress { position: relative; height: 2px; margin: 0 var(--s4) var(--s2); overflow: hidden; border-radius: 1px; background: var(--fill); flex: none; }
+#topProgress[hidden] { display: none; }
+#topProgress i { position: absolute; inset: 0 auto 0 0; width: 35%; background: var(--accent); border-radius: 1px; animation: topbar 1.2s var(--ease) infinite; }
+@keyframes topbar { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { #topProgress i { animation: none; width: 100%; opacity: 0.5; } }
+
+/* Bildirim: üstte küçük kapsül */
+#toast {
+  top: calc(env(safe-area-inset-top) + 10px); bottom: auto; transform: translate(-50%, -14px);
+  padding: 10px 16px; border-radius: 999px; background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+  font: var(--t-sub); font-weight: 500; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); max-width: calc(100% - 32px); text-align: center;
+}
+#toast.show { transform: translate(-50%, 0); }
+
+/* Boş / hata durumları: tek ikon + tek cümle + tek eylem */
+.tv-note { align-items: center; text-align: center; gap: var(--s3); padding: var(--s6) var(--s4); background: none; box-shadow: none; }
+.tv-note .ic { width: 40px; height: 40px; color: var(--label-3); }
+.tv-note p { font: var(--t-body); color: var(--label-2); max-width: 28ch; }
+#offline .box { text-align: center; }
+#offline h2 { font: var(--t-headline); font-size: 20px; }
+#offline p { font: var(--t-sub); max-width: 30ch; margin-inline: auto; }
+.hero-icon.small { background: var(--surface-2); color: var(--label-2); }
+
+/* ================================================================ AŞAMA 7 — AÇIK TEMA VE VURGU RENGİ */
+:root { color-scheme: dark; }
+
+/* Vurgu paleti: --accent (metin/ikon), --accent-fill (dolgu), --on-accent (dolgu üstündeki yazı). Hepsi AA kontrastlı */
+:root[data-accent="purple"] { --accent: #bf5af2; --accent-fill: #8e3fd1; --on-accent: #fff; }
+:root[data-accent="pink"] { --accent: #ff6482; --accent-fill: #d42a50; --on-accent: #fff; }
+:root[data-accent="orange"] { --accent: #ff9f0a; --accent-fill: #ff9f0a; --on-accent: #1a0f00; }
+:root[data-accent="green"] { --accent: #30d158; --accent-fill: #30d158; --on-accent: #00170a; }
+:root[data-accent="graphite"] { --accent: #e5e5ea; --accent-fill: #e5e5ea; --on-accent: #000; }
+
+/* Açık tema: iOS gruplu — gri zemin, beyaz kartlar */
+:root[data-mode="light"] {
+  color-scheme: light;
+  --bg: #f2f2f7; --surface: #fff; --surface-2: #e9e9ee; --surface-3: #dcdce1;
+  --stroke: rgba(0, 0, 0, 0.08); --sep: rgba(60, 60, 67, 0.29);
+  --fill: rgba(120, 120, 128, 0.16); --fill-strong: rgba(120, 120, 128, 0.28); --glass: rgba(249, 249, 249, 0.82);
+  --label: #000; --label-2: rgba(60, 60, 67, 0.74); --label-3: rgba(60, 60, 67, 0.6);
+  --lift: 0 8px 24px -8px rgba(0, 0, 0, 0.25);
+  --red: #d70015; --green: #248a3d; --orange: #c93400;
+  --seg-thumb: #fff;
+  --accent: #0062cc; --accent-fill: #0a6fe8; --on-accent: #fff;
+}
+:root[data-mode="light"][data-accent="purple"] { --accent: #8e3fd1; --accent-fill: #8e3fd1; }
+:root[data-mode="light"][data-accent="pink"] { --accent: #c4123f; --accent-fill: #d42a50; }
+:root[data-mode="light"][data-accent="orange"] { --accent: #a85600; --accent-fill: #ff9f0a; --on-accent: #1a0f00; }
+:root[data-mode="light"][data-accent="green"] { --accent: #1d7a35; --accent-fill: #187a31; --on-accent: #fff; }
+:root[data-mode="light"][data-accent="graphite"] { --accent: #3a3a3c; --accent-fill: #3a3a3c; --on-accent: #fff; }
+
+/* Durum çubuğu beyaz yazılıdır (black-translucent): açık temada üst güvenli alan siyah kalır */
+:root[data-mode="light"]::before { content: ""; position: fixed; inset: 0 0 auto 0; height: env(safe-area-inset-top); background: #000; z-index: 500; pointer-events: none; }
+
+/* Açık temada sabit renkli parçalar */
+:root[data-mode="light"] #volSlider::-webkit-slider-runnable-track, :root[data-mode="light"] #tvVol::-webkit-slider-runnable-track, :root[data-mode="light"] #npSeek::-webkit-slider-runnable-track { background: linear-gradient(to right, var(--label) 0 var(--p), var(--fill-strong) var(--p) 100%); }
+:root[data-mode="light"] #v-kbd { --key: #fff; --key-fn: #abb0bb; --key-text: #000; --kb-bg: #d1d4d9; --key-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); }
+:root[data-mode="light"] #keyPop { background: #fff; color: #000; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25); }
+:root[data-mode="light"] body:not(.bed) .kk.shift.on { background: var(--accent-fill); color: var(--on-accent); }
+:root[data-mode="light"] .card-list .badge, :root[data-mode="light"] .row-btn .badge { color: var(--label); }
+:root[data-mode="light"] .finger-glow { background: radial-gradient(closest-side, rgba(0, 0, 0, 0.12), transparent) !important; }
+:root[data-mode="light"] #backdrop { background: rgba(0, 0, 0, 0.3); }
+:root[data-mode="light"] .seg::before { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+:root[data-mode="light"] #tabs button { color: #6c6c70; }
+:root[data-mode="light"] #tabs button.on { color: var(--accent); }
+
+/* Renk seçici */
+.swatches { display: flex; gap: var(--s3); flex-wrap: wrap; padding: var(--s1) 0; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2); position: relative; }
+.swatches button.on::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--label); }
+.np-art, #npThumb, .np-art-ph { box-shadow: none; }
