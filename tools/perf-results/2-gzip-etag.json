@@ -1,0 +1,105 @@
+{
+  "label": "2-gzip-etag",
+  "at": "2026-10-01T23:33:39.170Z",
+  "connectedDevices": 0,
+  "exeMB": 7.08,
+  "idle": {
+    "seconds": 30,
+    "cpuPercentOfOneCore": 0,
+    "workingSetMB": 40.8,
+    "privateMB": 9.4,
+    "threads": 34,
+    "handles": 439,
+    "hotThreads": {}
+  },
+  "web": {
+    "files": [
+      {
+        "p": "/app",
+        "status": 200,
+        "rawKB": 43.5,
+        "wireKB": 10.5,
+        "enc": "gzip"
+      },
+      {
+        "p": "/app.js",
+        "status": 200,
+        "rawKB": 99.9,
+        "wireKB": 30.3,
+        "enc": "gzip"
+      },
+      {
+        "p": "/air.js",
+        "status": 200,
+        "rawKB": 6.4,
+        "wireKB": 2.9,
+        "enc": "gzip"
+      },
+      {
+        "p": "/tv.js",
+        "status": 200,
+        "rawKB": 19.2,
+        "wireKB": 6.1,
+        "enc": "gzip"
+      },
+      {
+        "p": "/brand-icons.js",
+        "status": 200,
+        "rawKB": 3.2,
+        "wireKB": 1.6,
+        "enc": "gzip"
+      },
+      {
+        "p": "/app.css",
+        "status": 200,
+        "rawKB": 37,
+        "wireKB": 8.2,
+        "enc": "gzip"
+      },
+      {
+        "p": "/ui.css",
+        "status": 200,
+        "rawKB": 42.8,
+        "wireKB": 10.5,
+        "enc": "gzip"
+      },
+      {
+        "p": "/design.css",
+        "status": 200,
+        "rawKB": 21.1,
+        "wireKB": 6,
+        "enc": "gzip"
+      },
+      {
+        "p": "/i18n.js",
+        "status": 200,
+        "rawKB": 6.1,
+        "wireKB": 2.6,
+        "enc": "gzip"
+      }
+    ],
+    "rawKB": 279.3,
+    "wireKB": 78.8,
+    "loadMs": 49,
+    "repeatWireKB": 0,
+    "repeatMs": 4
+  },
+  "ws": {
+    "firstMs": 6.6,
+    "restAvgMs": 3.5,
+    "all": [
+      6.6,
+      3.8,
+      3.8,
+      3.4,
+      3.6,
+      3.3,
+      3.6,
+      3.2,
+      3.4,
+      3.5,
+      4,
+      3.2
+    ]
+  }
+}

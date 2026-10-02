@@ -62,6 +62,14 @@ fn message(a: &Act) -> Option<Value> {
             "method": "ms.channel.emit",
             "params": { "event": "ed.apps.launch", "to": "host", "data": { "action_type": "DEEP_LINK", "appId": id, "metaTag": "" } },
         })),
+        Act::OpenLink { youtube: Some(id), .. } => Some(json!({
+            "method": "ms.channel.emit",
+            "params": { "event": "ed.apps.launch", "to": "host", "data": { "action_type": "DEEP_LINK", "appId": "111299001912", "metaTag": format!("v={id}") } },
+        })),
+        Act::OpenLink { url, .. } => Some(json!({
+            "method": "ms.channel.emit",
+            "params": { "event": "ed.apps.launch", "to": "host", "data": { "action_type": "NATIVE_LAUNCH", "appId": "org.tizen.browser", "metaTag": url } },
+        })),
         Act::Text(t) => Some(json!({
             "method": "ms.remote.control",
             "params": { "Cmd": B64.encode(t.as_bytes()), "DataOfCmd": "base64", "TypeOfRemote": "SendInputString" },

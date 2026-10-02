@@ -335,6 +335,7 @@ fn act_msg(a: &Act) -> Option<Vec<u8>> {
         Act::Backspace => 67,
         Act::Key(n) => key_code(n)?,
         Act::Launch(link) => return Some(f_bytes(90, &f_bytes(1, link.as_bytes()))),
+        Act::OpenLink { url, .. } => return Some(f_bytes(90, &f_bytes(1, url.as_bytes()))),
         _ => return None,
     };
     Some(f_bytes(10, &cat(&[f_varint(1, code), f_varint(2, 3)])))

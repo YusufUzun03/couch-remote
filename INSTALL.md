@@ -32,6 +32,19 @@ From now on you just open the app; it connects by itself.
 - **iPad:** the layout adapts to larger screens.
 - **Language:** follows your phone; change it in Settings → Language.
 
+## Android phone (experimental)
+If you use Android instead of iPhone: scan the QR code on the "Connect your phone" page. The page detects Android and shows 3 steps:
+1. **Download the certificate** (the code in the file name must match the security code on the page).
+2. **Install it:** Settings › Security & privacy › More security settings › Encryption & credentials › Install a certificate › CA certificate (menu names vary by brand; you can search for "certificate").
+3. In Chrome choose **⋮ › Install app**.
+
+Android sometimes can't resolve `couch-xxxx.local`; in that case the page automatically tries the LAN address (`https://192.168.x.x:47801`). Give the computer a fixed address (DHCP reservation in your router). Haptics use the phone's vibration motor. This path hasn't been widely tested on real Android devices yet; tell us if you get stuck.
+
+## Open windows and new gestures
+- **Apps › Open windows:** lists the computer's open windows. Tap to bring to front; **−** minimizes, **×** closes (the app asks about unsaved work itself).
+- **Pinch:** spread or pinch two fingers on the touchpad to send Ctrl + wheel (zooms browsers and documents). Can be turned off in Settings › Touchpad.
+- **Open a link on the TV:** in the TV remote, "Open link": YouTube links open the video, other links open in the TV's browser.
+
 ## Control your TV too
 LG, Samsung and Android/Google TV (experimental) are supported. The computer connects to the TV and relays your commands, so the computer must be on and on the same network while you use the TV.
 
@@ -48,6 +61,12 @@ LG, Samsung and Android/Google TV (experimental) are supported. The computer con
 </p>
 
 To turn a TV on from your phone while it is off, enable **Turn on via mobile / Wi-Fi** in the TV's settings. For Siri shortcuts use `tv-on`, `tv-off`, `tv-volup`, `tv-mute`… (Settings › Siri & Shortcuts).
+
+## If your phone says it isn't registered / the computer was reset
+- **Automatic backup:** the program keeps the last 5 copies of its settings file in `%LOCALAPPDATA%\CouchRemote\backup`. If the file is deleted or corrupted it recovers from the newest one by itself; phones keep working without setting up again. A notice appears on the admin page.
+- **Password-protected backup (before reinstalling Windows):** "Connect your phone" page › Advanced › **Backup and recovery** › enter a password › **Back up**. On the new install use **Restore** in the same place: paired phones and the security certificate come back.
+- **No backup:** on the phone open Settings › **Connection troubleshooter** (or "Troubleshooter" on the connection screen). It walks you through opening the setup page, deleting the old profile, installing the new one, and, if needed, resetting this phone's pairing and reconnecting with the PIN.
+- The admin page shows a warning when an unregistered phone tries to connect.
 
 ## Troubleshooting
 - **"Can't reach your computer":** the PC may be asleep; wake it and wait a few seconds. Check that both devices are on the same Wi-Fi.

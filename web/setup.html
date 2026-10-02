@@ -68,6 +68,17 @@
   .btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .tip { background: color-mix(in srgb, var(--orange) 13%, var(--surface)); border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13.5px; color: var(--label-2); line-height: 1.4; }
 
+  /* Sihirbaz: yalnızca sıradaki adım açık, biten adım tek satıra iner, sonrakiler soluk */
+  .prog { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 14px; font-weight: 600; color: var(--label-2); }
+  .prog i { flex: 1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+  .prog i::after { content: ""; display: block; height: 100%; width: var(--p, 0%); background: var(--accent); border-radius: 3px; transition: width .5s var(--out); }
+  .step.done small, .step.done .tip, .step.done .path, .step.done .btn { display: none; }
+  .step.done { padding: 10px 14px; align-items: center; opacity: .75; }
+  .step.future { opacity: .5; }
+  .step.future .tip, .step.future .btn, .step.future .got { display: none; }
+  .step.current { box-shadow: var(--shadow), var(--hl), 0 0 0 2px var(--accent); }
+  .got { margin-top: 12px; }
+
   /* Durum: sertifikaya güvenildi mi? */
   #status { display: flex; gap: 14px; align-items: center; background: var(--surface); border-radius: 20px; padding: 16px 18px; box-shadow: var(--shadow), var(--hl); transition: background-color .4s; }
   #status .ind { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; position: relative; }
@@ -99,13 +110,15 @@
     </div>
   </div>
 
-  <div class="section">3 adım</div>
-  <ol class="steps">
+  <div class="section" id="progLabel">3 adım</div>
+  <div class="prog"><span id="progText">Adım 1 / 3</span><i id="progBar"></i></div>
+  <ol class="steps" id="iosSteps">
     <li class="step" id="s1">
       <span class="num"><span>1</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
       <div style="flex:1;min-width:0">
         <b>Profili indir</b>
         <small>Çıkan pencerede <b>İzin Ver</b>, sonra <b>Kapat</b>'a dokun.</small>
+        <div class="tip">Daha önce bir CouchRemote profili yüklediysen önce sil: <b>Ayarlar › Genel › VPN ve Aygıt Yönetimi</b>. Bilgisayarın ayarları sıfırlandıysa eski profil artık geçerli değildir.</div>
         <a class="btn" id="dl" href="/ca.mobileconfig">
           <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Profili indir
         </a>
@@ -117,6 +130,7 @@
         <b>Profili yükle</b>
         <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Profil İndirildi</span><span class="sep">›</span><span class="chip">Yükle</span></div>
         <div class="tip">Kırmızı "Doğrulanmadı" yazısı normal: profili bir şirket değil, senin bilgisayarın oluşturdu. İçinde yalnızca bu bilgisayara güvenli bağlanmak için bir sertifika var.</div>
+        <button class="btn secondary got" data-done="s2">Yükledim</button>
       </div>
     </li>
     <li class="step" id="s3">
@@ -129,12 +143,43 @@
     </li>
   </ol>
 
+  <ol class="steps" id="androidSteps" hidden>
+    <li class="step" id="a1">
+      <span class="num"><span>1</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="flex:1;min-width:0">
+        <b>Sertifikayı indir</b>
+        <small>İnen dosyanın adındaki kod yukarıdaki güvenlik koduyla aynı olmalı.</small>
+        <a class="btn" id="dlAndroid" href="/ca.crt">
+          <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Sertifikayı indir
+        </a>
+      </div>
+    </li>
+    <li class="step" id="a2">
+      <span class="num"><span>2</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="min-width:0">
+        <b>Sertifikayı yükle</b>
+        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Güvenlik ve gizlilik</span><span class="sep">›</span><span class="chip">Diğer güvenlik ayarları</span><span class="sep">›</span><span class="chip">Sertifika yükle</span><span class="sep">›</span><span class="chip">CA sertifikası</span></div>
+        <small>"Yine de yükle"yi seç, sonra indirdiğin dosyayı seç. Ekran kilidi (PIN veya desen) istenebilir.</small>
+        <div class="tip">Menü adları telefon markasına göre değişir; Ayarlar'da "sertifika" diye aratabilirsin. Sertifika yalnızca bu bilgisayara güvenli bağlanmak içindir.</div>
+        <button class="btn secondary got" data-done="a2">Yükledim</button>
+      </div>
+    </li>
+    <li class="step" id="a3">
+      <span class="num"><span>3</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div style="min-width:0">
+        <b>Ana ekrana ekle</b>
+        <small>Bağlantı kurulunca Chrome'da <b>⋮</b> menüsünden <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) de.</small>
+      </div>
+    </li>
+  </ol>
+
   <div class="section">Durum</div>
   <div id="status" class="waiting">
     <span class="ind"></span>
     <div><b id="stTitle">Profil bekleniyor</b><small id="stText">Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.</small></div>
   </div>
   <button class="btn secondary" id="check">Kontrol et</button>
+  <p style="text-align:center;color:var(--label-3);font-size:12.5px;letter-spacing:.04em;margin-top:22px">Yapımcı: <b>WOOP WOOP</b></p>
 </div>
 
 <script type="module">
@@ -142,6 +187,12 @@
   await ready;
   translateDom();
   const APP_ORIGIN = '%%APP_ORIGIN%%';
+  const APP_IP_ORIGIN = '%%APP_IP_ORIGIN%%';
+  const ANDROID = /Android/i.test(navigator.userAgent);
+  if (ANDROID) {
+    document.getElementById('iosSteps').hidden = true;
+    document.getElementById('androidSteps').hidden = false;
+  }
   const code = new URLSearchParams(location.search).get('c') || '';
   const box = document.getElementById('status');
   const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -155,23 +206,46 @@
   }
   function markDone(...ids) {
     for (const id of ids) document.getElementById(id).classList.add('done');
+    updateSteps();
   }
+  // Sıradaki adım vurgulanır, sonrakiler soluk kalır
+  function updateSteps() {
+    const list = [...document.querySelectorAll(ANDROID ? '#androidSteps .step' : '#iosSteps .step')];
+    const cur = list.findIndex((s) => !s.classList.contains('done'));
+    list.forEach((s, i) => {
+      s.classList.toggle('current', i === cur);
+      s.classList.toggle('future', cur >= 0 && i > cur);
+    });
+    const n = cur < 0 ? list.length : cur + 1;
+    document.getElementById('progText').textContent = tl('Adım') + ` ${n} / ${list.length}`;
+    document.getElementById('progBar').style.setProperty('--p', (cur < 0 ? 100 : (cur / list.length) * 100) + '%');
+  }
+  for (const b of document.querySelectorAll('[data-done]')) b.onclick = () => markDone(b.dataset.done);
+  updateSteps();
 
   // Profil indirilince 1. adım tamamlanır (Ayarlar'a geçilir); gerisini sertifika kontrolü doğrular
   document.getElementById('dl').addEventListener('click', () => setTimeout(() => markDone('s1'), 400));
+  document.getElementById('dlAndroid').addEventListener('click', () => setTimeout(() => markDone('a1'), 400));
 
-  async function check(auto) {
+  async function check(auto, quiet) {
     if (checking) return;
     checking = true;
-    setStatus('checking', tl('Kontrol ediliyor…'), tl('Sertifikaya güvenilip güvenilmediğine bakılıyor.'));
+    if (!quiet) setStatus('checking', tl('Kontrol ediliyor…'), tl('Sertifikaya güvenilip güvenilmediğine bakılıyor.'));
     try {
-      const r = await fetch(APP_ORIGIN + '/api/hello', { cache: 'no-store' });
-      if (!r.ok) throw new Error(r.status);
-      markDone('s1', 's2', 's3');
+      // Android bazen .local adını çözemez: önce ad, olmazsa LAN adresiyle denenir
+      let origin = null;
+      for (const o of ANDROID ? [APP_ORIGIN, APP_IP_ORIGIN] : [APP_ORIGIN]) {
+        try {
+          const r = await fetch(o + '/api/hello', { cache: 'no-store' });
+          if (r.ok) { origin = o; break; }
+        } catch {}
+      }
+      if (!origin) throw new Error('güvenilmiyor');
+      markDone('s1', 's2', 's3', 'a1', 'a2', 'a3');
       setStatus('ok', tl('Hazır'), tl('Son adım açılıyor…'));
-      setTimeout(() => (location.href = APP_ORIGIN + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 900);
+      setTimeout(() => (location.href = origin + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 900);
     } catch {
-      setStatus('waiting', tl('Profil bekleniyor'),
+      if (!quiet) setStatus('waiting', tl('Profil bekleniyor'),
         tl(auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.'));
     } finally {
       checking = false;
@@ -187,6 +261,8 @@
   });
   document.getElementById('check').onclick = () => check(false);
   check(true);
+  // Sayfa açıkken sertifika güvenilir olur olmaz kendiliğinden devam et (düğmeye basmaya gerek yok)
+  setInterval(() => document.visibilityState === 'visible' && !box.classList.contains('ok') && check(true, true), 3000);
 </script>
 </body>
 </html>

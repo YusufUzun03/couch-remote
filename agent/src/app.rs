@@ -20,7 +20,6 @@ use crate::power::Timer;
 use crate::state::State;
 use crate::stats::Stats;
 use crate::tls::{self, SniResolver};
-use crate::{HTTPS_PORT, HTTP_PORT};
 
 /// Çok fazla hatalı PIN denemesinden sonra yeni eşleşme kodu bu süre boyunca kendiliğinden üretilmez
 const PAIRING_LOCKOUT: Duration = Duration::from_secs(5 * 60);
@@ -66,6 +65,9 @@ pub struct App {
     pub icons: HashMap<u32, Vec<u8>>,
     /// Yanlış jeton / kimlik denemeleri (IP başına dakikada 10): sonrası 429
     pub fails: crate::net::FailLimiter,
+    /// Kayıtlı olmadığı halde bağlanmaya çalışan telefonlar (eşleşme sıfırlanmış olabilir): yönetim sayfasında uyarı
+    pub unknown_attempts: AtomicUsize,
+    pub unknown_last: Mutex<Option<String>>,
 }
 
 /// Ayar dosyası bu kullanıcıda çözülemiyorsa (başka bilgisayardan/kullanıcıdan kopyalanmış) yedeklenip sıfırlanır
@@ -100,8 +102,9 @@ impl App {
             state.ca = Some(certs::create_ca(&host)?);
             state.leaf = None;
         }
-        if state.leaf.as_ref().is_none_or(|l| l.host != host || certs::expires_soon(l)) {
-            state.leaf = Some(certs::create_leaf(&host, state.ca.as_ref().unwrap())?);
+        let lan_s = lan_ip.to_string();
+        if state.leaf.as_ref().is_none_or(|l| l.host != host || l.ip != lan_s || certs::expires_soon(l)) {
+            state.leaf = Some(certs::create_leaf(&host, &lan_s, state.ca.as_ref().unwrap())?);
         }
         prune_devices(&mut state);
         state.save()?;
@@ -153,7 +156,10 @@ impl App {
             network_public: Mutex::new(None),
             icons,
             fails: crate::net::FailLimiter::new(10, std::time::Duration::from_secs(60)),
+            unknown_attempts: AtomicUsize::new(0),
+            unknown_last: Mutex::new(None),
         };
+        crate::state::snapshot_backup();
         // Program ikinci kez açılırsa (güncelleme dahil) yönetim sayfasına bu anahtarla ulaşabilsin
         let _ = std::fs::write(crate::state::data_dir().join("admin.token"), &app.admin_token);
         // Faz 0'dan kalan disk raporları artık tutulmuyor (S2)
@@ -224,25 +230,29 @@ impl App {
     }
 
     pub fn local_origin(&self) -> String {
+        let HTTPS_PORT = crate::https_port();
         format!("https://{}:{HTTPS_PORT}", self.host)
     }
 
     /// Web uygulamasının geçerli adresleri (Origin kontrolü için)
     pub fn app_origins(&self) -> Vec<String> {
-        vec![self.local_origin()]
+        let HTTPS_PORT = crate::https_port();
+        vec![self.local_origin(), format!("https://{}:{HTTPS_PORT}", self.lan_ip)]
     }
 
     /// HTTPS sunucusu için geçerli Host başlıkları (DNS rebinding koruması)
     pub fn app_hosts(&self) -> Vec<String> {
-        vec![format!("{}:{HTTPS_PORT}", self.host)]
+        let HTTPS_PORT = crate::https_port();
+        vec![format!("{}:{HTTPS_PORT}", self.host), format!("{}:{HTTPS_PORT}", self.lan_ip)]
     }
 
     /// Yönetim sayfasının anahtarlı adresi (tepsi menüsü ve program bunu açar)
     pub fn admin_url(&self) -> String {
-        format!("http://127.0.0.1:{}/?t={}", crate::ADMIN_PORT, self.admin_token)
+        format!("http://127.0.0.1:{}/?t={}", crate::admin_port(), self.admin_token)
     }
 
     pub fn setup_hosts(&self) -> Vec<String> {
+        let HTTP_PORT = crate::http_port();
         vec![format!("{}:{HTTP_PORT}", self.host), format!("{}:{HTTP_PORT}", self.lan_ip)]
     }
 

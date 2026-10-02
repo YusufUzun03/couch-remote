@@ -1,0 +1,5 @@
+{
+  "aciklama": "Telefon arayüzü boşta zamanlayıcı uyanışı (saniyede), önizleme sunucusunda ?perf=1 ile ölçüldü (Kumanda ekranı açık, bağlantı yok). Ağ paketleri koddan hesaplandı (gerçek telefonda ölçülmedi).",
+  "once": { "kumandaEkrani": 15.19, "agPaketiBostaSaniyede": 11 },
+  "sonra": { "kumandaEkraniCalarken": 1.4, "kumandaEkraniDuraklatilmis": 0.3, "touchpadVeDigerEkranlar": 0.3, "agPaketiBostaSaniyede": 0.2 }
+}

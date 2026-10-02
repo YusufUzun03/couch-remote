@@ -122,6 +122,9 @@
 
   #banner { display:none; background:color-mix(in srgb, var(--warn) 14%, var(--card)); border-radius:16px; padding:14px 16px; margin-bottom:16px; box-shadow:var(--hl); animation:rise .5s var(--out) both; }
   #banner button { margin-left:10px; }
+  #banner .bi + .bi { margin-top:10px; padding-top:10px; border-top:.5px solid var(--line); }
+  .bk-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .bk-row input[type=password] { flex:1; min-width:180px; padding:9px 12px; border-radius:11px; border:.5px solid var(--line); background:var(--fill); color:var(--fg); font:inherit; }
   details.card { margin-top:16px; }
   details.card > summary { cursor:pointer; color:var(--muted); font-weight:600; list-style-position:inside; }
   details.card[open] > summary { margin-bottom:16px; }
@@ -204,6 +207,14 @@
       <section>
         <h2>Siri ve Kestirmeler</h2>
         <div id="shortcut"></div>
+      </section>
+      <section id="bkSec">
+        <h2>Yedek ve kurtarma</h2>
+        <p class="muted">Eşleşmiş telefonları ve güvenlik sertifikasını parolalı bir dosyaya kaydet. Windows'u yeniden kurar ya da başka bir kullanıcıya geçersen yedeği geri yükle: telefonlar yeniden kurulum yapmadan çalışmaya devam eder. Dosya içindeki anahtarlar şifrelidir; yine de parolayı ve dosyayı güvende tut.</p>
+        <div class="bk-row"><input type="password" id="bkPass" autocomplete="new-password" placeholder="Parola (en az 8 karakter)"><button id="bkExport">Yedek al</button></div>
+        <div class="bk-row"><input type="file" id="bkFile" accept=".crbackup,application/json"><button id="bkImport" class="plain">Geri yükle</button></div>
+        <p class="muted" id="bkMsg"></p>
+        <p class="muted" id="bkAuto"></p>
       </section>
       <section>
         <h2>Tanılama raporları</h2>
@@ -317,24 +328,43 @@
     $('exp').textContent = tl('Kod {time} içinde yenilenir (kurulum sayfası açık kaldıkça uzar)', { time: `${m}:${sec}` });
   }
 
+  const NOTICES = {
+    restored: 'Ayarlar otomatik yedekten geri yüklendi (ayar dosyası silinmiş ya da bozulmuştu). Telefonlar genellikle yeniden kurulum yapmadan çalışır; bağlanamayan olursa o telefonda "Telefonu bağla" adımlarını yinele.',
+    reset: 'Ayar dosyası bu Windows kullanıcısına ait olmadığı için sıfırlandı ve güvenlik sertifikası yenilendi. Her telefonda eski CouchRemote profilini silip yeniden kurman gerekir. Daha önce parolalı yedek aldıysan Gelişmiş › Yedek ve kurtarma bölümünden geri yükle.',
+  };
+  let bannerSig = '';
   function renderBanner(s) {
     const b = $('banner');
+    const items = [];
     if (s.networkPublic === true) {
-      b.style.display = 'block';
-      if (!$('fixNet')) {
-        b.innerHTML = `<b>Telefon bu bilgisayara bağlanamayabilir.</b> Windows bu ağı "Genel" olarak işaretlemiş; güvenlik için bu profilde bağlantılar engelleniyor.
-          Evdeki ağınsa "Özel" yapabilirsin.<button id="fixNet">Ağı Özel yap</button>`;
-        $('fixNet').onclick = async () => {
-          $('fixNet').disabled = true;
-          const r = await (await post('/api/network-private')).json().catch(() => ({}));
-          if (!r.ok) alert(tl('Değiştirilemedi (izin verilmedi olabilir).'));
-          poll();
-        };
-      }
-    } else {
+      items.push({ k: 'net', html: `<b>${tl('Telefon bu bilgisayara bağlanamayabilir.')}</b> ${tl('Windows bu ağı "Genel" olarak işaretlemiş; güvenlik için bu profilde bağlantılar engelleniyor. Evdeki ağınsa "Özel" yapabilirsin.')}<button id="fixNet">${tl('Ağı Özel yap')}</button>` });
+    }
+    if (s.notice && NOTICES[s.notice]) {
+      items.push({ k: 'notice' + s.notice, html: `${esc(tl(NOTICES[s.notice]))}<button id="noticeOk" class="plain">${tl('Tamam')}</button>` });
+    }
+    if (s.unknown?.count > 0 && s.devices.length >= 0) {
+      items.push({ k: 'unknown' + s.unknown.count, html: `<b>${tl('Kayıtlı olmayan bir telefon bağlanmaya çalıştı')}</b> (${s.unknown.count}×). ${tl('Telefonun eşleşmesi bu bilgisayardan silinmiş ya da yeni bir kurulum yapılmış olabilir. O telefonda uygulamayı açıp bu sayfadaki PIN veya QR ile yeniden bağlan.')}` });
+    }
+    const sig = items.map((i) => i.k).join('|');
+    if (sig === bannerSig) return;
+    bannerSig = sig;
+    if (!items.length) {
       b.style.display = 'none';
       b.innerHTML = '';
+      return;
     }
+    b.style.display = 'block';
+    b.innerHTML = items.map((i) => `<div class="bi">${i.html}</div>`).join('');
+    if ($('fixNet')) {
+      $('fixNet').onclick = async () => {
+        $('fixNet').disabled = true;
+        const r = await (await post('/api/network-private')).json().catch(() => ({}));
+        if (!r.ok) alert(tl('Değiştirilemedi (izin verilmedi olabilir).'));
+        bannerSig = '';
+        poll();
+      };
+    }
+    if ($('noticeOk')) $('noticeOk').onclick = async () => { await post('/api/notice/dismiss'); bannerSig = ''; poll(); };
   }
 
   const PHONE_ICON = '<svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.5h2"/></svg>';
@@ -406,8 +436,41 @@
       <tr><td>Ekran yenileme</td><td>${esc(touch?.fps ?? '–')} Hz</td></tr>
       <tr><td>iOS</td><td class="muted">${esc(any.iosVersion ?? '–')}</td></tr>` : '<tr><td class="muted">Henüz rapor yok.</td></tr>';
     $('raw').textContent = JSON.stringify(s.reports, null, 2);
+    $('bkAuto').textContent = tl('Otomatik yedek: ayar dosyasının son 5 kopyası şuraya kaydedilir: {dir}. Dosya silinir ya da bozulursa program en yenisinden kendiliğinden kurtarır.', { dir: s.backupDir || '' });
     translateDom(document.querySelector('.wrap')); // yeni çizilen içerik İngilizceye çevrilir
   }
+
+  // ---- yedek al / geri yükle
+  const bkMsg = (t, bad) => { $('bkMsg').innerHTML = bad ? `<span class="bad">${esc(t)}</span>` : esc(t); };
+  $('bkExport').onclick = async () => {
+    const password = $('bkPass').value;
+    if (password.length < 8) return bkMsg(tl('Parola en az 8 karakter olmalı'), true);
+    $('bkExport').disabled = true;
+    try {
+      const r = await post('/api/backup/export', { password });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || tl('Yedek alınamadı'));
+      const blob = await r.blob();
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'CouchRemote-yedek-' + new Date().toISOString().slice(0, 10) + '.crbackup' });
+      document.body.append(a); a.click(); a.remove();
+      bkMsg(tl('Yedek indirildi. Dosyayı ve parolayı güvenli bir yerde sakla.'));
+    } catch (e) { bkMsg(e.message, true); }
+    $('bkExport').disabled = false;
+  };
+  $('bkImport').onclick = async () => {
+    const f = $('bkFile').files[0];
+    const password = $('bkPass').value;
+    if (!f) return bkMsg(tl('Önce bir yedek dosyası seç'), true);
+    if (!password) return bkMsg(tl('Yedeğin parolasını yaz'), true);
+    if (!confirm(tl('Mevcut eşleşmelerin yerine yedekteki geri yüklenecek ve program yeniden başlayacak. Devam edilsin mi?'))) return;
+    $('bkImport').disabled = true;
+    try {
+      const r = await post('/api/backup/import', { password, data: await f.text() });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || tl('Geri yüklenemedi'));
+      bkMsg(tl('Geri yüklendi, program yeniden başlıyor… Bu sayfayı kapatıp tepsi simgesinden yeniden aç.'));
+    } catch (e) { bkMsg(e.message, true); }
+    $('bkImport').disabled = false;
+  };
 
   let timer = 0;
   async function poll() {
@@ -432,5 +495,6 @@
   poll();
   timer = setInterval(poll, 1000);
 </script>
+<p style="text-align:center;opacity:.5;font-size:12.5px;letter-spacing:.04em;margin:28px 0 20px">Yapımcı: <b>WOOP WOOP</b></p>
 </body>
 </html>

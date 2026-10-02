@@ -24,13 +24,13 @@ use crate::events::Events;
 /// Son görülen medya penceresi (tutamaç, profil)
 static MEDIA_WINDOW: Mutex<Option<(isize, &'static str)>> = Mutex::new(None);
 
-fn title_of(hwnd: HWND) -> String {
+pub(crate) fn title_of(hwnd: HWND) -> String {
     let mut buf = [0u16; 512];
     let n = unsafe { GetWindowTextW(hwnd, &mut buf) };
     String::from_utf16_lossy(&buf[..n.max(0) as usize])
 }
 
-fn exe_of(hwnd: HWND) -> String {
+pub(crate) fn exe_of(hwnd: HWND) -> String {
     unsafe {
         let mut pid = 0u32;
         GetWindowThreadProcessId(hwnd, Some(&mut pid));

@@ -258,6 +258,39 @@ export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets,
     haptic();
   });
 
+  // ---- link aç: YouTube bağlantısı videoyla, diğer her bağlantı TV'nin tarayıcısında açılır
+  function parseLink(raw) {
+    let s = String(raw || '').trim();
+    if (!s) return null;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = 'https://' + s;
+    let u;
+    try { u = new URL(s); } catch { return null; }
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    const ID = /^[A-Za-z0-9_-]{11}$/;
+    let id = null;
+    if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+    else if (host === 'youtube.com') {
+      id = u.searchParams.get('v');
+      const m = u.pathname.match(/^\/(?:shorts|live|embed)\/([^/?#]+)/);
+      if (!id && m) id = m[1];
+    }
+    if (id && ID.test(id)) return { kind: 'youtube', video: id };
+    return { kind: 'web', url: u.href };
+  }
+  $('tvLinkForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const p = parseLink($('tvLink').value);
+    if (!p) return toast(tl('Geçerli bir link yaz'));
+    send({ op: 'open-link', ...p });
+    toast(p.kind === 'youtube' ? tl("YouTube videosu TV'de açılıyor…") : tl("Link TV'de açılıyor…"));
+    $('tvLink').value = '';
+    haptic();
+  });
+  $('tvLinkPaste').onclick = async () => {
+    try { $('tvLink').value = (await navigator.clipboard.readText()).trim(); } catch { toast(tl('Pano okunamadı; linki kutuya yapıştır')); }
+  };
+
   // ---- yazı (TV'deki arama kutusu)
   $('tvTypeForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -496,5 +529,5 @@ export function initTv({ $, sendJson, toast, haptic, tl, openSheet, closeSheets,
     toast(tl(m.reason === 'limit' ? 'En fazla 8 TV eklenebilir' : 'Bu adreste desteklenen bir TV bulunamadı. TV açık ve aynı ağda mı?'));
   }
 
-  return { onTvs, onScan, onAdd, refresh, onView: refresh, input, json, tvList: () => tvs, current: cur, select: pick };
+  return { onTvs, onScan, onAdd, refresh, onView: refresh, input, json, isRouted: () => !!routed(), tvList: () => tvs, current: cur, select: pick };
 }

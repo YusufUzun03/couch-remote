@@ -83,6 +83,33 @@ impl Cfg {
     }
 }
 
+/// Yedek için: kayıtlı TV'ler, eşleşme anahtarları çözülmüş (parolalı dosyada saklanır). Android TV anahtarı taşınmaz (yeniden eşleşir)
+pub fn export_tvs() -> Vec<Value> {
+    Cfg::load_all()
+        .into_iter()
+        .map(|c| json!({ "id": c.id, "brand": c.brand, "ip": c.ip, "name": c.name, "mac": c.mac, "key": if c.brand == "android" { None } else { c.key() } }))
+        .collect()
+}
+
+pub fn import_tvs(list: &[Value]) {
+    let cfgs: Vec<Cfg> = list
+        .iter()
+        .filter_map(|v| {
+            let ip = v["ip"].as_str().and_then(lan_ip)?.to_string();
+            let brand = v["brand"].as_str().filter(|b| brand_ok(b))?.to_string();
+            Some(Cfg {
+                id: v["id"].as_str().filter(|i| word_ok(i)).map(str::to_string).unwrap_or_else(new_id),
+                brand,
+                ip,
+                name: v["name"].as_str().unwrap_or("TV").chars().take(60).collect(),
+                mac: v["mac"].as_str().map(str::to_string),
+                key_enc: v["key"].as_str().and_then(|k| crate::dpapi::protect_str(k).ok()),
+            })
+        })
+        .collect();
+    let _ = std::fs::write(Cfg::path(), serde_json::to_string_pretty(&cfgs).unwrap_or_default());
+}
+
 fn lg() -> String {
     "lg".into()
 }
@@ -183,6 +210,8 @@ pub(crate) enum Act {
     Text(String),
     Enter,
     Backspace,
+    /// Link aç: YouTube videosu (kimlik) ya da herhangi bir web adresi (TV tarayıcısı)
+    OpenLink { youtube: Option<String>, url: String },
 }
 
 /// LG: eylemi SSAP isteğine / işaretçi satırına çevir
@@ -210,6 +239,8 @@ fn lg_cmd(a: Act) -> Option<Cmd> {
         Act::Text(t) => req("ssap://com.webos.service.ime/insertText", json!({ "text": t, "replace": 0 })),
         Act::Enter => req("ssap://com.webos.service.ime/sendEnterKey", json!({})),
         Act::Backspace => req("ssap://com.webos.service.ime/deleteCharacters", json!({ "count": 1 })),
+        Act::OpenLink { youtube: Some(id), .. } => req("ssap://system.launcher/launch", json!({ "id": "youtube.leanback.v4", "contentId": id })),
+        Act::OpenLink { url, .. } => req("ssap://system.launcher/open", json!({ "target": url })),
     }
 }
 
@@ -274,6 +305,16 @@ async fn rediscover(cfg: &Cfg, hub: &Hub) -> Option<Ipv4Addr> {
 /// Uygulama kimliği: kimlik harfleri/rakamları, ayrıca Android TV bağlantıları (https://… veya şema:)
 fn app_ok(s: &str) -> bool {
     word_ok(s) || ((s.starts_with("https://") || s.starts_with("spotify:")) && s.len() <= 200 && s.bytes().all(|b| b.is_ascii_graphic()))
+}
+
+/// YouTube video kimliği: 11 karakter (harf, rakam, - ve _)
+fn youtube_id_ok(s: &str) -> bool {
+    s.len() == 11 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+/// Yalnızca http(s) adresleri; boşluk, denetim karakteri ve tırnak yok
+fn web_url_ok(s: &str) -> bool {
+    (s.starts_with("https://") || s.starts_with("http://")) && s.len() <= 500 && s.bytes().all(|b| b.is_ascii_graphic() && b != b'"' && b != b'\\')
 }
 
 fn word_ok(s: &str) -> bool {
@@ -417,6 +458,11 @@ impl Tv {
             "scroll" => act(Act::Scroll(int("dy", 200).unwrap_or(0))),
             "text" => m["text"].as_str().filter(|t| t.len() <= 400).and_then(|t| act(Act::Text(t.to_string()))),
             "enter" => act(Act::Enter),
+            "open-link" => match m["kind"].as_str() {
+                Some("youtube") => m["video"].as_str().filter(|i| youtube_id_ok(i)).and_then(|i| act(Act::OpenLink { youtube: Some(i.to_string()), url: format!("https://www.youtube.com/watch?v={i}") })),
+                Some("web") => m["url"].as_str().filter(|u| web_url_ok(u)).and_then(|u| act(Act::OpenLink { youtube: None, url: u.to_string() })),
+                _ => None,
+            },
             "backspace" => act(Act::Backspace),
             _ => None,
         };
@@ -447,11 +493,11 @@ struct View {
 fn view_json(cfg: &Cfg, v: &View) -> Value {
     let (caps, apps) = match cfg.brand.as_str() {
         "samsung" => (
-            json!({ "vol": false, "pointer": false, "apps": true, "inputs": false, "text": true }),
+            json!({ "vol": false, "pointer": false, "apps": true, "inputs": false, "text": true, "link": true }),
             samsung::APPS,
         ),
-        "android" => (json!({ "vol": false, "pointer": false, "apps": true, "inputs": false, "text": false }), android::APPS),
-        _ => (json!({ "vol": true, "pointer": true, "apps": true, "inputs": true, "text": true }), LG_APPS),
+        "android" => (json!({ "vol": false, "pointer": false, "apps": true, "inputs": false, "text": false, "link": true }), android::APPS),
+        _ => (json!({ "vol": true, "pointer": true, "apps": true, "inputs": true, "text": true, "link": true }), LG_APPS),
     };
     let apps: Vec<Value> = apps.iter().map(|(l, id)| json!([l, id])).collect();
     json!({

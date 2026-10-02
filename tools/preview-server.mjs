@@ -20,8 +20,19 @@ const mock = {
   shortcut: { url: 'https://couch-test.local:47801/api/v1/action/playpause', token: 'TESTTOKEN', actions: [{ id: 'playpause', params: '', about: 'Oynat' }], last: null },
   latency: { oneWay: null, proc: null, rate: 0 }, reports: [],
 };
+// Performans ölçümü (?perf=1): zamanlayıcı ve animasyon karesi uyanışlarını sayar → window.__wake
+const PERF_JS = `(() => {
+  const w = (window.__wake = { timer: 0, raf: 0, since: performance.now() });
+  const st = window.setTimeout, si = window.setInterval, raf = window.requestAnimationFrame;
+  window.setTimeout = (f, ...a) => st(typeof f === 'function' ? (...x) => { w.timer++; return f(...x); } : f, ...a);
+  window.setInterval = (f, ...a) => si(typeof f === 'function' ? (...x) => { w.timer++; return f(...x); } : f, ...a);
+  window.requestAnimationFrame = (f) => raf((t) => { w.raf++; return f(t); });
+  window.__wakeReset = () => { w.timer = 0; w.raf = 0; w.since = performance.now(); };
+})();`;
 createServer(async (req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
+  const perf = new URL(req.url, 'http://x').searchParams.has('perf');
+  if (path === '/__perf.js') return res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }).end(PERF_JS);
   if (path === '/api/status') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(mock));
   if (path === '/__mock' && req.method === 'POST') {
     let b = ''; for await (const c of req) b += c;
@@ -35,6 +46,7 @@ createServer(async (req, res) => {
   try {
     let body = await readFile(join(WEB, file));
     if (file === 'app.html') body = body.toString().replace('%%MANIFEST_HREF%%', '');
+    if (file === 'app.html' && perf) body = body.toString().replace('<head>', '<head><script src="/__perf.js"></script>');
     if (file === 'setup.html') body = body.toString().replaceAll('%%HOST%%', 'couch-test.local').replaceAll('%%APP_ORIGIN%%', 'https://couch-test.local:47801').replaceAll('%%CA_CODE%%', '7F3A-91C2');
     res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-store', 'content-security-policy': file === 'app.html' ? CSP_APP : CSP_PAGE }).end(body);
   } catch {

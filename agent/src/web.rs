@@ -21,7 +21,6 @@ use crate::input::{vk, Cmd};
 use crate::media::MediaCmd;
 use crate::pairing::MAX_PIN_ATTEMPTS;
 use crate::state::Device;
-use crate::{ADMIN_PORT, HTTP_PORT};
 
 type S = Arc<App>;
 
@@ -113,10 +112,75 @@ const CSP_APP: &str = "default-src 'none'; script-src 'self'; style-src 'self' '
 const CSP_PAGE: &str = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; \
     connect-src 'self' https:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
+/// Sıkıştırılmış gövde önbelleği: (crc32, uzunluk) → gzip. Sabit dosyalar her istekte yeniden sıkıştırılmaz.
+static GZ_CACHE: std::sync::Mutex<Option<HashMap<(u32, usize), Bytes>>> = std::sync::Mutex::new(None);
+
+fn compressible(ctype: &str) -> bool {
+    ["text/html", "text/css", "text/javascript", "application/javascript", "application/manifest+json", "image/svg+xml"].iter().any(|t| ctype.starts_with(t))
+}
+
+/// Metin yanıtlarına ETag ekler (If-None-Match eşleşirse 304: tekrar açılışta neredeyse hiç veri inmez)
+/// ve istemci destekliyorsa gzip uygular (arayüz dosyaları ~%75 küçülür).
+async fn etag_and_gzip(wants_gzip: bool, if_none_match: Option<String>, r: Response) -> Response {
+    let ctype = r.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    if r.status() != StatusCode::OK || !compressible(&ctype) || r.headers().contains_key(header::CONTENT_ENCODING) {
+        return r;
+    }
+    let (mut parts, body) = r.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, 8 << 20).await else {
+        return Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap();
+    };
+    let crc = crc32fast::hash(&bytes);
+    let etag = format!("\"{crc:08x}-{}\"", bytes.len());
+    parts.headers.insert(header::ETAG, etag.parse().unwrap());
+    parts.headers.append(header::VARY, "accept-encoding".parse().unwrap());
+    if if_none_match.as_deref().is_some_and(|m| m.split(',').any(|t| t.trim().trim_start_matches("W/") == etag)) {
+        parts.status = StatusCode::NOT_MODIFIED;
+        parts.headers.remove(header::CONTENT_LENGTH);
+        return Response::from_parts(parts, Body::empty());
+    }
+    if wants_gzip && bytes.len() > 600 {
+        let key = (crc, bytes.len());
+        let cached = GZ_CACHE.lock().unwrap_or_else(|e| e.into_inner()).as_ref().and_then(|m| m.get(&key).cloned());
+        let gz = match cached {
+            Some(g) => g,
+            None => {
+                use std::io::Write;
+                let mut enc = flate2::write::GzEncoder::new(Vec::with_capacity(bytes.len() / 3), flate2::Compression::new(9));
+                let g = if enc.write_all(&bytes).is_ok() { enc.finish().ok().map(Bytes::from) } else { None };
+                match g {
+                    Some(g) => {
+                        let mut guard = GZ_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+                        let m = guard.get_or_insert_with(HashMap::new);
+                        if m.len() >= 64 {
+                            m.clear(); // sayfalar her istekte değişiyorsa (eşleşme kodu) önbellek şişmesin
+                        }
+                        m.insert(key, g.clone());
+                        g
+                    }
+                    None => return Response::from_parts(parts, Body::from(bytes)),
+                }
+            }
+        };
+        parts.headers.insert(header::CONTENT_ENCODING, "gzip".parse().unwrap());
+        parts.headers.remove(header::CONTENT_LENGTH);
+        return Response::from_parts(parts, Body::from(gz));
+    }
+    parts.headers.remove(header::CONTENT_LENGTH);
+    Response::from_parts(parts, Body::from(bytes))
+}
+
 async fn sec_headers(State(csp): State<&'static str>, req: Request, next: Next) -> Response {
     // Yönetim sunucusundaki arayüz önizlemesi uygulama sayfasıdır: uygulamanın katı politikasıyla denenir
     let csp = if req.uri().path() == "/preview" { CSP_APP } else { csp };
+    let is_get = req.method() == axum::http::Method::GET;
+    let wants_gzip = req.headers().get(header::ACCEPT_ENCODING).and_then(|v| v.to_str().ok()).is_some_and(|v| v.split(',').any(|p| p.trim().starts_with("gzip")));
+    let if_none_match = req.headers().get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()).map(str::to_string);
+    let is_upgrade = req.headers().contains_key(header::UPGRADE);
     let mut r = next.run(req).await;
+    if is_get && !is_upgrade {
+        r = etag_and_gzip(wants_gzip, if_none_match, r).await;
+    }
     let h = r.headers_mut();
     for (k, v) in [
         ("content-security-policy", csp),
@@ -145,6 +209,7 @@ async fn guard_app(State(app): State<S>, req: Request, next: Next) -> Response {
     next.run(req).await
 }
 fn admin_hosts() -> Vec<String> {
+    let ADMIN_PORT = crate::admin_port();
     vec![format!("127.0.0.1:{ADMIN_PORT}"), format!("localhost:{ADMIN_PORT}")]
 }
 const ADMIN_COOKIE: &str = "couch_admin";
@@ -206,6 +271,7 @@ pub fn setup_router(app: S) -> Router {
         .route("/", get(setup_page))
         .route("/setup", get(setup_page))
         .route("/ca.mobileconfig", get(mobileconfig))
+        .route("/ca.crt", get(ca_crt))
         .route("/icon-180.png", get(|State(a): State<S>| async move { png(&a, 180) }))
         .route("/logo.svg", get(|| async { asset("logo.svg") }))
         .route("/api/pair/touch", post(setup_touch))
@@ -217,7 +283,21 @@ pub fn setup_router(app: S) -> Router {
 }
 
 async fn setup_page(State(app): State<S>) -> Response {
-    page("setup.html", &[("%%HOST%%", &app.host), ("%%APP_ORIGIN%%", &app.local_origin()), ("%%CA_CODE%%", &app.ca_code)])
+    let ip_origin = format!("https://{}:{}", app.lan_ip, crate::https_port());
+    page("setup.html", &[("%%HOST%%", &app.host), ("%%APP_ORIGIN%%", &app.local_origin()), ("%%APP_IP_ORIGIN%%", &ip_origin), ("%%CA_CODE%%", &app.ca_code)])
+}
+
+/// Android: kök sertifika dosyası (Ayarlar › Güvenlik › Sertifika yükle › CA sertifikası). Dosya adında doğrulama kodu görünür.
+async fn ca_crt(State(app): State<S>) -> Response {
+    log!("Sertifika dosyası (Android) indirildi");
+    if let Some(p) = app.pairing.lk().as_mut() {
+        p.profile_seen = true;
+    }
+    Response::builder()
+        .header(header::CONTENT_TYPE, "application/x-x509-ca-cert")
+        .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"CouchRemote-{}.crt\"", app.ca_code))
+        .body(Body::from(app.ca_der.clone()))
+        .unwrap()
 }
 
 async fn mobileconfig(State(app): State<S>) -> Response {
@@ -399,6 +479,8 @@ async fn api_pair(State(app): State<S>, axum::Extension(peer): axum::Extension<c
     };
     let id = device.id.clone();
     log!("✓ Cihaz eşleşti: {} ({via}, anahtar: {})", device.name, device.key_mode);
+    app.unknown_attempts.store(0, Ordering::Relaxed);
+    *app.unknown_last.lk() = None;
     // B5: aynı adlı, aynı IP'den bağlanmış ve şu an bağlı olmayan eski kayıt aynı telefondur
     // (ana ekran uygulaması silinip yeniden eklenince iOS eski anahtarı da siler)
     let stale: Vec<String> = {
@@ -584,6 +666,9 @@ pub fn admin_router(app: S) -> Router {
     Router::new()
         .route("/", get(|| async { page("admin.html", &[]) }))
         .route("/api/status", get(status))
+        .route("/api/backup/export", post(backup_export))
+        .route("/api/backup/import", post(backup_import))
+        .route("/api/notice/dismiss", post(|| async { crate::state::clear_notice(); json_resp(StatusCode::OK, json!({ "ok": true })) }))
         // Arayüz tasarım önizlemesi (eşleşme/bağlantı çalışmaz)
         .route("/preview", get(|| async { page("app.html", &[("%%MANIFEST_HREF%%", "")]) }))
         .route("/app.css", get(|| async { asset("app.css") }))
@@ -639,7 +724,41 @@ async fn remove_device(State(app): State<S>, body: Bytes) -> Response {
     json_resp(StatusCode::OK, json!({ "ok": true }))
 }
 
+/// Parolalı yedek dosyasını üretir (yalnızca yönetim sayfası: yerel + anahtarlı + özel başlık)
+async fn backup_export(body: Bytes) -> Response {
+    let pw = parse_json(&body).and_then(|v| v["password"].as_str().map(str::to_owned)).unwrap_or_default();
+    match tokio::task::spawn_blocking(move || crate::backup::export(&pw)).await {
+        Ok(Ok(text)) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::CACHE_CONTROL, "no-store")
+            .header(header::CONTENT_DISPOSITION, format!("attachment; filename=\"CouchRemote-yedek-{}.crbackup\"", chrono::Local::now().format("%Y%m%d")))
+            .body(Body::from(text))
+            .unwrap(),
+        Ok(Err(e)) => err(StatusCode::BAD_REQUEST, "yedek", &e.to_string()),
+        Err(_) => err(StatusCode::INTERNAL_SERVER_ERROR, "yedek", "Yedek alınamadı"),
+    }
+}
+
+/// Yedeği geri yükler ve programı yeniden başlatır
+async fn backup_import(body: Bytes) -> Response {
+    let (pw, data) = match parse_json(&body) {
+        Some(v) => (v["password"].as_str().unwrap_or("").to_string(), v["data"].as_str().unwrap_or("").to_string()),
+        None => return err(StatusCode::BAD_REQUEST, "yedek", "Geçersiz istek"),
+    };
+    match tokio::task::spawn_blocking(move || crate::backup::import(&pw, &data)).await {
+        Ok(Ok(n)) => {
+            log!("Yedek geri yüklendi ({n} telefon); program yeniden başlatılıyor");
+            crate::system::restart_soon();
+            json_resp(StatusCode::OK, json!({ "ok": true, "devices": n }))
+        }
+        Ok(Err(e)) => err(StatusCode::BAD_REQUEST, "yedek", &e.to_string()),
+        Err(_) => err(StatusCode::INTERNAL_SERVER_ERROR, "yedek", "Geri yüklenemedi"),
+    }
+}
+
 async fn status(State(app): State<S>) -> Response {
+    let HTTP_PORT = crate::http_port();
     app.ensure_pairing();
     let pairing = {
         let guard = app.pairing.lk();
@@ -669,6 +788,10 @@ async fn status(State(app): State<S>) -> Response {
         json!({
             "host": app.host, "lanIp": app.lan_ip, "pairing": pairing, "version": env!("CARGO_PKG_VERSION"),
             "pairingLocked": app.pairing_locked(), "caCode": app.ca_code,
+            "notice": crate::state::notice(),
+            "unknown": { "count": app.unknown_attempts.load(Ordering::Relaxed), "lastAt": *app.unknown_last.lk() },
+            "dataDir": crate::state::data_dir().display().to_string(),
+            "backupDir": crate::state::backup_dir().display().to_string(),
             "networkPublic": *app.network_public.lk(), "devices": devices,
             "connected": app.connections.load(Ordering::Relaxed),
             "shortcut": {

@@ -51,6 +51,8 @@ pub enum Cmd {
     Key { key: u16, mods: Mods },
     /// Karakter tabanlı kısayol (ör. Ctrl + 'c'): tuş, öndeki pencerenin klavye düzenine göre bulunur
     Combo { ch: char, mods: Mods },
+    /// İki parmakla yakınlaştır/uzaklaştır: Ctrl basılıyken fare tekerleği (tarayıcı, Office, resim görüntüleyiciler)
+    Zoom(i32),
 }
 
 #[derive(Clone, Copy, Default)]
@@ -98,6 +100,9 @@ pub fn vk_from_name(name: &str) -> Option<u16> {
         "delete" => 0x2E,
         "win" => 0x5B,
         "menu" => 0x5D,
+        // Fiziksel tuş konumuna bağlı kısayollar (YouTube Shift+, / Shift+. ) her klavye düzeninde aynı tuşa basılsın diye
+        "comma" => 0xBC,
+        "period" => 0xBE,
         "volup" => vk::VOLUME_UP,
         "voldown" => vk::VOLUME_DOWN,
         "mute" => vk::VOLUME_MUTE,
@@ -199,8 +204,31 @@ fn send_text(text: &str) {
     send_all(&v);
 }
 
+/// ASCII harf kısayolları her düzende harfin kendi tuşuna (VK = büyük harf) basılarak gönderilir; Shift yalnızca büyük harfte.
+/// Düzen sorgusuna güvenilmez: Türkçe düzende `i` bazen AltGr+I (Ctrl+Alt) ya da İ tuşu olarak döner ve tarayıcı kısayolları bozulur.
+fn letter_override(ch: char) -> Option<(u16, bool)> {
+    ch.is_ascii_alphabetic().then(|| (ch.to_ascii_uppercase() as u16, ch.is_ascii_uppercase()))
+}
+
 /// Karakteri, öndeki pencerenin klavye düzeninde üreten tuşa çevirir (Türkçe Q / F / İngilizce fark etmez)
+fn send_zoom(steps: i32) {
+    let steps = steps.clamp(-5, 5);
+    if steps == 0 {
+        return;
+    }
+    send_key(VK_CONTROL, false);
+    send_mouse(MOUSEEVENTF_WHEEL, 0, 0, steps * 120);
+    send_key(VK_CONTROL, true);
+}
+
 fn send_combo(ch: char, mods: Mods) {
+    // Tarayıcı kısayolları (YouTube i, Netflix s…) tuş kodunu bekler: harfler düzenden bağımsız kendi tuşuna basılır
+    if let Some((letter_vk, shift)) = letter_override(ch) {
+        let mut m = mods;
+        m.shift |= shift;
+        press_with_mods(letter_vk, &mod_keys(m));
+        return;
+    }
     let mut buf = [0u16; 2];
     let units = ch.encode_utf16(&mut buf);
     let scan = unsafe {
@@ -261,6 +289,7 @@ impl Input {
                         Cmd::Text(t) => send_text(&t),
                         Cmd::Key { key, mods } => press_with_mods(key, &mod_keys(mods)),
                         Cmd::Combo { ch, mods } => send_combo(ch, mods),
+                        Cmd::Zoom(steps) => send_zoom(steps),
                     }
                     if measured {
                         stats.lk().add_proc(t0.elapsed().as_secs_f64() * 1000.0);
@@ -440,5 +469,22 @@ impl Mouse {
             send_mouse(MOUSEEVENTF_HWHEEL, 0, 0, hw as i32);
             self.hwheel_acc -= hw;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn harf_kisayolu_duzenden_bagimsiz() {
+        assert_eq!(super::letter_override('i'), Some((0x49, false)));
+        assert_eq!(super::letter_override('N'), Some((0x4E, true)));
+        assert_eq!(super::letter_override('<'), None);
+        assert_eq!(super::letter_override('ı'), None);
+    }
+
+    #[test]
+    fn fiziksel_tus_adlari() {
+        assert_eq!(super::vk_from_name("comma"), Some(0xBC));
+        assert_eq!(super::vk_from_name("period"), Some(0xBE));
     }
 }

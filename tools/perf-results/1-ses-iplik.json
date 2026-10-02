@@ -1,0 +1,101 @@
+{
+  "label": "1-ses-iplik",
+  "at": "2026-10-01T23:26:24.932Z",
+  "connectedDevices": 0,
+  "exeMB": 7.05,
+  "idle": {
+    "seconds": 30,
+    "cpuPercentOfOneCore": 0.05,
+    "workingSetMB": 47.9,
+    "privateMB": 8.6,
+    "threads": 35,
+    "handles": 449,
+    "hotThreads": {
+      "id": 24328,
+      "name": "",
+      "cpuMs": 15.6
+    }
+  },
+  "web": {
+    "files": [
+      {
+        "p": "/app",
+        "status": 200,
+        "rawKB": 43.5,
+        "wireKB": 43.5,
+        "enc": "yok"
+      },
+      {
+        "p": "/app.js",
+        "status": 200,
+        "rawKB": 99.9,
+        "wireKB": 99.9,
+        "enc": "yok"
+      },
+      {
+        "p": "/air.js",
+        "status": 200,
+        "rawKB": 6.4,
+        "wireKB": 6.4,
+        "enc": "yok"
+      },
+      {
+        "p": "/tv.js",
+        "status": 200,
+        "rawKB": 19.2,
+        "wireKB": 19.2,
+        "enc": "yok"
+      },
+      {
+        "p": "/brand-icons.js",
+        "status": 200,
+        "rawKB": 3.2,
+        "wireKB": 3.2,
+        "enc": "yok"
+      },
+      {
+        "p": "/app.css",
+        "status": 200,
+        "rawKB": 37,
+        "wireKB": 37,
+        "enc": "yok"
+      },
+      {
+        "p": "/ui.css",
+        "status": 200,
+        "rawKB": 42.8,
+        "wireKB": 42.8,
+        "enc": "yok"
+      },
+      {
+        "p": "/design.css",
+        "status": 200,
+        "rawKB": 21.1,
+        "wireKB": 21.1,
+        "enc": "yok"
+      },
+      {
+        "p": "/i18n.js",
+        "status": 200,
+        "rawKB": 6.1,
+        "wireKB": 6.1,
+        "enc": "yok"
+      },
+      {
+        "p": "/i18n-en.js",
+        "status": 200,
+        "rawKB": 40.7,
+        "wireKB": 40.7,
+        "enc": "yok"
+      }
+    ],
+    "rawKB": 320,
+    "wireKB": 320,
+    "loadMs": 52
+  },
+  "ws": {
+    "firstMs": null,
+    "restAvgMs": 0,
+    "all": []
+  }
+}

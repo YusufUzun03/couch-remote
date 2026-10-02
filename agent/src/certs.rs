@@ -43,14 +43,19 @@ pub fn create_ca(host: &str) -> Result<StoredCert> {
         cert_pem: cert.pem(),
         key_pem_enc: dpapi::protect_str(&key.serialize_pem())?,
         not_after: rfc3339(p.not_after),
+        ip: String::new(),
     })
 }
 
-pub fn create_leaf(host: &str, ca: &StoredCert) -> Result<StoredCert> {
+pub fn create_leaf(host: &str, lan_ip: &str, ca: &StoredCert) -> Result<StoredCert> {
     let ca_key = KeyPair::from_pem(&dpapi::unprotect_str(&ca.key_pem_enc)?)?;
     let issuer = Issuer::from_ca_cert_pem(&ca.cert_pem, ca_key)?;
     let key = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)?;
     let mut p = CertificateParams::new(vec![host.to_string()])?;
+    // .local adı Android'de çözülemezse LAN adresiyle de açılabilsin (CA'nın ad kısıtı yalnızca DNS adlarını sınırlar)
+    if let Ok(ip) = lan_ip.parse::<std::net::IpAddr>() {
+        p.subject_alt_names.push(rcgen::SanType::IpAddress(ip));
+    }
     p.distinguished_name.push(DnType::CommonName, host);
     p.key_usages = vec![KeyUsagePurpose::DigitalSignature];
     p.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
@@ -64,6 +69,7 @@ pub fn create_leaf(host: &str, ca: &StoredCert) -> Result<StoredCert> {
         cert_pem: format!("{}\n{}", cert.pem().trim(), ca.cert_pem.trim()),
         key_pem_enc: dpapi::protect_str(&key.serialize_pem())?,
         not_after: rfc3339(p.not_after),
+        ip: lan_ip.to_string(),
     })
 }
 

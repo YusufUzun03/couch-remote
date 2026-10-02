@@ -7,6 +7,7 @@
 //!               --print-cursor / --selftest-cursor (test araçları)
 // Sürüm derlemesinde konsol penceresi açılmaz (günlük dosyaya yazılır)
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![allow(non_snake_case)] // HTTP_PORT gibi yerel adlar biçim dizelerinde yakalanır
 
 #[macro_export]
 macro_rules! log {
@@ -17,6 +18,7 @@ macro_rules! log {
 
 mod app;
 mod audio;
+mod backup;
 mod clipboard;
 mod context;
 mod events;
@@ -45,19 +47,32 @@ mod tray;
 mod tv;
 mod upload;
 mod web;
+mod winlist;
 mod ws;
 
 use crate::sync::LockExt;
 use std::sync::Arc;
 
-pub const HTTP_PORT: u16 = 47800;
-pub const HTTPS_PORT: u16 = 47801;
-pub const ADMIN_PORT: u16 = 47802;
+/// Portlar: 47800 (kurulum, HTTP) / 47801 (uygulama, HTTPS) / 47802 (yönetim, yalnızca bu bilgisayar).
+/// COUCH_PORT_BASE ile kaydırılabilir: testler, çalışan gerçek programı ve eşleşmeleri bozmadan ayrı bir örnekle yapılır.
+fn port_base() -> u16 {
+    static B: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
+    *B.get_or_init(|| std::env::var("COUCH_PORT_BASE").ok().and_then(|v| v.parse::<u16>().ok()).filter(|b| *b >= 1024 && *b < 65000).unwrap_or(47800))
+}
+pub fn http_port() -> u16 {
+    port_base()
+}
+pub fn https_port() -> u16 {
+    port_base() + 1
+}
+pub fn admin_port() -> u16 {
+    port_base() + 2
+}
 
 /// Çalışan örneğin yönetim sayfası adresi (anahtar dosyadan okunur)
 fn running_admin_url() -> String {
     let token = std::fs::read_to_string(state::data_dir().join("admin.token")).unwrap_or_default();
-    format!("http://127.0.0.1:{ADMIN_PORT}/?t={}", token.trim())
+    format!("http://127.0.0.1:{}/?t={}", admin_port(), token.trim())
 }
 
 #[tokio::main]
@@ -114,6 +129,7 @@ async fn main() -> anyhow::Result<()> {
 
 /// Başlangıç hatasını kullanıcının anlayacağı dile çevirir
 fn friendly_error(e: &anyhow::Error) -> String {
+    let (HTTP_PORT, ADMIN_PORT) = (crate::http_port(), crate::admin_port());
     let in_use = e.chain().any(|c| c.downcast_ref::<std::io::Error>().is_some_and(|io| io.kind() == std::io::ErrorKind::AddrInUse));
     if in_use {
         if i18n::is_tr() {
@@ -135,6 +151,7 @@ fn friendly_error(e: &anyhow::Error) -> String {
 }
 
 async fn run(background: bool) -> anyhow::Result<()> {
+    let HTTPS_PORT = crate::https_port();
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     // Türkçe karakterler konsolda doğru görünsün (geliştirme derlemesi)
     unsafe {
@@ -205,9 +222,9 @@ async fn run(background: bool) -> anyhow::Result<()> {
     }
     let _mdns = mdns::start(&app.host, &app.lan_ip)?;
 
-    let setup = tokio::net::TcpListener::bind(("0.0.0.0", HTTP_PORT)).await?;
-    let https = tokio::net::TcpListener::bind(("0.0.0.0", HTTPS_PORT)).await?;
-    let admin = tokio::net::TcpListener::bind(("127.0.0.1", ADMIN_PORT)).await?;
+    let setup = tokio::net::TcpListener::bind(("0.0.0.0", http_port())).await?;
+    let https = tokio::net::TcpListener::bind(("0.0.0.0", https_port())).await?;
+    let admin = tokio::net::TcpListener::bind(("127.0.0.1", admin_port())).await?;
 
     tokio::spawn(net::serve(setup, None, web::setup_router(app.clone())));
     tokio::spawn(net::serve(https, Some(app.tls.clone()), web::app_router(app.clone())));

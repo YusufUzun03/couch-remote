@@ -1,0 +1,115 @@
+{
+  "label": "3-son",
+  "at": "2026-10-01T23:48:39.076Z",
+  "connectedDevices": 0,
+  "exeMB": 7.08,
+  "idle": {
+    "seconds": 30,
+    "cpuPercentOfOneCore": 0.05,
+    "workingSetMB": 47.9,
+    "privateMB": 9.1,
+    "threads": 36,
+    "handles": 446,
+    "hotThreads": {
+      "id": 40016,
+      "name": "mdns",
+      "cpuMs": 15.6
+    }
+  },
+  "web": {
+    "files": [
+      {
+        "p": "/app",
+        "status": 200,
+        "rawKB": 43.5,
+        "wireKB": 10.5,
+        "enc": "gzip"
+      },
+      {
+        "p": "/app.js",
+        "status": 200,
+        "rawKB": 101,
+        "wireKB": 30.7,
+        "enc": "gzip"
+      },
+      {
+        "p": "/air.js",
+        "status": 200,
+        "rawKB": 6.4,
+        "wireKB": 2.9,
+        "enc": "gzip"
+      },
+      {
+        "p": "/tv.js",
+        "status": 200,
+        "rawKB": 19.2,
+        "wireKB": 6.1,
+        "enc": "gzip"
+      },
+      {
+        "p": "/brand-icons.js",
+        "status": 200,
+        "rawKB": 3.2,
+        "wireKB": 1.6,
+        "enc": "gzip"
+      },
+      {
+        "p": "/app.css",
+        "status": 200,
+        "rawKB": 37,
+        "wireKB": 8.2,
+        "enc": "gzip"
+      },
+      {
+        "p": "/ui.css",
+        "status": 200,
+        "rawKB": 42.8,
+        "wireKB": 10.5,
+        "enc": "gzip"
+      },
+      {
+        "p": "/design.css",
+        "status": 200,
+        "rawKB": 21.4,
+        "wireKB": 6.1,
+        "enc": "gzip"
+      },
+      {
+        "p": "/i18n.js",
+        "status": 200,
+        "rawKB": 6.1,
+        "wireKB": 2.6,
+        "enc": "gzip"
+      }
+    ],
+    "rawKB": 280.7,
+    "wireKB": 79.3,
+    "loadMs": 50,
+    "repeatWireKB": 0,
+    "repeatMs": 3
+  },
+  "ws": {
+    "firstMs": 6.6,
+    "restAvgMs": 3.5,
+    "all": [
+      6.6,
+      3.5,
+      3.9,
+      3.5,
+      3.5,
+      3.4,
+      3.4,
+      3.4,
+      3.5,
+      3.6,
+      3.6,
+      3.4
+    ]
+  },
+  "cold": {
+    "readyMs": 93,
+    "lanFirstMs": 4,
+    "privateMB": 7,
+    "workingSetMB": 34.6
+  }
+}

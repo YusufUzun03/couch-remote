@@ -10,13 +10,15 @@ import { execSync } from 'node:child_process';
 import WebSocket from 'ws';
 import * as x509 from '@peculiar/x509';
 
-const state = JSON.parse(fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'state.json'), 'utf8'));
+const DATA = process.env.COUCH_DATA_DIR ?? path.join(process.env.APPDATA, 'CouchRemote');
+const state = JSON.parse(fs.readFileSync(path.join(DATA, 'state.json'), 'utf8'));
 const HOST = `couch-${state.id}.local`;
-const PORT = 47801;
+const BASE = Number(process.env.COUCH_PORT_BASE ?? 47800);
+const PORT = BASE + 1;
 const ORIGIN = `https://${HOST}:${PORT}`;
-const ADMIN = 'http://127.0.0.1:47802';
+const ADMIN = `http://127.0.0.1:${BASE + 2}`;
 const CA = state.ca.cert_pem;
-const ADMIN_TOKEN = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'admin.token'), 'utf8').trim();
+const ADMIN_TOKEN = fs.readFileSync(path.join(DATA, 'admin.token'), 'utf8').trim();
 const ADMIN_COOKIE = { Cookie: `couch_admin=${ADMIN_TOKEN}` };
 const status = async () => (await fetch(`${ADMIN}/api/status`, { headers: ADMIN_COOKIE })).json();
 const LAN_IP = (await status()).lanIp;
@@ -56,17 +58,17 @@ console.log(`\nHedef: ${HOST} (${LAN_IP})\n`);
 x509.cryptoProvider.set(wc);
 const ca = new x509.X509Certificate(CA);
 check('CA ad kısıtlaması içeriyor', ca.extensions.some((e) => e.type === '2.5.29.30'));
-const raw = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'state.json'), 'utf8');
+const raw = fs.readFileSync(path.join(DATA, 'state.json'), 'utf8');
 check('Diskte şifrelenmemiş özel anahtar yok (DPAPI)', !raw.includes('PRIVATE KEY'));
 check('Diskte şifrelenmemiş Kestirmeler jetonu yok', !raw.includes((await status()).shortcut.token));
 const hello = await req('/api/hello');
 check('TLS zinciri + doğru ad', hello.status === 200, hello.body);
-check('Yanlış Host başlığı reddediliyor (DNS rebinding)', (await req('/api/hello', { host: 'evil.com:47801' })).status === 421);
+check('Yanlış Host başlığı reddediliyor (DNS rebinding)', (await req('/api/hello', { host: `evil.com:${PORT}` })).status === 421);
 
 // --- mDNS (Windows çözümleyicisi üzerinden)
 const t0 = Date.now();
 try {
-  const r = await fetch(`http://${HOST}:47800/setup`, { signal: AbortSignal.timeout(20000) });
+  const r = await fetch(`http://${HOST}:${BASE}/setup`, { signal: AbortSignal.timeout(20000) });
   check('mDNS: .local adı çözülüyor', r.status === 200, `${Date.now() - t0} ms (Windows'ta ilk çözümleme yavaş olabilir)`);
 } catch (e) {
   check('mDNS: .local adı çözülüyor', false, e.cause?.code ?? e.message);
@@ -91,15 +93,15 @@ const token = (await status()).shortcut.token;
 check('S2: kimliksiz rapor yazılamıyor', (await req('/api/report', { method: 'POST', body: { phase: 'x' } })).status === 404);
 // S3: profil adında doğrulama kodu var ve yönetim sayfasındakiyle aynı
 const caCode = (await status()).caCode;
-const profile = await fetch(`http://${LAN_IP}:47800/ca.mobileconfig`, { headers: { Host: `${HOST}:47800` } }).then((r) => r.text()).catch(() => '');
+const profile = await fetch(`http://${LAN_IP}:${BASE}/ca.mobileconfig`, { headers: { Host: `${HOST}:${BASE}` } }).then((r) => r.text()).catch(() => '');
 check('S3: profil adında doğrulama kodu', /^[0-9A-F]{4}-[0-9A-F]{4}$/.test(caCode) && profile.includes(`CouchRemote · ${caCode}`), caCode);
 // Kurulum sayfası: doğrulama kodu sayfanın içinde (telefon ekranındaki kodla karşılaştırılır), yer tutucu kalmamış
-const setupHtml = await fetch(`http://${LAN_IP}:47800/setup`, { headers: { Host: `${HOST}:47800` } }).then((r) => r.text()).catch(() => '');
+const setupHtml = await fetch(`http://${LAN_IP}:${BASE}/setup`, { headers: { Host: `${HOST}:${BASE}` } }).then((r) => r.text()).catch(() => '');
 check('Kurulum sayfasında doğrulama kodu görünüyor', setupHtml.includes(caCode) && !setupHtml.includes('%%'), caCode);
 // Eşleşme ilerlemesi: profil indirilince yönetim sayfasındaki adım işaretlenir
 check('Eşleşme ilerlemesi: profil indirildi işaretlendi', (await status()).pairing?.profileSeen === true);
 // S5: PIN günlüğe yazılmıyor (bu çalıştırmada üretilen kodlar)
-const logText = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'couch.log'), 'utf8');
+const logText = fs.readFileSync(path.join(DATA, 'couch.log'), 'utf8');
 const runStart = logText.lastIndexOf('çalışıyor —');
 check('S5: günlükte PIN yok', !/PIN: \d{6}/.test(logText.slice(runStart)));
 // S4: 5 hatalı PIN → eşleşme kilitlenir, yönetim sayfası elle açabilir
@@ -281,7 +283,15 @@ async function featureTests(ws) {
       const sr = [await act('tv-volup'), await act('tv-key?v=home&tv=oled'), await act('tv-volume?v=500'), await act('tv-launch?v=..%2Fetc'), await act('tv-off?tv=yok-boyle'), await act('tv-bilinmeyen')];
       check('Kestirme: TV eylemleri (ad ile TV seçimi dahil) çalışıyor', sr[0].status === 200 && sr[1].status === 200 && await until(() => log.filter((l) => typeof l === 'string' && l.includes('volumeUp')).length === 2 && ptr.filter((p) => p.includes('name:HOME')).length === 2));
       check('Kestirme: TV hatalı parametre / bilinmeyen TV / bilinmeyen eylem reddediliyor', sr.slice(2).every((r) => r.status === 400));
-      check('TV: eşleşme anahtarı diskte şifreli', (() => { const t = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'tvs.json'), 'utf8'); return t.includes('key_enc') && !t.includes('MOCKKEY'); })());
+      tv({ op: 'open-link', kind: 'youtube', video: 'dQw4w9WgXcQ' });
+      tv({ op: 'open-link', kind: 'web', url: 'https://example.com/a?b=1' });
+      tv({ op: 'open-link', kind: 'youtube', video: 'kisa' });
+      tv({ op: 'open-link', kind: 'web', url: 'javascript:alert(1)' });
+      tv({ op: 'open-link', kind: 'web', url: 'https://x.com/a b' });
+      check('TV: link açma (YouTube kimliğiyle, web adresi tarayıcıda) doğru eşleniyor', await until(() => log.some((l) => typeof l === 'string' && l.includes('system.launcher/launch {"contentId":"dQw4w9WgXcQ","id":"youtube.leanback.v4"}')) && log.some((l) => typeof l === 'string' && l.includes('system.launcher/open {"target":"https://example.com/a?b=1"}'))));
+      await sleep(300);
+      check('TV: bozuk YouTube kimliği, javascript: ve boşluklu adres reddediliyor', !log.some((l) => typeof l === 'string' && (l.includes('kisa') || l.includes('javascript') || l.includes('a b'))));
+      check('TV: eşleşme anahtarı diskte şifreli', (() => { const t = fs.readFileSync(path.join(DATA, 'tvs.json'), 'utf8'); return t.includes('key_enc') && !t.includes('MOCKKEY'); })());
       // TV kapanınca durum 'off', anahtarla yeniden bağlanır (yeniden eşleşme istemez)
       for (const c of wss.clients) c.close();
       check('TV: bağlantı kopunca kapalı görünüyor', await until(() => cur()?.state === 'off', 4000), cur()?.state);
@@ -293,6 +303,47 @@ async function featureTests(ws) {
       for (const c of wss.clients) c.terminate();
       wss.close();
     }
+  }
+
+  // Açık pencereler: liste biçimi, geçersiz kimlikle eylem hiçbir şey yapmaz
+  {
+    ws.send(JSON.stringify({ type: 'windows' }));
+    const wl = await waitFor('windows', 4000);
+    const okShape = Array.isArray(wl?.windows) && wl.windows.every((w) => typeof w.id === 'number' && typeof w.app === 'string' && typeof w.title === 'string' && w.title.length > 0);
+    check('Açık pencereler: liste geliyor (kimlik, uygulama, başlık)', okShape && wl.windows.length >= 1, `${wl?.windows?.length} pencere`);
+    check('Açık pencereler: CouchRemote kendi penceresini listelemiyor', !(wl?.windows ?? []).some((w) => w.app === 'CouchRemote'));
+    const before = JSON.stringify((wl?.windows ?? []).map((w) => w.id));
+    ws.send(JSON.stringify({ type: 'window', id: 123456789, action: 'close' }));
+    ws.send(JSON.stringify({ type: 'window', id: (wl?.windows?.[0]?.id ?? 1), action: 'format-c' }));
+    await sleep(500);
+    ws.send(JSON.stringify({ type: 'windows' }));
+    const wl2 = await waitFor('windows', 4000);
+    check('Açık pencereler: geçersiz kimlik / bilinmeyen eylem pencereleri etkilemiyor', JSON.stringify((wl2?.windows ?? []).map((w) => w.id)) === before);
+  }
+  // LAN adresiyle bağlantı (Android .local çözemezse): sertifikada IP var, Host/Origin kabul ediliyor
+  {
+    const https2 = (await import('node:https')).default;
+    const viaIp = await new Promise((resolve) => {
+      const r = https2.request({ host: LAN_IP, port: PORT, path: '/app', ca: CA, headers: { Host: `${LAN_IP}:${PORT}` } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+      r.on('error', (e) => resolve(e.code ?? e.message));
+      r.end();
+    });
+    check('IP ile bağlantı: sertifika LAN adresini içeriyor (SNI yok), sayfa açılıyor', viaIp === 200, String(viaIp));
+    const wsIp = await new Promise((resolve) => {
+      const w2 = new WebSocket(`wss://${LAN_IP}:${PORT}/ws`, { ca: CA, headers: { Host: `${LAN_IP}:${PORT}` }, origin: `https://${LAN_IP}:${PORT}` });
+      w2.on('message', (d) => { if (String(d).includes('challenge')) { w2.close(); resolve(true); } });
+      w2.on('error', () => resolve(false));
+      setTimeout(() => resolve(false), 4000);
+    });
+    check('IP ile bağlantı: WebSocket el sıkışması (Origin = LAN adresi) kabul ediliyor', wsIp === true);
+    const evil = await req('/app', { host: `attacker.example:${PORT}` });
+    check('IP desteği DNS rebinding korumasını bozmadı (yabancı Host reddediliyor)', evil.status === 421, String(evil.status));
+    const crt = await fetch(`http://${LAN_IP}:${BASE}/ca.crt`);
+    const crtBody = Buffer.from(await crt.arrayBuffer());
+    const caDer = Buffer.from(CA.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''), 'base64');
+    check('Android: /ca.crt kök sertifikayı DER olarak veriyor, dosya adında doğrulama kodu var', crt.status === 200 && /x509-ca-cert/.test(crt.headers.get('content-type') ?? '') && crtBody.equals(caDer) && /CouchRemote-[0-9A-F]{4}-[0-9A-F]{4}\.crt/.test(crt.headers.get('content-disposition') ?? ''));
+    const setup = await (await fetch(`http://${LAN_IP}:${BASE}/setup`)).text();
+    check('Kurulum sayfası Android adımlarını ve IP adresini içeriyor', setup.includes('androidSteps') && setup.includes(`https://${LAN_IP}:${PORT}`));
   }
 
   // Samsung ve Android TV sürücüleri: sahte TV'lerle (tools/mock-tvs.mjs) eşleşme + komut eşlemesi
@@ -317,15 +368,18 @@ async function featureTests(ws) {
       check('Samsung: yetenekler (işaretçi/ses ayarı yok, uygulamalar var)', byBrand('samsung')?.caps?.pointer === false && byBrand('samsung')?.caps?.vol === false && byBrand('samsung')?.apps?.length >= 4);
       for (const o of [{ op: 'vol-up' }, { op: 'mute', mute: true }, { op: 'key', name: 'HOME' }, { op: 'launch', app: '11101200001' }, { op: 'text', text: 'merhaba' },
         { op: 'vol', level: 30 }, { op: 'move', dx: 3, dy: 3 }, { op: 'input', input: 'HDMI_1' }, { op: 'key', name: 'POWEROFF' }]) tvOp('samsung', o);
+      tvOp('samsung', { op: 'open-link', kind: 'youtube', video: 'dQw4w9WgXcQ' });
+      tvOp('samsung', { op: 'open-link', kind: 'web', url: 'https://example.com/' });
       const msgs = () => sam.log.filter((l) => l.method);
-      check('Samsung: tuş, uygulama ve yazı komutları doğru iletiliyor', await until(() => msgs().length >= 5) &&
+      check('Samsung: link açma (YouTube derin bağlantısı, tarayıcı)', await until(() => msgs().some((l) => l.params.data?.appId === '111299001912' && l.params.data?.metaTag === 'v=dQw4w9WgXcQ') && msgs().some((l) => l.params.data?.appId === 'org.tizen.browser' && l.params.data?.metaTag === 'https://example.com/')));
+      check('Samsung: tuş, uygulama ve yazı komutları doğru iletiliyor', await until(() => msgs().length >= 7) &&
         msgs().some((l) => l.params.DataOfCmd === 'KEY_VOLUP') && msgs().some((l) => l.params.DataOfCmd === 'KEY_MUTE') && msgs().some((l) => l.params.DataOfCmd === 'KEY_HOME') &&
         msgs().some((l) => l.params.data?.appId === '11101200001') && msgs().some((l) => l.params.TypeOfRemote === 'SendInputString' && Buffer.from(l.params.Cmd, 'base64').toString() === 'merhaba'));
       await sleep(500);
-      check('Samsung: desteklenmeyen / geçersiz komutlar sızmıyor', msgs().length === 5, String(msgs().length));
+      check('Samsung: desteklenmeyen / geçersiz komutlar sızmıyor', msgs().length === 7, String(msgs().length));
       sam.drop();
       check('Samsung: kopunca kapalı, sonra kayıtlı jetonla kendiliğinden bağlanıyor', await until(() => byBrand('samsung')?.state === 'off', 4000) && await until(() => byBrand('samsung')?.state === 'on', 20000) && sam.log.filter((l) => l.connect).at(-1)?.token === sam.TOKEN);
-      check('Samsung: jeton diskte şifreli', !fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'tvs.json'), 'utf8').includes(sam.TOKEN));
+      check('Samsung: jeton diskte şifreli', !fs.readFileSync(path.join(DATA, 'tvs.json'), 'utf8').includes(sam.TOKEN));
     } finally {
       forgetAll();
       sam.close();
@@ -347,16 +401,44 @@ async function featureTests(ws) {
       for (const o of [{ op: 'vol-up' }, { op: 'key', name: 'UP' }, { op: 'key', name: '5' }, { op: 'launch', app: 'https://www.youtube.com' }, { op: 'off' }, { op: 'move', dx: 1, dy: 1 }, { op: 'input', input: 'HDMI_1' }]) tvOp('android', o);
       check('Android TV: tuş kodları ve uygulama bağlantısı doğru', await until(() => atv.state.keys.length >= 4 && atv.state.links.length >= 1) &&
         [24, 19, 12, 26].every((k) => atv.state.keys.includes(k)) && atv.state.links[0] === 'https://www.youtube.com', JSON.stringify(atv.state.keys));
+      tvOp('android', { op: 'open-link', kind: 'youtube', video: 'dQw4w9WgXcQ' });
+      tvOp('android', { op: 'open-link', kind: 'web', url: 'https://example.com/x' });
+      check('Android TV: YouTube ve web linkleri uygulama bağlantısı olarak gidiyor', await until(() => atv.state.links.includes('https://www.youtube.com/watch?v=dQw4w9WgXcQ') && atv.state.links.includes('https://example.com/x')));
       await sleep(400);
-      check('Android TV: desteklenmeyen komutlar sızmıyor', atv.state.keys.length === 4 && atv.state.links.length === 1);
+      check('Android TV: desteklenmeyen komutlar sızmıyor', atv.state.keys.length === 4 && atv.state.links.length === 3);
       tvOp('android', { op: 'launch', app: 'javascript:alert(1)' });
       await sleep(300);
-      check('Android TV: geçersiz uygulama bağlantısı reddediliyor', atv.state.links.length === 1);
-      check('Android TV: kimlik diskte şifreli (özel anahtar düz yazı değil)', !fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'atv-client.json'), 'utf8').includes('PRIVATE'));
+      check('Android TV: geçersiz uygulama bağlantısı reddediliyor', atv.state.links.length === 3);
+      check('Android TV: kimlik diskte şifreli (özel anahtar düz yazı değil)', !fs.readFileSync(path.join(DATA, 'atv-client.json'), 'utf8').includes('PRIVATE'));
     } finally {
       forgetAll();
       atv.close();
     }
+  }
+
+  // Klavye: kısayol tuşları (opsiyonel; masaüstünde küçük bir pencere açıp odağı alır): COUCH_TEST_KEYS=1
+  if (process.env.COUCH_TEST_KEYS === '1') {
+    const { spawn } = await import('node:child_process');
+    const log = path.join(process.env.TEMP, 'couch-keylog.txt');
+    for (const f of [log, log + '.ready']) try { fs.unlinkSync(f); } catch {}
+    const ps = spawn('powershell', ['-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-File', path.join(import.meta.dirname, 'keylog.ps1'), log, '8000'], { stdio: 'ignore' });
+    for (let t = 0; t < 6000 && !fs.existsSync(log + '.ready'); t += 100) await sleep(100);
+    await sleep(500);
+    const send = (o) => ws.send(JSON.stringify(o));
+    send({ type: 'key', key: 'comma', mods: ['shift'] }); await sleep(150);
+    send({ type: 'key', key: 'period', mods: ['shift'] }); await sleep(150);
+    send({ type: 'combo', char: 'j', mods: [] }); await sleep(150);
+    send({ type: 'combo', char: 'i', mods: [] }); await sleep(150);
+    send({ type: 'combo', char: 'N', mods: [] }); await sleep(150);
+    send({ type: 'key', key: 'left', mods: ['alt'] }); await sleep(150);
+    send({ type: 'zoom', steps: 1 }); await sleep(150);
+    send({ type: 'zoom', steps: 99 }); await sleep(150); // sınırlanır (en çok 5)
+    await new Promise((r) => ps.on('exit', r));
+    const lines = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean) : [];
+    check('Klavye: Shift+, ve Shift+. fiziksel tuş olarak gidiyor (YouTube yavaşlat/hızlandır)', lines.some((l) => l.startsWith('Oemcomma|True')) && lines.some((l) => l.startsWith('OemPeriod|True')) , lines.join(' '));
+    check('Pinch: yakınlaştırma Ctrl basılı tekerlek olarak gidiyor', lines.filter((l) => l.startsWith('ControlKey|False|True')).length >= 2, lines.join(' '));
+    check('Klavye: i harfi her düzende I tuşuyla gidiyor (YouTube mini oynatıcı)', lines.some((l) => l.startsWith('I|False')), lines.join(' '));
+    check('Klavye: harf kısayolu (j) ve Shift+N doğru', lines.some((l) => l.startsWith('J|False')) && lines.some((l) => l.startsWith('N|True')), lines.join(' '));
   }
 
   // Zamanlayıcı: 1 dk kur ve hemen iptal et (sesi kısmaya başlamadan)
@@ -506,6 +588,66 @@ const netMod = await import('node:net');
 const appPage = await req('/app');
 const csp = appPage.headers['content-security-policy'] ?? '';
 check('Güvenlik başlıkları (CSP, çerçeveleme yasağı)', /frame-ancestors 'none'/.test(csp) && /script-src 'self'(;|$)/.test(csp) && appPage.headers['x-frame-options'] === 'DENY' && appPage.headers['referrer-policy'] === 'no-referrer');
+{
+  // Yedek ve kurtarma (yalnızca yönetim sayfası): parolalı dosya, yanlış parola ve bozuk dosya reddi
+  const crypto = (await import('node:crypto')).default;
+  const short = await adminPost('/api/backup/export', { password: 'kisa' });
+  check('Yedek: kısa parola reddediliyor', short.status === 400);
+  const ex = await adminPost('/api/backup/export', { password: 'test-parolasi-123' });
+  const blob = await ex.text();
+  let bj = {};
+  try { bj = JSON.parse(blob); } catch {}
+  check('Yedek: dosya üretiliyor, şifreli (düz metin anahtar yok), indirilebilir ad var', ex.status === 200 && bj.app === 'CouchRemote' && !blob.includes('PRIVATE KEY') && /crbackup/.test(ex.headers.get('content-disposition') ?? ''));
+  let plain = null;
+  try {
+    const key = crypto.pbkdf2Sync('test-parolasi-123', Buffer.from(bj.salt, 'base64'), bj.iter, 32, 'sha256');
+    const ct = Buffer.from(bj.ct, 'base64');
+    const d = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(bj.nonce, 'base64'));
+    d.setAAD(Buffer.from('couchremote-backup-v1'));
+    d.setAuthTag(ct.subarray(ct.length - 16));
+    plain = JSON.parse(Buffer.concat([d.update(ct.subarray(0, ct.length - 16)), d.final()]).toString());
+  } catch {}
+  check('Yedek: Node ile çözülünce kimlik, CA (özel anahtarlı), telefonlar ve Kestirmeler jetonu var', !!plain && plain.id === state.id && plain.ca_cert_pem.trim() === CA.trim() && plain.ca_key_pem.includes('PRIVATE KEY') && Array.isArray(plain.devices) && plain.shortcut_token.length > 10);
+  const devicesBefore = (await status()).devices.length;
+  const wrong = await adminPost('/api/backup/import', { password: 'yanlis-parola-1', data: blob });
+  const junk = await adminPost('/api/backup/import', { password: 'test-parolasi-123', data: '{"app":"baska"}' });
+  const tam = JSON.parse(blob); tam.ct = Buffer.from(Buffer.from(tam.ct, 'base64').map((b, k) => (k === 3 ? b ^ 1 : b))).toString('base64');
+  const bozuk = await adminPost('/api/backup/import', { password: 'test-parolasi-123', data: JSON.stringify(tam) });
+  check('Yedek: yanlış parola, yabancı dosya ve bozulmuş dosya geri yüklenmiyor (400)', wrong.status === 400 && junk.status === 400 && bozuk.status === 400);
+  check('Yedek: reddedilen geri yükleme mevcut eşleşmelere dokunmuyor', (await status()).devices.length === devicesBefore);
+  const noHeader = await adminPost('/api/backup/export', { password: 'test-parolasi-123' }, ADMIN, false);
+  check('Yedek: yönetim özel başlığı olmadan istek reddediliyor (403)', noHeader.status === 403, String(noHeader.status));
+  // Kayıtsız telefon: yönetim sayfasında sayaç
+  const uBefore = (await status()).unknown?.count ?? 0;
+  await new Promise((res) => {
+    const w = new WebSocket(`wss://${LAN_IP}:${PORT}/ws`, { servername: HOST, ca: CA, headers: { Host: `${HOST}:${PORT}` }, origin: ORIGIN });
+    w.on('message', (d) => {
+      const m = JSON.parse(String(d));
+      if (m.type === 'challenge') w.send(JSON.stringify({ type: 'auth', deviceId: 'yok-boyle-bir-cihaz', sig: 'AAAA' }));
+      else if (m.type === 'unknown-device') { w.close(); res(true); }
+    });
+    w.on('error', () => res(false));
+    setTimeout(() => res(false), 4000);
+  });
+  const uAfter = (await status()).unknown;
+  check('Kayıtsız telefon: bağlanma denemesi yönetim durumunda sayılıyor', uAfter?.count >= uBefore + 1 && !!uAfter.lastAt, JSON.stringify(uAfter));
+  const st0 = await status();
+  check('Durum: bildirim yok, veri ve yedek klasörü bildiriliyor', (st0.notice ?? null) === null && !!st0.dataDir && !!st0.backupDir);
+}
+{
+  // Sıkıştırma ve ETag: gzip gövdesi aynı içeriği verir, If-None-Match → 304 (güvenlik başlıkları korunur), gzip istemeyene düz gövde
+  const zlib = (await import('node:zlib')).default;
+  const plain = await req('/app.js');
+  const gz = await req('/app.js', { headers: { 'Accept-Encoding': 'gzip' } });
+  const etag = gz.headers.etag;
+  const same = gz.headers['content-encoding'] === 'gzip' && zlib.gunzipSync(gz.raw).equals(plain.raw);
+  check('Sıkıştırma: gzip isteyene gzip, içerik aynı, boyut belirgin küçük', same && gz.raw.length < plain.raw.length * 0.45, `${Math.round(plain.raw.length / 1024)} KB → ${Math.round(gz.raw.length / 1024)} KB`);
+  check('Sıkıştırma: gzip istemeyene düz gövde', plain.headers['content-encoding'] === undefined && plain.status === 200);
+  const nm = await req('/app.js', { headers: { 'Accept-Encoding': 'gzip', 'If-None-Match': etag } });
+  check('ETag: aynı sürüm → 304, gövde yok, güvenlik başlıkları duruyor', nm.status === 304 && nm.raw.length === 0 && nm.headers['x-frame-options'] === 'DENY' && !!nm.headers['content-security-policy']);
+  const stale = await req('/app.js', { headers: { 'If-None-Match': '"eski-surum"' } });
+  check('ETag: farklı sürüm → 200 ve tam gövde', stale.status === 200 && stale.raw.length === plain.raw.length);
+}
 
 {
   // Yarım bırakılan bağlantı (hiçbir şey göndermeyen) zaman aşımıyla kapanmalı
@@ -538,7 +680,7 @@ if (process.env.COUCH_TEST_DESTRUCTIVE) {
   const newToken = (await status()).shortcut.token;
   const callWith = (tk) => req('/api/v1/action/ping', { method: 'POST', origin: null, headers: { Authorization: `Bearer ${tk}` } });
   check('Jeton yenileme: yeni jeton farklı ve çalışıyor, eskisi reddediliyor', newToken !== oldToken && (await callWith(newToken)).status === 200 && (await callWith(oldToken)).status === 401);
-  const raw2 = fs.readFileSync(path.join(process.env.APPDATA, 'CouchRemote', 'state.json'), 'utf8');
+  const raw2 = fs.readFileSync(path.join(DATA, 'state.json'), 'utf8');
   check('Yenilenen jeton diskte şifresiz değil', !raw2.includes(newToken));
   await adminPost('/api/remove-all-devices', {});
   const afterAll = await status();

@@ -14,6 +14,8 @@ pub struct Peer(pub std::net::IpAddr);
 #[derive(Debug, Default)]
 pub struct SniResolver {
     certs: RwLock<HashMap<String, Arc<CertifiedKey>>>,
+    /// SNI göndermeyen istemciler (IP adresiyle bağlananlar) için tek sertifika
+    fallback: RwLock<Option<Arc<CertifiedKey>>>,
 }
 
 impl SniResolver {
@@ -21,7 +23,9 @@ impl SniResolver {
         let chain = CertificateDer::pem_slice_iter(cert_pem.as_bytes()).collect::<Result<Vec<_>, _>>()?;
         let key = PrivateKeyDer::from_pem_slice(key_pem.as_bytes())?;
         let signer = rustls::crypto::ring::sign::any_supported_type(&key)?;
-        self.certs.write().unwrap().insert(host.to_ascii_lowercase(), Arc::new(CertifiedKey::new(chain, signer)));
+        let ck = Arc::new(CertifiedKey::new(chain, signer));
+        self.certs.write().unwrap().insert(host.to_ascii_lowercase(), ck.clone());
+        *self.fallback.write().unwrap() = Some(ck);
         Ok(())
     }
 
@@ -29,8 +33,10 @@ impl SniResolver {
 
 impl ResolvesServerCert for SniResolver {
     fn resolve(&self, hello: ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
-        let name = hello.server_name()?.to_ascii_lowercase();
-        self.certs.read().unwrap().get(&name).cloned()
+        match hello.server_name() {
+            Some(name) => self.certs.read().unwrap().get(&name.to_ascii_lowercase()).cloned(),
+            None => self.fallback.read().unwrap().clone(),
+        }
     }
 }
 

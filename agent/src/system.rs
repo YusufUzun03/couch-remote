@@ -69,9 +69,26 @@ impl Drop for InstanceGuard {
 }
 
 /// İlk örnekse kilidi döner; program zaten çalışıyorsa None.
+/// Programı (yedek geri yükleme sonrası) kapatıp 2 sn sonra yeniden açar
+pub fn restart_soon() {
+    use std::os::windows::process::CommandExt;
+    let exe = std::env::current_exe().map(|p| p.display().to_string()).unwrap_or_default();
+    let _ = std::process::Command::new("cmd.exe")
+        .args(["/c", &format!("ping -n 3 127.0.0.1 >nul & start \"\" \"{exe}\" --background")])
+        .creation_flags(0x0800_0000)
+        .spawn();
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(600));
+        std::process::exit(0);
+    });
+}
+
 pub fn single_instance() -> Option<InstanceGuard> {
     unsafe {
-        let h = CreateMutexW(None, true, w!("Local\\CouchRemoteAgent")).ok()?;
+        // Test örneği (COUCH_PORT_BASE) gerçek programla çakışmasın diye ayrı kilit adı kullanır
+        let name = if std::env::var_os("COUCH_PORT_BASE").is_some() { format!("Local\\CouchRemoteAgent-{}", crate::http_port()) } else { "Local\\CouchRemoteAgent".to_string() };
+        let wide: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+        let h = CreateMutexW(None, true, windows::core::PCWSTR(wide.as_ptr())).ok()?;
         if GetLastError() == ERROR_ALREADY_EXISTS {
             let _ = CloseHandle(h);
             return None;
@@ -86,10 +103,10 @@ pub fn single_instance() -> Option<InstanceGuard> {
 fn admin_request(method: &str, path: &str) -> Option<String> {
     use std::io::{Read, Write};
     let token = std::fs::read_to_string(crate::state::data_dir().join("admin.token")).ok()?;
-    let addr: std::net::SocketAddr = ([127, 0, 0, 1], crate::ADMIN_PORT).into();
+    let addr: std::net::SocketAddr = ([127, 0, 0, 1], crate::admin_port()).into();
     let mut s = std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(2)).ok()?;
     s.set_read_timeout(Some(std::time::Duration::from_secs(3))).ok()?;
-    let host = format!("127.0.0.1:{}", crate::ADMIN_PORT);
+    let host = format!("127.0.0.1:{}", crate::admin_port());
     let req = format!(
         "{method} {path} HTTP/1.1\r\nHost: {host}\r\nCookie: couch_admin={}\r\nOrigin: http://{host}\r\nX-Couch-Admin: 1\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
         token.trim()

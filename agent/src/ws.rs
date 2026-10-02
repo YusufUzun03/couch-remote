@@ -125,9 +125,14 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                                 if socket.send(Message::Text(m.into())).await.is_err() { failed = true; break; }
                             }
                             if failed { break; }
+                            app.audio.send(AudioCmd::Refresh); // bağlanma anında ses durumu güncel olsun
                         }
                         Err(AuthError::Unknown) => {
                             app.fails.fail(peer);
+                            if app.unknown_attempts.fetch_add(1, Ordering::Relaxed) == 0 {
+                                log!("Kayıtlı olmayan bir telefon bağlanmaya çalıştı (eşleşme bilgisayarda yok)");
+                            }
+                            *app.unknown_last.lk() = Some(chrono::Local::now().to_rfc3339());
                             let _ = socket.send(Message::Text(json!({ "type": "unknown-device" }).to_string().into())).await;
                             break;
                         }
@@ -281,7 +286,7 @@ impl Bucket {
 
 /// Komutun göreli maliyeti (JSON'u çözmeden metinden tahmin edilir; istemci kompakt JSON gönderir)
 fn command_cost(text: &str) -> f64 {
-    for (needle, cost) in [("\"screenshot\"", 40.0), ("\"apps\"", 10.0), ("\"power\"", 10.0), ("\"launch\"", 6.0), ("\"search\"", 6.0), ("\"clipboard-get\"", 6.0), ("\"game-art\"", 3.0)] {
+    for (needle, cost) in [("\"screenshot\"", 40.0), ("\"windows\"", 8.0), ("\"window\"", 5.0), ("\"apps\"", 10.0), ("\"power\"", 10.0), ("\"launch\"", 6.0), ("\"search\"", 6.0), ("\"clipboard-get\"", 6.0), ("\"game-art\"", 3.0)] {
         if text.contains(needle) {
             return cost;
         }
@@ -311,6 +316,18 @@ fn command(app: &Arc<App>, device_id: &str, text: &str) -> Option<String> {
                 }
             } else if let Some(ch) = m["char"].as_str().and_then(|c| c.chars().next()) {
                 app.input.send(Cmd::Combo { ch, mods: mods() });
+            }
+        }
+        "zoom" => {
+            if let Some(n) = m["steps"].as_i64() {
+                app.input.send(Cmd::Zoom(n.clamp(-5, 5) as i32));
+            }
+        }
+        // ---- açık pencereler: liste yanıtı hemen döner; eylem sonrası telefon listeyi yeniden ister
+        "windows" => return Some(crate::winlist::to_json(&crate::winlist::list()).to_string()),
+        "window" => {
+            if let (Some(id), Some(action)) = (m["id"].as_i64(), m["action"].as_str()) {
+                crate::winlist::act(id as isize, action);
             }
         }
         "media" => {

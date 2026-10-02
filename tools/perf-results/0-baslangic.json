@@ -1,0 +1,123 @@
+{
+  "label": "0-baslangic",
+  "at": "2026-10-01T23:21:19.306Z",
+  "connectedDevices": 0,
+  "exeMB": 7.05,
+  "idle": {
+    "seconds": 30,
+    "cpuPercentOfOneCore": 1.85,
+    "workingSetMB": 40.4,
+    "privateMB": 8.8,
+    "threads": 33,
+    "handles": 433,
+    "hotThreads": [
+      {
+        "id": 39780,
+        "name": "ses",
+        "cpuMs": 546.9
+      },
+      {
+        "id": 10024,
+        "name": "mdns",
+        "cpuMs": 15.6
+      }
+    ]
+  },
+  "web": {
+    "files": [
+      {
+        "p": "/app",
+        "status": 200,
+        "rawKB": 43.5,
+        "wireKB": 43.5,
+        "enc": "yok"
+      },
+      {
+        "p": "/app.js",
+        "status": 200,
+        "rawKB": 99.9,
+        "wireKB": 99.9,
+        "enc": "yok"
+      },
+      {
+        "p": "/air.js",
+        "status": 200,
+        "rawKB": 6.4,
+        "wireKB": 6.4,
+        "enc": "yok"
+      },
+      {
+        "p": "/tv.js",
+        "status": 200,
+        "rawKB": 19.2,
+        "wireKB": 19.2,
+        "enc": "yok"
+      },
+      {
+        "p": "/brand-icons.js",
+        "status": 200,
+        "rawKB": 3.2,
+        "wireKB": 3.2,
+        "enc": "yok"
+      },
+      {
+        "p": "/app.css",
+        "status": 200,
+        "rawKB": 37,
+        "wireKB": 37,
+        "enc": "yok"
+      },
+      {
+        "p": "/ui.css",
+        "status": 200,
+        "rawKB": 42.8,
+        "wireKB": 42.8,
+        "enc": "yok"
+      },
+      {
+        "p": "/design.css",
+        "status": 200,
+        "rawKB": 21.1,
+        "wireKB": 21.1,
+        "enc": "yok"
+      },
+      {
+        "p": "/i18n.js",
+        "status": 200,
+        "rawKB": 6.1,
+        "wireKB": 6.1,
+        "enc": "yok"
+      }
+    ],
+    "rawKB": 279.2,
+    "wireKB": 279.2,
+    "loadMs": 56,
+    "repeatWireKB": 279.2,
+    "note": "İngilizce sözlük (Türkçe telefonda yüklenmez) çıkarıldı; tekrar açılış = ilk açılış (ETag yok)"
+  },
+  "ws": {
+    "firstMs": 6.8,
+    "restAvgMs": 3.5,
+    "all": [
+      6.8,
+      3.9,
+      3.5,
+      3.4,
+      4,
+      3.5,
+      3.4,
+      3.5,
+      3.5,
+      3.6,
+      3.2,
+      3.5
+    ]
+  },
+  "cold": {
+    "readyMs": 77,
+    "lanFirstMs": 554,
+    "privateMB": 7,
+    "workingSetMB": 35.5,
+    "note": "hazır süresi aynı başlangıç koduyla sonradan ölçüldü (77 ms); ilk ölçümde 554 ms LAN üzerinden ilk isteğe kadar geçen süreydi"
+  }
+}

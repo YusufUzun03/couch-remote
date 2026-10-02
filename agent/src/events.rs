@@ -34,6 +34,11 @@ impl Events {
         self.latest.lk().get(kind).cloned()
     }
 
+    /// Dinleyen (bağlı) telefon sayısı; kimse dinlemiyorsa arka plan yoklamaları durur
+    pub fn subscribers(&self) -> usize {
+        self.tx.receiver_count()
+    }
+
     pub fn subscribe(&self) -> broadcast::Receiver<String> {
         self.tx.subscribe()
     }

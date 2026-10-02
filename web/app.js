@@ -160,7 +160,9 @@ function toast(text) {
 // iOS 18+: switch tipindeki checkbox'a tıklamak hafif titreşim üretir (sadece kullanıcı dokunuşu sırasında)
 const hapticLabel = $('haptic');
 const haptic = () => {
-  if (settings.haptics) hapticLabel.click();
+  if (!settings.haptics) return;
+  hapticLabel.click(); // iOS 18+: switch tıklaması hafif titreşim verir
+  navigator.vibrate?.(8); // Android (iOS'ta yok)
 };
 
 function show(id) {
@@ -230,6 +232,7 @@ function connect() {
         pingBurst();
         for (const r of pendingReports.splice(0)) sendJson(r);
       } else if (m.type === 'unknown-device' || m.type === 'revoked') {
+        try { localStorage.setItem('unregistered', '1'); } catch {}
         // Eşleşme bilgisayardan kaldırıldı: bu telefondaki anahtarı da sil, eşleşme ekranına dön
         await forgetIdentity();
         location.replace('/app');
@@ -254,6 +257,8 @@ function connect() {
         onMixer(m);
       } else if (m.type === 'audio-devices') {
         onAudioDevices(m);
+      } else if (m.type === 'windows') {
+        onWindows(m);
       } else if (m.type === 'tvs') {
         tvUi.onTvs(m);
       } else if (m.type === 'tv-add') {
@@ -306,13 +311,21 @@ function sendInput(type, a, b, t) {
   ws.send(inBuf);
   lastSend = performance.now();
   sentThisSecond++;
+  syncHeartbeat();
 }
 const sendState = (t = now()) => sendInput(T.STATE, 0, 0, t);
 
-// Heartbeat: PC 300 ms paket görmezse basılı butonları bırakır
-setInterval(() => {
-  if (connected && performance.now() - lastSend > 90) sendState();
-}, 100);
+// Heartbeat: PC 300 ms paket görmezse basılı butonları bırakır. Yalnızca bir tuş basılıyken çalışır (boşta zamanlayıcı ve paket yok)
+let heartbeatTimer = 0;
+function syncHeartbeat() {
+  if (!buttons || heartbeatTimer) return;
+  heartbeatTimer = setInterval(() => {
+    if (!buttons) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = 0;
+    } else if (connected && performance.now() - lastSend > 90) sendState();
+  }, 100);
+}
 
 // ============================================================ gecikme ölçümü
 // Tek yönlü gecikme saatler senkron olmadığından doğrudan ölçülemez:
@@ -333,11 +346,17 @@ function ping() {
 function pingBurst() {
   for (let i = 0; i < 8; i++) setTimeout(ping, i * 120);
 }
-setInterval(ping, 1000);
-setInterval(() => {
-  sendRate = sentThisSecond;
-  sentThisSecond = 0;
-}, 1000);
+// Gecikme ayrıntıları (HUD) açıksa saniyede bir, değilse 5 sn'de bir (pil ve ağ uyanışı)
+function statLoop() {
+  const hud = settings.hud;
+  if (hud) {
+    sendRate = sentThisSecond;
+    sentThisSecond = 0;
+  }
+  if (!document.hidden) ping();
+  setTimeout(statLoop, hud ? 1000 : 5000);
+}
+setTimeout(statLoop, 1000);
 
 function onPong(t0, ts) {
   const t1 = now();
@@ -498,6 +517,8 @@ let dragPending = false;
 let dragging = false;
 let lastTap = { t: -1e9, x: 0, y: 0 };
 let swipe3 = { x: 0, y: 0 }; // 3 parmak hareketinin toplamı (piksel)
+let pinch = { start: 0, base: 0, active: false, mid: null }; // 2 parmak açma/kapama (yakınlaştırma)
+const PINCH_STEP = 1.12; // her %12'lik mesafe değişimi bir tekerlek adımı
 
 // ---- ivmeli kaydırma: parmaklar kalkınca kaydırma iPhone'daki gibi yavaşlayarak sürer
 const scrollSamples = []; // son 2 parmak kaydırma adımları {t, dx, dy} (mm)
@@ -538,9 +559,39 @@ function startInertia(endTime) {
   return true;
 }
 
+// ---- 2 parmak açma/kapama: Ctrl + tekerlek. Parmaklar arası mesafe değişimi, ortak hareketten belirgin büyükse yakınlaştırma sayılır
+function pinchStep() {
+  const [a, b] = [...pts.values()];
+  if (!a || !b) return false;
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  if (!pinch.start) {
+    pinch = { start: dist, base: dist, active: false, mid };
+    return false;
+  }
+  if (!pinch.active) {
+    const spread = Math.abs(dist - pinch.start);
+    const drift = Math.hypot(mid.x - pinch.mid.x, mid.y - pinch.mid.y);
+    if (spread < 14 || spread < drift * 1.2) return false;
+    pinch.active = true;
+    pinch.base = dist;
+    scrollSamples.length = 0; // kaydırma ataleti başlamasın
+    return true;
+  }
+  const ratio = dist / pinch.base;
+  const steps = ratio >= PINCH_STEP ? 1 : ratio <= 1 / PINCH_STEP ? -1 : 0;
+  if (steps) {
+    pinch.base = dist;
+    sendJson({ type: 'zoom', steps });
+    haptic();
+  }
+  return true;
+}
+
 // ---- 3 parmak: sanal masaüstü, görev görünümü, masaüstünü göster (Windows touchpad hareketleriyle aynı)
 const SWIPE3_MIN_PX = 40;
 function finishSwipe3() {
+  if (tvUi?.isRouted()) return false; // hedef TV ise üç parmak hareketleri bilgisayara gitmesin
   const { x, y } = swipe3;
   if (Math.max(Math.abs(x), Math.abs(y)) < SWIPE3_MIN_PX) return false;
   if (Math.abs(x) > Math.abs(y)) {
@@ -635,6 +686,7 @@ function bindPad(el) {
       maxPts = 1;
       moved = false;
       swipe3 = { x: 0, y: 0 };
+      pinch = { start: 0, base: 0, active: false, mid: null };
       scrollSamples.length = 0;
       dragPending = e.timeStamp - lastTap.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40;
       if (el === pad && airMode) {
@@ -680,6 +732,8 @@ function bindPad(el) {
         buttons |= 1;
       }
       sendInput(T.MOVE, dx * MM_PER_PX * settings.sens, dy * MM_PER_PX * settings.sens, evTime(e));
+    } else if (pts.size === 2 && maxPts === 2 && settings.pinch && !tvUi?.isRouted() && pinchStep()) {
+      // yakınlaştırma işlendi; kaydırma gönderilmez
     } else if (pts.size === 2 && maxPts === 2) {
       // her parmak toplam hareketin yarısını katkılar → ortalama
       const k = MM_PER_PX * settings.scroll * (settings.natural ? 1 : -1);
@@ -784,6 +838,17 @@ document.addEventListener('visibilitychange', () => {
     if (wakeLock?.released !== false && firstTouchReported) requestWakeLock();
   }
 });
+// Uygulama anında önbellekten açılır; arka planda yeni sürüm gelirse: dokunulmadıysa hemen yenile, yoksa bir sonraki açılışta geçerli olur
+let touched = false;
+addEventListener('pointerdown', () => (touched = true), { once: true, capture: true });
+navigator.serviceWorker?.addEventListener('message', (e) => {
+  if (e.data?.type !== 'shell-updated') return;
+  if (!touched) location.reload();
+  else toast('Güncellendi: yeniden açınca geçerli olur');
+});
+// Sayfa önbellekten (bfcache) geri gelirse ya da ağ dönerse bekleme: hemen bağlan
+addEventListener('pageshow', (e) => { if (e.persisted && identity) { retry = 0; connect(); } });
+addEventListener('online', () => { if (identity && !connected) { retry = 0; connect(); } });
 $('retryBtn').onclick = () => {
   retry = 0;
   connect();
@@ -810,6 +875,8 @@ function showView(name) {
   currentViewName = name;
   if (tvUi) tvUi.onView();
   for (const [k, el] of Object.entries(views)) el.hidden = k !== name;
+  syncMediaTimer();
+  syncWinTimer();
   for (const b of document.querySelectorAll('#tabs button')) {
     b.classList.toggle('on', b.dataset.view === name);
     b.setAttribute('aria-current', b.dataset.view === name ? 'page' : 'false');
@@ -1226,6 +1293,7 @@ function onMedia(m) {
   media = m;
   mediaAt = performance.now();
   renderMedia();
+  syncMediaTimer();
 }
 
 // PC her saniye konum gönderir; arada çalıyorsa geçen süre eklenerek akıcı gösterilir
@@ -1255,7 +1323,17 @@ function renderMedia() {
   seek.style.setProperty('--p', `${dur > 0 ? (Number(seek.value) / Number(seek.max)) * 100 : 0}%`);
   $('npDur').textContent = fmt(dur);
 }
-setInterval(renderMedia, 500);
+// Çalan kart konumu: yalnızca Kumanda ekranı görünürken ve sayfa öndeyken güncellenir
+let mediaTimer = 0;
+function syncMediaTimer() {
+  const want = !views.remote.hidden && !document.hidden && !!media.playing; // duraklatılmışken konum değişmez
+  if (want && !mediaTimer) mediaTimer = setInterval(renderMedia, 1000);
+  else if (!want && mediaTimer) {
+    clearInterval(mediaTimer);
+    mediaTimer = 0;
+  }
+}
+document.addEventListener('visibilitychange', syncMediaTimer);
 
 seek.addEventListener('pointerdown', () => (seeking = true));
 seek.addEventListener('input', () => {
@@ -1447,7 +1525,7 @@ function renderApps() {
   );
   $('searchChips').hidden = !searchInput.value.trim();
   const target = searchable.find((a) => a.id === searchTarget);
-  searchInput.placeholder = target ? tl('{name} içinde ara · uygulama bul', { name: target.name }) : tl('Uygulama bul');
+  if (appsMode !== 'windows') searchInput.placeholder = target ? tl('{name} içinde ara · uygulama bul', { name: target.name }) : tl('Uygulama bul');
 
   // Hızlı başlat
   $('tiles').replaceChildren(
@@ -1559,7 +1637,90 @@ function onLaunched(m) {
   if (m.media) setTimeout(() => showView('remote'), 700);
 }
 
-searchInput.addEventListener('input', renderApps);
+searchInput.addEventListener('input', () => {
+  renderApps();
+  renderWindows();
+});
+
+// ============================================================ Açık pencereler (Alt+Tab'ın telefondaki hâli)
+let appsMode = 'start';
+try { appsMode = localStorage.getItem('appsMode') === 'windows' ? 'windows' : 'start'; } catch {}
+let winData = [];
+let winTimer = 0;
+function requestWindows() {
+  if (appsMode === 'windows' && !views.apps.hidden) sendJson({ type: 'windows' });
+}
+function syncWinTimer() {
+  const want = appsMode === 'windows' && !views.apps.hidden && !document.hidden;
+  if (want && !winTimer) {
+    winTimer = setInterval(requestWindows, 3000);
+    requestWindows();
+  } else if (!want && winTimer) {
+    clearInterval(winTimer);
+    winTimer = 0;
+  }
+}
+document.addEventListener('visibilitychange', syncWinTimer);
+function setAppsMode(m) {
+  appsMode = m;
+  try { localStorage.setItem('appsMode', m); } catch {}
+  $('v-apps').classList.toggle('mode-windows', m === 'windows');
+  for (const b of document.querySelectorAll('#appsMode [data-v]')) {
+    b.classList.toggle('on', b.dataset.v === m);
+    b.setAttribute('aria-pressed', String(b.dataset.v === m));
+  }
+  if (m === 'windows') searchInput.placeholder = tl('Pencere ara');
+  else renderApps();
+  renderWindows();
+  syncWinTimer();
+}
+for (const b of document.querySelectorAll('#appsMode [data-v]')) b.onclick = () => { haptic(); setAppsMode(b.dataset.v); };
+function onWindows(m) {
+  winData = Array.isArray(m.windows) ? m.windows : [];
+  renderWindows();
+}
+function winAction(id, action) {
+  haptic();
+  if (!sendJson({ type: 'window', id, action })) return toast(tl('Bilgisayara bağlı değil'));
+  if (action === 'focus') toast(tl('Pencere öne getirildi'));
+  setTimeout(requestWindows, action === 'close' ? 900 : 450);
+}
+function renderWindows() {
+  const list = $('winList');
+  if (!list) return;
+  const q = trLower(searchInput.value.trim());
+  const rows = winData.filter((w) => !q || trLower(w.app).includes(q) || trLower(w.title).includes(q));
+  $('winEmpty').hidden = rows.length > 0;
+  list.hidden = rows.length === 0;
+  list.replaceChildren(
+    ...rows.map((w) => {
+      const li = document.createElement('li');
+      li.className = 'win-row' + (w.active ? ' active' : '') + (w.minimized ? ' min' : '');
+      const main = document.createElement('button');
+      main.className = 'win-main';
+      const initial = document.createElement('span');
+      initial.className = 'initial';
+      initial.textContent = upper(String(w.app).trim().charAt(0));
+      const text = document.createElement('span');
+      text.className = 'win-text';
+      text.append(Object.assign(document.createElement('b'), { textContent: w.app }), Object.assign(document.createElement('small'), { textContent: w.title }));
+      main.append(initial, text);
+      main.onclick = () => winAction(w.id, 'focus');
+      const mini = document.createElement('button');
+      mini.className = 'win-btn';
+      mini.setAttribute('aria-label', tl('Pencereyi küçült'));
+      mini.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg>';
+      mini.onclick = () => winAction(w.id, 'minimize');
+      const close = document.createElement('button');
+      close.className = 'win-btn';
+      close.setAttribute('aria-label', tl('Pencereyi kapat'));
+      close.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>';
+      close.onclick = () => winAction(w.id, 'close');
+      li.append(main, mini, close);
+      return li;
+    }),
+  );
+}
 $('searchForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const q = searchInput.value.trim();
@@ -1573,7 +1734,7 @@ $('searchForm').addEventListener('submit', (e) => {
 });
 
 // ============================================================ ayarlar
-const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false, theme: 'dark', accent: 'blue' };
+const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false, theme: 'dark', accent: 'blue', pinch: true };
 const settings = { ...SETTINGS_DEFAULT };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('settings') || '{}'));
@@ -1632,6 +1793,7 @@ function applySettings() {
   $('setScrollOut').textContent = `${Number(settings.scroll).toFixed(1)}×`;
   $('setNatural').checked = settings.natural;
   $('setLefty').checked = settings.lefty;
+  $('setPinch').checked = settings.pinch;
   $('setBed').checked = settings.bed;
   $('setBedAuto').checked = settings.bedAuto;
   $('setHaptics').checked = settings.haptics;
@@ -1688,7 +1850,7 @@ for (const b of document.querySelectorAll('#setScreen [data-v]')) {
     haptic();
   };
 }
-for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote'], ['setNudge', 'nudge']]) {
+for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote'], ['setNudge', 'nudge'], ['setPinch', 'pinch']]) {
   $(id).addEventListener('change', () => {
     settings[key] = $(id).checked;
     saveSettings();
@@ -1817,6 +1979,16 @@ for (const sheet of document.querySelectorAll('.sheet')) {
   sheet.addEventListener('pointercancel', end);
 }
 $('padHelp').onclick = () => openSheet('padHelpSheet');
+setAppsMode(appsMode);
+// Bağlantı sorun giderici: kurulum sayfasını aç / bu telefondaki eşleşmeyi sıfırla
+$('openFix').onclick = () => { closeSheets(); openSheet('fixSheet'); };
+$('offFix').onclick = () => { $('offline').hidden = true; openSheet('fixSheet'); };
+$('fixSetup').onclick = () => { location.href = `http://${location.hostname}:47800/setup`; };
+$('fixReset').onclick = async () => {
+  if (!confirm(tl('Bu telefondaki eşleşme silinecek; PIN ile yeniden bağlanman gerekecek. Devam edilsin mi?'))) return;
+  await forgetIdentity();
+  location.replace('/app');
+};
 $('openPower').onclick = () => {
   closeSheets();
   openSheet('powerSheet');
@@ -1940,8 +2112,14 @@ function onTimer(m) {
   if (m.fired) toast(tl('Uyku zamanlayıcısı doldu'));
   renderTimer();
 }
+let timerTick = 0;
 function renderTimer() {
   const on = !!timerState.active;
+  if (on && !timerTick) timerTick = setInterval(renderTimer, 1000);
+  else if (!on && timerTick) {
+    clearInterval(timerTick);
+    timerTick = 0;
+  }
   $('timerActive').hidden = !on;
   $('timerSetup').hidden = on;
   $('timerPill').hidden = !on;
@@ -1952,7 +2130,6 @@ function renderTimer() {
   $('timerPill').querySelector('span').textContent = txt;
   $('timerWhat').textContent = TIMER_WHAT[timerState.action] ?? '';
 }
-setInterval(renderTimer, 1000);
 
 // ============================================================ ses kaydırıcısı
 const volSlider = $('volSlider');
@@ -2232,7 +2409,7 @@ $('outBtn').onclick = () => {
 const ARROWS = { back: { key: 'left' }, fwd: { key: 'right' } }; // Netflix, Prime, Disney+, tabii, Exxen: ok tuşları 10 sn
 const PROFILES = {
   netflix: { name: 'Netflix', seek: ARROWS, buttons: [{ label: tl('İntroyu atla'), char: 's', accent: true }, { label: tl('Sonraki bölüm'), char: 'N' }, { label: tl('Sessiz'), char: 'm' }] },
-  youtube: { name: 'YouTube', seek: { back: { char: 'j' }, fwd: { char: 'l' } }, buttons: [{ label: tl('Altyazı'), char: 'c' }, { label: tl('Yavaşlat'), char: '<' }, { label: tl('Hızlandır'), char: '>' }, { label: tl('Sinema modu'), char: 't' }, { label: tl('Mini oynatıcı'), char: 'i' }, { label: tl('Önceki video'), char: 'P' }, { label: tl('Sonraki video'), char: 'N', accent: true }] },
+  youtube: { name: 'YouTube', seek: { back: { char: 'j' }, fwd: { char: 'l' } }, buttons: [{ label: tl('Altyazı'), char: 'c' }, { label: tl('Yavaşlat'), key: 'comma', mods: ['shift'] }, { label: tl('Hızlandır'), key: 'period', mods: ['shift'] }, { label: tl('Sinema modu'), char: 't' }, { label: tl('Mini oynatıcı'), char: 'i' }, { label: tl('Önceki video'), char: 'P' }, { label: tl('Sonraki video'), char: 'N', accent: true }] },
   ytmusic: { name: 'YouTube Music', buttons: [{ label: tl('Karışık'), char: 's' }, { label: tl('Tekrar'), char: 'r' }, { label: tl('Sessiz'), char: 'm' }] },
   primevideo: { name: 'Prime Video', seek: ARROWS, buttons: [{ label: tl('Altyazı'), char: 'c' }, { label: tl('Sessiz'), char: 'm' }] },
   disneyplus: { name: 'Disney+', seek: ARROWS, buttons: [{ label: tl('Sessiz'), char: 'm' }] },
@@ -2271,7 +2448,7 @@ function onContext(m) {
       el.textContent = b.label;
       pressFeedback(el);
       // Sadece o uygulamanın penceresine gider; pencere yoksa PC hata döner, tuş başka yere yazılmaz
-      el.onclick = () => sendJson({ type: 'combo', char: b.char, mods: b.mods || [], profile: currentProfile });
+      el.onclick = () => sendJson(b.key ? { type: 'key', key: b.key, mods: b.mods || [], profile: currentProfile } : { type: 'combo', char: b.char, mods: b.mods || [], profile: currentProfile });
       return el;
     }),
   );
@@ -2562,7 +2739,11 @@ async function init() {
       showPin(e.code === 'expired' ? tl('Eşleşme kodunun süresi dolmuş. PC\'deki yönetim sayfasında görünen PIN\'i gir.') : undefined);
     }
   } else {
-    showPin(tl('Bu ana ekran uygulamasına eşleşme kodu ulaşmadı. PC\'deki yönetim sayfasında görünen PIN\'i gir.'));
+    let unreg = false;
+    try { unreg = localStorage.getItem('unregistered') === '1'; localStorage.removeItem('unregistered'); } catch {}
+    showPin(unreg
+      ? tl('Bu telefon bilgisayarda kayıtlı görünmüyor (bilgisayarın ayarları sıfırlanmış olabilir). Bilgisayardaki yönetim sayfasında görünen PIN ile yeniden bağlan.')
+      : tl('Bu ana ekran uygulamasına eşleşme kodu ulaşmadı. PC\'deki yönetim sayfasında görünen PIN\'i gir.'));
   }
   // Kod bir kez kullanıldı; adres çubuğunda kalmasın
   if (startCode) history.replaceState(null, '', '/app');
@@ -2581,7 +2762,7 @@ else init();
 bindClickpad($('dpad'), (d) => { haptic(); sendJson({ type: 'key', key: d, mods: [], target: 'media' }); });
 tvUi = initTv({ $, sendJson, toast, haptic, tl, openSheet: (id) => openSheet(id), closeSheets: () => closeSheets(), pressFeedback, showView: (n) => showView(n), getView: () => currentViewName, getPc: () => pcConn });
 tvUi.refresh();
-if (window.__preview) Object.assign(window.__preview, { tv: tvUi, setConn });
+if (window.__preview) Object.assign(window.__preview, { tv: tvUi, setConn, onWindows });
 
 // ============================================================ erişilebilirlik
 // Süs simgeleri ekran okuyucudan gizlenir; düğmelerin adı metinlerinden / aria-label'dan gelir

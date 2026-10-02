@@ -33,6 +33,8 @@ pub enum AudioCmd {
     SetApp { id: String, level: Option<f32>, mute: Option<bool> },
     /// Anlık seviyeyi döndür (zamanlayıcının sesi kısıp geri alması için)
     Get(Sender<Option<(f32, bool)>>),
+    /// Telefon bağlandı: tüm durumları (ses, cihazlar, karıştırıcı) hemen yeniden tara ve yayınla
+    Refresh,
 }
 
 #[derive(Clone)]
@@ -136,7 +138,30 @@ struct Sess {
 }
 
 /// İşlem kimliğinden program adı ("chrome" gibi, .exe'siz)
+/// Program adı önbelleği: aynı işlem kimliği için her taramada OpenProcess çağrılmasın (30 sn'de bir tazelenir)
+static STEM_CACHE: std::sync::Mutex<Option<(std::time::Instant, std::collections::HashMap<u32, String>)>> = std::sync::Mutex::new(None);
+
 fn exe_stem(pid: u32) -> String {
+    if pid != 0 {
+        let mut g = STEM_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        let fresh = g.as_ref().is_some_and(|(t, _)| t.elapsed() < Duration::from_secs(30));
+        if !fresh {
+            *g = Some((std::time::Instant::now(), std::collections::HashMap::new()));
+        }
+        if let Some(s) = g.as_ref().and_then(|(_, m)| m.get(&pid)) {
+            return s.clone();
+        }
+        drop(g);
+        let s = exe_stem_uncached(pid);
+        if let Some((_, m)) = STEM_CACHE.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
+            m.insert(pid, s.clone());
+        }
+        return s;
+    }
+    exe_stem_uncached(pid)
+}
+
+fn exe_stem_uncached(pid: u32) -> String {
     unsafe {
         let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return String::new() };
         let mut path = [0u16; 520];
@@ -152,7 +177,7 @@ fn exe_stem(pid: u32) -> String {
     }
 }
 
-fn pretty_name(stem: &str) -> String {
+pub(crate) fn pretty_name(stem: &str) -> String {
     match stem.to_lowercase().as_str() {
         "chrome" => "Google Chrome".into(),
         "msedge" => "Microsoft Edge".into(),
@@ -261,10 +286,23 @@ impl Audio {
                 let mut last: Option<(f32, bool)> = None;
                 let mut sig = None;
                 let mut mixer_sig = String::new();
+                let mut tick = 0u32;
                 loop {
-                    let cmd = rx.recv_timeout(Duration::from_millis(700));
+                    // Dinleyen telefon yoksa 5 sn'de bir uyanır ve hiçbir şey taramaz; komut gelirse hemen uyanır
+                    let watched = events.subscribers() > 0;
+                    let cmd = rx.recv_timeout(Duration::from_millis(if watched { 700 } else { 5000 }));
                     if matches!(cmd, Err(RecvTimeoutError::Disconnected)) {
                         return;
+                    }
+                    if !watched && matches!(cmd, Err(RecvTimeoutError::Timeout)) {
+                        last = None; // biri bağlanınca güncel seviye gitsin
+                        continue;
+                    }
+                    tick = tick.wrapping_add(1);
+                    if matches!(cmd, Ok(AudioCmd::Refresh)) {
+                        last = None;
+                        sig = None;
+                        mixer_sig.clear();
                     }
                     if let Ok(AudioCmd::SetDefault(id)) = &cmd {
                         let ok = switch_default(&en, id);
@@ -275,8 +313,10 @@ impl Audio {
                         set_app(&en, id, *level, *mute);
                         mixer_sig.clear(); // hemen yansısın
                     }
-                    publish_devices(&en, &events, &mut sig);
-                    {
+                    // Ses seviyesi her turda (ucuz); cihaz listesi ve uygulama karıştırıcısı ağır: ~2 sn'de bir ya da komut/bağlanma sonrası
+                    let heavy = tick % 3 == 0 || matches!(cmd, Ok(AudioCmd::SetDefault(_) | AudioCmd::SetApp { .. } | AudioCmd::Refresh));
+                    if heavy {
+                        publish_devices(&en, &events, &mut sig);
                         let state = mixer_state(&collect_sessions(&en));
                         let text = state.to_string();
                         if text != mixer_sig {
@@ -297,7 +337,7 @@ impl Audio {
                         Ok(AudioCmd::SetMute(m)) => unsafe {
                             let _ = vol.SetMute(m, std::ptr::null());
                         },
-                        Ok(AudioCmd::SetDefault(_)) | Ok(AudioCmd::SetApp { .. }) => {}
+                        Ok(AudioCmd::SetDefault(_)) | Ok(AudioCmd::SetApp { .. }) | Ok(AudioCmd::Refresh) => {}
                         Ok(AudioCmd::Get(reply)) => {
                             let _ = reply.send(read(&vol).ok());
                         }

@@ -57,6 +57,7 @@
     <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8 10.5H6.5A1.5 1.5 0 0 0 5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12a1.5 1.5 0 0 0-1.5-1.5H16"/></symbol>
     <symbol id="i-add" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
     <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 20.5h8"/></symbol>
     <symbol id="i-desktop" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></symbol>
     <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2.5 8.8a14 14 0 0 1 19 0M5.5 12.2a9.5 9.5 0 0 1 13 0M8.6 15.5a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/><path d="M4 4l16 16"/></symbol>
@@ -287,6 +288,12 @@
         <div class="chips" id="tvApps" data-cap="apps"></div>
         <div class="section-title" id="tvInputsTitle" data-cap="inputs">Girişler</div>
         <div class="chips" id="tvInputs" data-cap="inputs"></div>
+        <div class="section-title" data-cap="link">Link aç</div>
+        <form class="tv-type" id="tvLinkForm" action="#" data-cap="link" novalidate>
+          <input id="tvLink" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="YouTube veya başka bir link" aria-label="TV'de açılacak link">
+          <button class="pill accent" type="submit">Aç</button>
+          <button class="pill" type="button" id="tvLinkPaste">Yapıştır</button>
+        </form>
         <div class="section-title" data-cap="text">Yaz</div>
         <form class="tv-type" id="tvTypeForm" action="#" data-cap="text">
           <input id="tvText" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="TV'deki arama kutusuna yaz" aria-label="TV'ye yaz">
@@ -305,6 +312,7 @@
 
   <!-- Uygulamalar -->
   <div class="view" id="v-apps" hidden>
+    <div class="seg" id="appsMode" role="group" aria-label="Uygulamalar görünümü"><button data-v="windows">Açık pencereler</button><button data-v="start">Başlat</button></div>
     <form id="searchForm" class="searchbar" action="#">
       <svg class="ic"><use href="#i-search"/></svg>
       <input id="searchInput" type="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Ara">
@@ -319,6 +327,10 @@
     <div id="gamesBox" hidden>
       <div class="section-title">Oyunlar <span id="gamesNote"></span></div>
       <div class="cover-row" id="gameList"></div>
+    </div>
+    <div id="winBox">
+      <ul class="list" id="winList"></ul>
+      <p class="muted-row" id="winEmpty" hidden>Açık pencere yok</p>
     </div>
     <div class="section-title">Bu bilgisayarda <span id="browserNote"></span></div>
     <ul class="list" id="appList"><li class="skel-row"><i></i><b></b></li><li class="skel-row"><i></i><b></b></li><li class="skel-row"><i></i><b></b></li><li class="skel-row"><i></i><b></b></li><li class="skel-row"><i></i><b></b></li></ul>
@@ -362,6 +374,7 @@
     <h2 id="offTitle">Bilgisayara ulaşılamıyor</h2>
     <p>Bilgisayar açık ve aynı Wi-Fi ağında mı? Bağlantı kendiliğinden yeniden denenir.</p>
     <button id="retryBtn" class="btn-primary">Şimdi dene</button>
+    <button id="offFix" class="link-btn">Hâlâ bağlanmıyor mu? Sorun giderici</button>
   </div>
 </section>
 
@@ -417,6 +430,20 @@
   <h3>Ses çıkışı</h3>
   <div class="card-list settings" id="outList"></div>
   <p class="hint-sm">Bilgisayarın varsayılan hoparlörü değişir. Ses yönlendirmesini başka bir program yönetiyorsa (ör. SteelSeries Sonar) o program seçimi geri alabilir.</p>
+</section>
+
+<section class="sheet" id="fixSheet" hidden>
+  <div class="grabber"></div>
+  <h3>Bağlantı sorun giderici</h3>
+  <div class="card-list settings">
+    <div class="set-row"><span>1. Bilgisayar açık mı?<small>Saatin yanında CouchRemote simgesi görünmeli. Uyku modundaysa uyandır, birkaç saniye bekle.</small></span></div>
+    <div class="set-row"><span>2. Aynı Wi-Fi'de misiniz?<small>Telefon ve bilgisayar aynı ağda olmalı (bilgisayar kablolu olabilir, aynı modem).</small></span></div>
+    <div class="set-row"><span>3. Güvenlik sertifikası değişmiş olabilir<small>Kurulum sayfasındaki kod bilgisayardakiyle aynıysa sorun yok; farklıysa eski CouchRemote profilini silip yenisini yükle.</small></span></div>
+  </div>
+  <div class="pills"><button class="pill accent" id="fixSetup">Kurulum sayfasını aç</button></div>
+  <div class="section-title">Telefon bilgisayarda kayıtlı değilse</div>
+  <p class="hint-sm">Bilgisayarın ayarları sıfırlanmış olabilir. Bu telefondaki eşleşmeyi silip PIN ile yeniden bağlan.</p>
+  <div class="pills"><button class="pill" id="fixReset">Bu telefonun eşleşmesini sıfırla</button></div>
 </section>
 
 <section class="sheet" id="padHelpSheet" hidden>
@@ -491,6 +518,7 @@
   <div class="grabber"></div>
   <h3>Ayarlar</h3>
   <div class="card-list settings">
+    <button class="set-row link" id="openFix"><span>Bağlantı sorun giderici<small>Bağlanamıyor ya da telefon kayıtlı görünmüyorsa</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
     <button class="set-row link" id="openPower"><span>Güç ve sahneler<small>Uyut, kilitle, uyku zamanlayıcısı, film modu</small></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
   </div>
   <div class="section-title">Cihazlar ve kısayollar</div>
@@ -503,6 +531,7 @@
     <div class="set-row"><span>İmleç hızı</span><input type="range" id="setSens" min="0.4" max="2.2" step="0.1"><output id="setSensOut"></output></div>
     <div class="set-row"><span>Hava faresi hızı<small>Telefonu çevirdikçe imlecin ne kadar gideceği</small></span><input type="range" id="setAirSens" min="0.4" max="2.5" step="0.1"><output id="setAirSensOut"></output></div>
     <div class="set-row"><span>Kaydırma hızı</span><input type="range" id="setScroll" min="0.4" max="2.5" step="0.1"><output id="setScrollOut"></output></div>
+    <label class="set-row"><span>Pinch ile yakınlaştırma<small>İki parmağı açıp kapatınca Ctrl + tekerlek: tarayıcı ve belgelerde büyütür/küçültür</small></span><input type="checkbox" switch id="setPinch"></label>
     <label class="set-row"><span>Doğal kaydırma<small>Parmak yukarı → sayfa aşağı (iPhone gibi)</small></span><input type="checkbox" switch id="setNatural"></label>
     <label class="set-row"><span>Sol el modu<small>Sol/Sağ tık düğmelerinin yeri değişir</small></span><input type="checkbox" switch id="setLefty"></label>
   </div>
@@ -551,6 +580,7 @@
     <label class="set-row"><span>Gecikme ayrıntıları</span><input type="checkbox" switch id="setHud"></label>
   </div>
   <p class="hint-sm center" id="aboutLine"></p>
+  <p class="hint-sm center credit">Yapımcı: <b>WOOP WOOP</b></p>
 </section>
 
 <div id="shotView" hidden role="dialog" aria-modal="true" aria-label="Bilgisayar ekranı">
