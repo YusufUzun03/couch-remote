@@ -10,7 +10,7 @@ use p256::ecdsa::signature::Verifier;
 use p256::ecdsa::{Signature, VerifyingKey};
 use serde_json::{json, Value};
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::app::App;
@@ -49,6 +49,86 @@ fn f64_at(b: &[u8], i: usize) -> f64 {
     f64::from_le_bytes(b[i..i + 8].try_into().unwrap())
 }
 
+/// Bir bağlantının paket durumu. WebSocket ve WebRTC aynı örneği paylaşır: hangi yoldan gelirse gelsin
+/// basılı tuş takibi, saat farkı ve istatistikler tek yerde tutulur.
+pub struct Pkt {
+    pub device_id: String,
+    pub buttons_down: bool,
+    pub packets: u32,
+    pub last_packet: Instant,
+    last_t: f64,
+    offset: Option<f64>,
+    /// Son DURUM paketinin zamanı ve butonları: sırasız (UDP) yoldan gecikmeyle gelen eski bir hareket paketi, bırakılmış tuşu yeniden basmasın
+    state_t: f64,
+    state_buttons: u8,
+}
+
+impl Pkt {
+    pub fn new() -> Pkt {
+        Pkt { device_id: String::new(), buttons_down: false, packets: 0, last_packet: Instant::now(), last_t: 0.0, offset: None, state_t: f64::MIN, state_buttons: 0 }
+    }
+}
+
+/// İkili girdi paketini işler (hareket, kaydırma, durum, ping, saat farkı). Ping için yanıt paketini döner.
+pub fn process_packet(app: &App, pkt: &Mutex<Pkt>, b: &[u8]) -> Option<Vec<u8>> {
+    if b.len() < 12 {
+        return None;
+    }
+    let mut p = pkt.lk();
+    p.last_packet = Instant::now();
+    p.packets += 1;
+    match b[0] {
+        PING => {
+            let mut out = [0u8; 20];
+            out[0] = PONG;
+            out[4..12].copy_from_slice(&b[4..12]);
+            out[12..20].copy_from_slice(&now_ms().to_le_bytes());
+            Some(out.to_vec())
+        }
+        OFFSET => {
+            p.offset = Some(f64_at(b, 4));
+            None
+        }
+        kind @ (MOVE | SCROLL | STATE | AIR) if b.len() >= 20 => {
+            let arrived = now_ms();
+            let (a, c, t) = (f32_at(b, 4), f32_at(b, 8), f64_at(b, 12));
+            // NaN / sonsuz değer imleç konumunu kalıcı bozardı
+            if !(a.is_finite() && c.is_finite() && t.is_finite()) {
+                return None;
+            }
+            let buttons = if kind == STATE {
+                if t >= p.state_t {
+                    p.state_t = t;
+                    p.state_buttons = b[1];
+                }
+                b[1]
+            } else if t < p.state_t {
+                p.state_buttons
+            } else {
+                b[1]
+            };
+            p.buttons_down = buttons != 0;
+            match kind {
+                AIR => app.input.send(Cmd::Move { buttons, dx: a.clamp(-300.0, 300.0), dy: c.clamp(-300.0, 300.0) }),
+                MOVE => {
+                    let dt = (t - p.last_t).clamp(1.0, 50.0);
+                    p.last_t = t;
+                    let g = gain(a.hypot(c) / dt);
+                    app.input.send(Cmd::Move { buttons, dx: a * g, dy: c * g });
+                }
+                // Doğal kaydırma: parmak yukarı → sayfa aşağı (iPhone gibi)
+                SCROLL => app.input.send(Cmd::Scroll { buttons, v: c * WHEEL_PER_MM, h: -a * WHEEL_PER_MM }),
+                _ => app.input.send(Cmd::State { buttons }),
+            }
+            if let (Some(off), true) = (p.offset, kind != STATE) {
+                app.stats.lk().add_one_way(arrived - (t + off));
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 enum AuthError {
     Ignore,
     Unknown,
@@ -82,11 +162,8 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
 
     let started = Instant::now();
     let mut device: Option<Device> = None;
-    let mut last_packet = Instant::now();
-    let mut buttons_down = false;
-    let mut last_t = 0.0f64;
-    let mut offset: Option<f64> = None;
-    let mut packets = 0u32;
+    let pkt = Arc::new(Mutex::new(Pkt::new()));
+    let mut rtc_session: Option<u64> = None;
     let mut watchdog = tokio::time::interval(Duration::from_millis(50));
     let mut tick = tokio::time::interval(Duration::from_secs(1));
     let mut events_rx = app.events.subscribe();
@@ -112,6 +189,7 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                                 }
                                 let _ = st.save();
                             }
+                            pkt.lk().device_id = d.id.clone();
                             app.connected.lk().insert(d.id.clone());
                             let host = d.origin.trim_start_matches("https://").split(':').next().unwrap_or("").to_string();
                             device = Some(d);
@@ -143,8 +221,31 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                         }
                         Err(AuthError::Ignore) => {}
                     },
+                    Message::Text(text) if text.contains("\"rtc-offer\"") => {
+                        pkt.lk().last_packet = Instant::now();
+                        let sdp = serde_json::from_str::<Value>(&text).ok().and_then(|v| v["sdp"].as_str().map(str::to_owned));
+                        let reply = match (&app.rtc, sdp) {
+                            (None, _) => json!({ "type": "rtc-answer", "error": "WebRTC kapalı" }),
+                            // Her teklif bir DTLS sertifikası üretir: hızlı art arda teklif işlemciyi yormasın
+                            (Some(_), _) if !bucket.take(25.0) => json!({ "type": "rtc-answer", "error": "çok sık istendi, biraz bekle" }),
+                            (Some(hub), Some(sdp)) if sdp.len() < 20_000 => {
+                                if let Some(old) = rtc_session.take() {
+                                    hub.close(old);
+                                }
+                                match hub.offer(app.clone(), pkt.clone(), peer, sdp).await {
+                                    Ok((id, answer)) => {
+                                        rtc_session = Some(id);
+                                        json!({ "type": "rtc-answer", "sdp": answer })
+                                    }
+                                    Err(e) => json!({ "type": "rtc-answer", "error": e }),
+                                }
+                            }
+                            _ => json!({ "type": "rtc-answer", "error": "geçersiz istek" }),
+                        };
+                        if socket.send(Message::Text(reply.to_string().into())).await.is_err() { break; }
+                    }
                     Message::Text(text) => {
-                        last_packet = Instant::now();
+                        pkt.lk().last_packet = Instant::now();
                         // Başlatıcı Başlat menüsünü tarayabilir / program açabilir: çalışma zamanını bloklamadan
                         let id = device.as_ref().map(|d| d.id.clone()).unwrap_or_default();
                         // Hız sınırı: ağır komutlar (ekran görüntüsü, uygulama listesi…) pahalıdır, art arda istenemez
@@ -161,43 +262,8 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                         }
                     }
                     Message::Binary(b) if device.is_some() && b.len() >= 12 => {
-                        last_packet = Instant::now();
-                        packets += 1;
-                        match b[0] {
-                            PING => {
-                                let mut out = [0u8; 20];
-                                out[0] = PONG;
-                                out[4..12].copy_from_slice(&b[4..12]);
-                                out[12..20].copy_from_slice(&now_ms().to_le_bytes());
-                                if socket.send(Message::Binary(out.to_vec().into())).await.is_err() { break; }
-                            }
-                            OFFSET => offset = Some(f64_at(&b, 4)),
-                            kind @ (MOVE | SCROLL | STATE | AIR) if b.len() >= 20 => {
-                                let arrived = now_ms();
-                                let buttons = b[1];
-                                buttons_down = buttons != 0;
-                                let (a, c, t) = (f32_at(&b, 4), f32_at(&b, 8), f64_at(&b, 12));
-                                // NaN / sonsuz değer imleç konumunu kalıcı bozardı
-                                if !(a.is_finite() && c.is_finite() && t.is_finite()) {
-                                    continue;
-                                }
-                                match kind {
-                                    AIR => app.input.send(Cmd::Move { buttons, dx: a.clamp(-300.0, 300.0), dy: c.clamp(-300.0, 300.0) }),
-                                    MOVE => {
-                                        let dt = (t - last_t).clamp(1.0, 50.0);
-                                        last_t = t;
-                                        let g = gain(a.hypot(c) / dt);
-                                        app.input.send(Cmd::Move { buttons, dx: a * g, dy: c * g });
-                                    }
-                                    // Doğal kaydırma: parmak yukarı → sayfa aşağı (iPhone gibi)
-                                    SCROLL => app.input.send(Cmd::Scroll { buttons, v: c * WHEEL_PER_MM, h: -a * WHEEL_PER_MM }),
-                                    _ => app.input.send(Cmd::State { buttons }),
-                                }
-                                if let (Some(off), true) = (offset, kind != STATE) {
-                                    app.stats.lk().add_one_way(arrived - (t + off));
-                                }
-                            }
-                            _ => {}
+                        if let Some(out) = process_packet(&app, &pkt, &b) {
+                            if socket.send(Message::Binary(out.into())).await.is_err() { break; }
                         }
                     }
                     Message::Close(_) => break,
@@ -224,9 +290,10 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                 }
             }
             _ = watchdog.tick() => {
-                if buttons_down && last_packet.elapsed() > WATCHDOG {
+                let stuck = { let p = pkt.lk(); p.buttons_down && p.last_packet.elapsed() > WATCHDOG };
+                if stuck {
                     app.input.release_all();
-                    buttons_down = false;
+                    pkt.lk().buttons_down = false;
                     log!("Heartbeat kesildi — basılı butonlar bırakıldı");
                 }
             }
@@ -235,12 +302,12 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
                     if started.elapsed() > AUTH_TIMEOUT { break; }
                     continue;
                 }
+                let rate = std::mem::take(&mut pkt.lk().packets);
                 let summary = {
                     let mut s = app.stats.lk();
-                    s.rate = packets;
+                    s.rate = rate;
                     s.summary()
                 };
-                packets = 0;
                 let mut m = summary;
                 m["type"] = json!("stats");
                 if socket.send(Message::Text(m.to_string().into())).await.is_err() { break; }
@@ -248,6 +315,9 @@ pub async fn handle(mut socket: WebSocket, app: Arc<App>, peer: std::net::IpAddr
         }
     }
 
+    if let (Some(id), Some(hub)) = (rtc_session, &app.rtc) {
+        hub.close(id);
+    }
     if let Some(d) = device {
         app.connected.lk().remove(&d.id);
         app.connections.fetch_sub(1, Ordering::Relaxed);
@@ -372,6 +442,7 @@ fn command(app: &Arc<App>, device_id: &str, text: &str) -> Option<String> {
             _ => {}
         },
         // ---- uyku zamanlayıcısı
+        "stats-reset" => app.stats.lk().reset(),
         "timer" => {
             if m["cancel"] == true {
                 power::cancel_timer(app);

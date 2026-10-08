@@ -52,9 +52,25 @@ Bu belge, uygulamanın neye karşı korunduğunu, neye karşı **korunmadığın
 
 Sadece jetonu yenilemek için: yönetim sayfası → *Siri ve Kestirmeler* → **Jetonu yenile**.
 
+## WebRTC veri kanalı (deneysel, varsayılan kapalı)
+
+Ayarlar › Düşük gecikme (WebRTC) açılırsa hareket/kaydırma paketleri UDP üzerinden gider. Bunun getirdiği yüzey ve sınırlar:
+
+- **UDP soketi yalnızca ihtiyaç olunca açılır.** Ayar kapalıyken port açılmaz; ilk teklif gelince açılır, son oturum bitince kapanır. Yalnızca bilgisayarın yerel ağ adresine bağlanır, güvenlik duvarı kuralı (Özel ağ, yalnızca bu program) aynen geçerlidir.
+- **Oturum kurmak için kimlik doğrulaması gerekir.** SDP teklifi yalnızca doğrulanmış WSS bağlantısından kabul edilir; ICE parolası ve DTLS parmak izi o şifreli kanaldan geçer. Eşleşmemiş biri oturum kuramaz, UDP portuna paket göndermek de işe yaramaz.
+- **Oturum IP adresine kilitlidir.** Oturumu kuran WSS bağlantısının IP adresinden gelmeyen UDP paketleri kütüphaneye verilmeden atılır; üçüncü taraf ağ kütüphanesinin ayrıştırıcısına yabancı kaynaklardan paket ulaşmaz. (Aynı adresi taklit edebilen bir saldırgan hâlâ ICE/DTLS anahtarlarını bilmek zorundadır.)
+- **Kanalın yetkisi dardır.** Yalnızca 64 baytı aşmayan hareket, kaydırma, ping ve saat farkı paketleri işlenir; komut, yazı veya uygulama açma yoktur. NaN ve aşırı değerler elenir/kırpılır. Düğme basma/bırakma güvenilir WebSocket'ten gider.
+- **Kaynak sınırları:** en fazla 8 oturum; kanal 15 sn içinde açılmazsa oturum silinir; teklif mesajı komut hız sınırından yüksek maliyetle sayılır (her teklif bir DTLS sertifikası üretir); WebSocket kapanınca ya da eşleşme silinince oturum da kapanır.
+- **Hata yalıtımı:** WebRTC kütüphanesinde bir hata (panik) yalnızca o oturumu kapatır; program ve WebSocket yolu etkilenmez.
+- **Kalan risk:** WebRTC için `str0m` adlı genç bir üçüncü taraf kütüphane kullanılır (STUN/DTLS/SCTP ayrıştırması). Bağımlılıklar `cargo audit` ile taranır, ancak kütüphane bağımsız bir güvenlik denetiminden geçmemiştir. Endişen varsa özelliği açma; kapalıyken hiçbir UDP yüzeyi yoktur.
+
 ## Test ve denetim
 
 - `tools/smoke-test.mjs`: uçtan uca güvenlik testleri (TLS/ad kısıtı, DNS rebinding, Origin, yönetim anahtarı, PIN kilidi, dosya adı temizleme, bağlantı sınırı, zaman aşımı, hız sınırı, jeton yenileme).
+- `tools/fuzz-test.mjs`: bozuk/uç değerli ikili ve JSON mesajlar, aşırı büyük mesaj, paket fırtınası, bozuk kimlik doğrulama; sonrasında programın ayakta ve erişilebilir olduğu doğrulanır (tekrarlanabilir tohumla).
+- `tools/rtc-test.mjs`: WebRTC: kimliksiz/bozuk teklif, teklif sınırı, soketin yalnızca oturum varken açık olması, yabancı adresten UDP seli, IP kilidi, kanal zaman aşımı, oturumun temizlenmesi.
+- `tools/ui-test.mjs`: WebKit ile arayüz denetimi (taşma, CSP/konsol hataları, erişilebilirlik, çeviri eksikleri).
+- `.github/workflows/test.yml`: bunların hepsi ve `cargo audit` her değişiklikte çalışır.
 - `cargo test`: birim testleri (ayrıştırıcılar, sınırlayıcılar, dosya adı temizleme).
 - `cargo audit`: bağımlılık açığı taraması (yayın öncesi çalıştırılmalı).
 - Yıkıcı testler (`COUCH_TEST_DESTRUCTIVE=1`) yalnızca izole bir veri klasörüyle çalıştırılır.

@@ -2,6 +2,7 @@
 import { AirMouse } from '/air.js';
 import { initTv, bindClickpad } from '/tv.js';
 import { BRAND } from '/brand-icons.js';
+import { runTour } from '/tour.js';
 import { t as tl, lang, ready, translateDom, langPref, setLangPref } from '/i18n.js';
 
 await ready; // İngilizce sözlük yüklenir (Türkçede anında geçer)
@@ -230,12 +231,15 @@ function connect() {
         setConn('ok', m.name || m.host);
         if (!views.apps.hidden) requestApps(true);
         pingBurst();
+        if (settings.rtc) startRtc();
         for (const r of pendingReports.splice(0)) sendJson(r);
       } else if (m.type === 'unknown-device' || m.type === 'revoked') {
         try { localStorage.setItem('unregistered', '1'); } catch {}
         // Eşleşme bilgisayardan kaldırıldı: bu telefondaki anahtarı da sil, eşleşme ekranına dön
         await forgetIdentity();
         location.replace('/app');
+      } else if (m.type === 'rtc-answer') {
+        onRtcAnswer(m);
       } else if (m.type === 'stats') {
         serverStats = m;
         renderHud();
@@ -287,6 +291,7 @@ function connect() {
 
   ws.onclose = () => {
     connected = false;
+    stopRtc();
     setConn('down', tl('Bağlantı yok'));
     if (document.visibilityState !== 'visible') return;
     retry++;
@@ -295,6 +300,77 @@ function connect() {
     retryTimer = setTimeout(connect, Math.min(250 * 2 ** retry, 3000));
   };
   ws.onerror = () => {};
+}
+
+// ============================================================ WebRTC (isteğe bağlı, deneysel)
+// Veri kanalı yalnızca hareket/kaydırma içindir. Kurulamazsa ya da koparsa her şey WebSocket'ten sürer.
+let pc = null;
+let dc = null;
+let rtcStatus = ''; // '', 'kuruluyor', 'açık', 'hata: …'
+const rtcOpen = () => dc?.readyState === 'open';
+function resetLatency(why) {
+  rtts.length = 0;
+  offsets.length = 0;
+  if (connected) ws.send(JSON.stringify({ type: 'stats-reset' }));
+  if (why) rtcStatus = why;
+  renderHud();
+}
+function stopRtc(status = '') {
+  const had = pc || dc;
+  try { dc?.close(); } catch {}
+  try { pc?.close(); } catch {}
+  dc = pc = null;
+  rtcStatus = status;
+  if (had) resetLatency();
+  else renderHud();
+}
+async function startRtc() {
+  if (pc || !connected || typeof RTCPeerConnection === 'undefined') {
+    if (typeof RTCPeerConnection === 'undefined') rtcStatus = 'hata: bu tarayıcıda yok';
+    return;
+  }
+  rtcStatus = 'kuruluyor';
+  renderHud();
+  const mine = (pc = new RTCPeerConnection({ iceServers: [] }));
+  try {
+    dc = mine.createDataChannel('input', { ordered: false, maxRetransmits: 0 });
+    dc.binaryType = 'arraybuffer';
+    dc.onopen = () => {
+      resetLatency('açık');
+      pingBurst();
+    };
+    dc.onclose = () => { if (pc === mine) stopRtc('koptu, WebSocket kullanılıyor'); };
+    dc.onmessage = (ev) => {
+      if (typeof ev.data === 'string') return;
+      const dv = new DataView(ev.data);
+      if (dv.getUint8(0) === T.PONG) onPong(dv.getFloat64(4, true), dv.getFloat64(12, true));
+    };
+    mine.onconnectionstatechange = () => {
+      if (pc === mine && ['failed', 'closed', 'disconnected'].includes(mine.connectionState)) stopRtc('koptu, WebSocket kullanılıyor');
+    };
+    await mine.setLocalDescription(await mine.createOffer());
+    // Yerel adayların toplanmasını bekle (en fazla 1,5 sn): sunucu tek bir adres duyurur, telefonun adayları kendiliğinden bulunur
+    await new Promise((res) => {
+      if (mine.iceGatheringState === 'complete') return res();
+      mine.addEventListener('icegatheringstatechange', () => mine.iceGatheringState === 'complete' && res());
+      setTimeout(res, 1500);
+    });
+    if (pc !== mine || !connected) return;
+    ws.send(JSON.stringify({ type: 'rtc-offer', sdp: mine.localDescription.sdp }));
+    // Kanal 8 sn içinde açılmazsa vazgeç (güvenlik duvarı UDP'yi engelliyor olabilir)
+    setTimeout(() => { if (pc === mine && !rtcOpen()) stopRtc('kurulamadı (UDP engelli olabilir), WebSocket kullanılıyor'); }, 8000);
+  } catch (e) {
+    if (pc === mine) stopRtc('hata: ' + (e.message || e));
+  }
+}
+async function onRtcAnswer(m) {
+  if (!pc) return;
+  if (m.error) return stopRtc('hata: ' + m.error);
+  try {
+    await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp });
+  } catch (e) {
+    stopRtc('hata: ' + (e.message || e));
+  }
 }
 
 function sendInput(type, a, b, t) {
@@ -308,7 +384,10 @@ function sendInput(type, a, b, t) {
   inView.setFloat32(4, a, true);
   inView.setFloat32(8, b, true);
   inView.setFloat64(12, t, true);
-  ws.send(inBuf);
+  // Hareket/kaydırma: WebRTC açıksa sırasız UDP kanalından (kaybolan paket bekletmez); düğme durumu her zaman güvenilir WebSocket'ten
+  if (type !== T.STATE && rtcOpen()) {
+    if (dc.bufferedAmount < 2048) dc.send(inBuf.slice(0));
+  } else ws.send(inBuf);
   lastSend = performance.now();
   sentThisSecond++;
   syncHeartbeat();
@@ -341,7 +420,8 @@ function ping() {
   if (!connected) return;
   pingView.setUint8(0, T.PING);
   pingView.setFloat64(4, now(), true);
-  ws.send(pingBuf);
+  if (rtcOpen()) dc.send(pingBuf.slice(0));
+  else ws.send(pingBuf);
 }
 function pingBurst() {
   for (let i = 0; i < 8; i++) setTimeout(ping, i * 120);
@@ -362,7 +442,7 @@ function onPong(t0, ts) {
   const t1 = now();
   const rtt = t1 - t0;
   rtts.push(rtt);
-  if (rtts.length > 300) rtts.shift();
+  if (rtts.length > 1200) rtts.shift();
   offsets.push({ rtt, off: ts - (t0 + t1) / 2 });
   if (offsets.length > 30) offsets.shift();
   const best = offsets.reduce((a, b) => (b.rtt < a.rtt ? b : a));
@@ -390,10 +470,11 @@ function renderHud() {
   const ow = serverStats?.oneWay;
   const pr = serverStats?.proc;
   hud.textContent =
-    `${hl('RTT')}p50 ${pct(rtts, 0.5)}  p95 ${pct(rtts, 0.95)} ms\n` +
-    `${hl('Tek yön*')}${ow ? `p50 ${ow.p50}  p95 ${ow.p95}  p99 ${ow.p99} ms (n=${ow.n})` : tl('parmağını touchpad\'de gezdir')}\n` +
+    `${hl('RTT')}p50 ${pct(rtts, 0.5)}  p95 ${pct(rtts, 0.95)}  p99 ${pct(rtts, 0.99)}  max ${pct(rtts, 1)} ms (n=${rtts.length})\n` +
+    `${hl('Tek yön*')}${ow ? `p50 ${ow.p50}  p95 ${ow.p95}  p99 ${ow.p99}  p99.9 ${ow.p999}  max ${ow.max} ms (n=${ow.n})` : tl('parmağını touchpad\'de gezdir')}\n` +
     `${hl('PC işleme')}${pr ? `p50 ${pr.p50}  p99 ${pr.p99} ms` : '–'}\n` +
     `${hl('Paket/sn')}iPhone ${sendRate} · PC ${serverStats?.rate ?? '–'}   ${tl('Ekran yenileme')} ${fps ?? '…'} Hz\n` +
+    `${hl('Aktarım')}${rtcOpen() ? 'WebRTC (UDP)' : 'WebSocket (TCP)'}${settings.rtc && rtcStatus && rtcStatus !== 'açık' ? ' · ' + tl(rtcStatus) : ''}\n` +
     tl("* dokunma anından PC'ye varışa, saat farkı tahminiyle");
 }
 
@@ -1734,7 +1815,7 @@ $('searchForm').addEventListener('submit', (e) => {
 });
 
 // ============================================================ ayarlar
-const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false, theme: 'dark', accent: 'blue', pinch: true };
+const SETTINGS_DEFAULT = { sens: 1, scroll: 1, natural: true, lefty: false, bed: false, bedAuto: false, haptics: true, hud: false, rtc: false, screenMin: '10', autoFullscreen: true, autoRemote: false, kbdMode: 'keys', airSens: 1, kbLayout: lang === 'tr' ? 'tr' : 'us', nudge: false, theme: 'dark', accent: 'blue', pinch: true };
 const settings = { ...SETTINGS_DEFAULT };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem('settings') || '{}'));
@@ -1798,6 +1879,8 @@ function applySettings() {
   $('setBedAuto').checked = settings.bedAuto;
   $('setHaptics').checked = settings.haptics;
   $('setHud').checked = settings.hud;
+  $('setRtc').checked = settings.rtc;
+  if (connected) (settings.rtc ? startRtc : stopRtc)();
   applyKbdMode(false);
   renderHud();
 }
@@ -1850,7 +1933,7 @@ for (const b of document.querySelectorAll('#setScreen [data-v]')) {
     haptic();
   };
 }
-for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote'], ['setNudge', 'nudge'], ['setPinch', 'pinch']]) {
+for (const [id, key] of [['setNatural', 'natural'], ['setLefty', 'lefty'], ['setBed', 'bed'], ['setBedAuto', 'bedAuto'], ['setHaptics', 'haptics'], ['setHud', 'hud'], ['setRtc', 'rtc'], ['setFullscreen', 'autoFullscreen'], ['setAutoRemote', 'autoRemote'], ['setNudge', 'nudge'], ['setPinch', 'pinch']]) {
   $(id).addEventListener('change', () => {
     settings[key] = $(id).checked;
     saveSettings();
@@ -1982,6 +2065,30 @@ $('padHelp').onclick = () => openSheet('padHelpSheet');
 setAppsMode(appsMode);
 // Bağlantı sorun giderici: kurulum sayfasını aç / bu telefondaki eşleşmeyi sıfırla
 $('openFix').onclick = () => { closeSheets(); openSheet('fixSheet'); };
+
+// ============================================================ ilk açılış turu
+const tab = (v) => `#tabs button[data-view="${v}"]`;
+const TOUR = [
+  { title: 'Hoş geldin!', text: 'Telefonun artık bilgisayarının kumandası. 30 saniyede nerede ne olduğunu göstereyim.' },
+  { target: tab('pad'), before: () => showView('pad'), title: 'Touchpad', text: 'Parmağını kaydırarak imleci oynat. Dokun: tıkla. İki parmakla kaydır: sayfayı kaydır. İki parmakla dokun: sağ tık.' },
+  { target: tab('kbd'), before: () => showView('kbd'), title: 'Klavye', text: 'Telefonla bilgisayara yaz. Ctrl, Alt, Win ve ok tuşları şeridi de burada.' },
+  { target: tab('remote'), before: () => showView('remote'), title: 'Kumanda', text: "Oynat, duraklat, ses ve Netflix, YouTube gibi servislere tek dokunuş. TV'ni de buradan yönetebilirsin." },
+  { target: tab('apps'), before: () => showView('apps'), title: 'Uygulamalar', text: 'Bilgisayardaki uygulama ve oyunları aç, açık pencereler arasında geç.' },
+  { target: tab('share'), before: () => showView('share'), title: 'Aktar', text: 'Panoyu ve dosyaları telefonla bilgisayar arasında gönder.' },
+  { target: '#devBtn', before: () => showView('pad'), title: 'Cihaz seç', text: "Buradan bilgisayar ile eklediğin TV'ler arasında geçiş yaparsın." },
+  { target: '#settingsBtn', title: 'Ayarlar', text: 'Tema, hassasiyet, güç menüsü ve Siri kestirmeleri burada. Bu turu da buradan tekrar açabilirsin.' },
+  { title: 'Hazırsın!', text: "İyi eğlenceler. Takılırsan Ayarlar'dan turu yeniden başlatabilirsin." },
+];
+function startTour() {
+  closeSheets();
+  runTour({ steps: TOUR, tl, onEnd: () => { try { localStorage.setItem('tourDone', '1'); } catch {} showView('pad'); } });
+}
+$('openTour').onclick = () => setTimeout(startTour, 280);
+function maybeTour(fresh) {
+  let done = false;
+  try { done = localStorage.getItem('tourDone') === '1'; } catch {}
+  if (fresh && !done) setTimeout(startTour, 900);
+}
 $('offFix').onclick = () => { $('offline').hidden = true; openSheet('fixSheet'); };
 $('fixSetup').onclick = () => { location.href = `http://${location.hostname}:47800/setup`; };
 $('fixReset').onclick = async () => {
@@ -2706,6 +2813,7 @@ function start() {
   showView(views[saved] ? saved : 'pad');
   renderHud();
   connect();
+  maybeTour(exp.pairedVia !== 'kayıtlı anahtar');
 }
 
 async function init() {
@@ -2754,7 +2862,7 @@ async function init() {
 
 applySettings();
 // Yönetim sayfasındaki tasarım önizlemesi (sadece PC'de, /preview) için ekranlara erişim
-if (location.pathname === '/preview') window.__preview = { onGameArt, air, setAirMode, onShot, onApps, onMixer, onAudioDevices, onSiri: (m) => { siriInfo = m; renderSiri(); }, show, showView, onMedia, onApps, onVolume, onContext, onTimer, openSheet };
+if (location.pathname === '/preview') window.__preview = { onGameArt, air, setAirMode, onShot, onApps, onMixer, onAudioDevices, onSiri: (m) => { siriInfo = m; renderSiri(); }, show, showView, onMedia, onApps, onVolume, onContext, onTimer, openSheet, startTour };
 else init();
 
 

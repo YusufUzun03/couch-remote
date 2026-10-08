@@ -574,7 +574,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [x] **Jiroskop / hava faresi:** Touchpad sekmesinde "Hava faresi" modu. Dokunduğun sürece telefonun yönelimi imleci sürer, bırakınca durur (kavrama). Eğim/bilek bükmeden bağımsız, titreme süzülmüş, işaretçi ivmeli, hız ayarı. Çekirdek `web/air.js`, sentetik testler `tools/air-test.mjs` (29 test). Gamepad nişanı yok (gamepad kaldırıldı)
 - [ ] Uygulama içi kamerayla QR okuma (yeni PC ekleme)
 - [-] ~~**Ekran önizleme** + mutlak (tablet) mod~~ — **YAPILMAYACAK** (kullanıcı kararı, 2026-10-01): CPU/GPU, pil, ağ gecikmesi ve gizlilik maliyeti değmez; tek kare ekran görüntüsü yeterli
-- [ ] WebRTC DataChannel (p95 < 15 ms hedefi)
+- [x] WebRTC DataChannel (deneysel, ayarla açılır, varsayılan kapalı; `agent/src/rtc.rs`, str0m): hareket UDP'den, düğme WS'den; WS'e otomatik dönüş. Güvenlik: soket yalnızca oturum varken, IP kilidi, panik yalıtımı, teklif hız sınırı (SECURITY.md). Kazanç gerçek iPhone'da ölçülecek (p99/p99.9/max, Aktarım satırı)
 - [ ] Tarayıcı eklentisi (YouTube/Netflix derin kontrol)
 - [ ] Çoklu PC desteği
 - [ ] **Kilit ekranında PIN girme:** SYSTEM olarak çalışan isteğe bağlı servis + güvenli masaüstü yardımcısı (Windows kilit ekranı ve UAC pencerelerine girdi)
@@ -583,7 +583,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [ ] Kod imzalama: açık kaynaksa **SignPath Foundation (ücretsiz)**; değilse Azure Trusted Signing (ücretli, isteğe bağlı). Antivirüs yanlış pozitif bildirimleri (ücretsiz)
 - [ ] İmzalı otomatik güncelleme
 - [ ] Türkçe/İngilizce, erişilebilirlik denetimi
-- [ ] Test paketinin tamamlanması (protokol, WebKit, güvenlik)
+- [x] Test paketi: protokol/fuzz (`tools/fuzz-test.mjs`, tekrarlanabilir tohum, izole örnek), WebKit arayüz testi (`tools/ui-test.mjs`, Playwright: 4 cihaz boyutu, taşma, açılır pencereler, tema×vurgu, erişilebilirlik, İngilizce eksikler, kurulum sihirbazı), GitHub Actions (`.github/workflows/test.yml`: cargo test + audit, arayüz, protokol). Not: gerçek iPhone değil; Actions ilk push'ta doğrulanacak
 - [ ] ~~Plex tarzı alan adı~~ → Faz 1'e taşındı (DuckDNS + Let's Encrypt, ücretsiz)
 - [x] GitHub deposu (özel): github.com/YusufUzun03/couch-remote, MIT lisansı, README/KURULUM/SECURITY, v0.3.0 sürümü (CouchRemote.exe)`n- [ ] Depoyu herkese açma + indirme sayfasını (site/) GitHub Pages ile yayınlama (özel depoda Pages ücretli plan ister)`n- [ ] Web sitesi, kurulum videosu
 - [x] İngilizce dil desteği (0.4.0): Türkçe kaynak metin anahtar, `web/i18n-en.js` sözlüğü (~390 giriş), `web/i18n.js` DOM yürüyücüsü + `tl()`; dil telefonu izler, Ayarlar'dan değişir; yönetim/kurulum sayfaları, indirme sitesi, Rust bildirimleri/tepsi (`i18n.rs`, Windows dilini izler), README/INSTALL/SECURITY.en
@@ -597,6 +597,7 @@ Kullanıcı kararları: zengin ve canlı yön, dengeli hareket, kumanda + touchp
 - [x] Performans turu (0.9.2–0.9.4, ölçümler `tools/perf-results/`): boşta işlemci %1,85 → %0,05 (ses iş parçacığı dinleyen yokken uyuyor, uygulama listesi ~2 sn'de bir), arayüz ilk açılış 279 → 79 KB (gzip), tekrar açılış 279 KB → 0 (ETag/304), telefon zamanlayıcı uyanışı 15,2/sn → 0,3–1,4/sn, boşta ağ paketi ~11/sn → ~0,2/sn (heartbeat sadece tuş basılıyken, ping 5 sn)
 - [x] 0.10.0: Açık pencereler (Uygulamalar › Açık pencereler | Başlat: öne getir/küçült/kapat), pinch ile yakınlaştırma (Ctrl+tekerlek), TV'de link aç (YouTube kimliği + TV tarayıcısı), Android yolu (sertifika dosyası `/ca.crt`, platforma duyarlı kurulum sayfası, LAN adresi SAN + yedek bağlantı, Android titreşimi). Düzeltilen hatalar: `[hidden]` görünümünü ezen `!important` kuralları (TV seçiliyken ve yatay iPad'de Kumanda diğer sekmelerde de görünüyordu)
 - [x] 0.10.1 dayanıklılık: ayar dosyası otomatik yedek (son 5, LocalAppData) + silinme/bozulmada otomatik kurtarma, sıfırlanınca yönetim sayfasında bilgi, kayıtsız telefon denemesi uyarısı, parolalı yedek al/geri yükle (AES-256-GCM + PBKDF2), telefonda Bağlantı sorun giderici, kurulum sayfasında eski profil ipucu. Test izolasyonu: `COUCH_DATA_DIR` + `COUCH_PORT_BASE` (testler gerçek programa ve eşleşmelere dokunmaz). Kök neden: Claude uygulamasının paket sanallaştırması AppData yazmalarını ayrı kopyaya yönlendiriyordu
+- [x] 0.11.0: WebRTC veri kanalı (deneysel), test paketi (fuzz, rtc, WebKit arayüz, Actions), yeniden tasarlanan kurulum sayfası + kanepedeki iskelet animasyonlu karakter (`web/mascot.js`), ilk açılış turu (`web/tour.js`), gecikme ekranında p99/p99.9/max, eski kutular için yedek ve kurtarma
 - [ ] Sıradaki: birden fazla bilgisayar (telefonda cihaz listesi) — şimdilik istenmiyor; Roku/diğer markalar — şimdilik istenmiyor
 
 ### Faz 6 — Gerçek iOS Uygulaması (Mac gerekir)

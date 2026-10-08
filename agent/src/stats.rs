@@ -2,7 +2,8 @@
 use serde_json::{json, Value};
 use std::collections::VecDeque;
 
-const KEEP: usize = 500;
+// ~100 sn @ 60 Hz: p99.9 ve en kötü durum anlamlı olsun (500 örnek yalnızca ~8 sn)
+const KEEP: usize = 6000;
 
 #[derive(Default)]
 pub struct Stats {
@@ -25,6 +26,11 @@ impl Stats {
     pub fn add_proc(&mut self, v: f64) {
         push(&mut self.proc, v);
     }
+    /// Aktarım yolu değişince karşılaştırma temiz başlasın
+    pub fn reset(&mut self) {
+        self.one_way.clear();
+        self.proc.clear();
+    }
     pub fn summary(&self) -> Value {
         json!({ "oneWay": percentiles(&self.one_way), "proc": percentiles(&self.proc), "rate": self.rate })
     }
@@ -40,5 +46,5 @@ pub fn percentiles(q: &VecDeque<f64>) -> Value {
         let v = s[((f * s.len() as f64) as usize).min(s.len() - 1)];
         (v * 100.0).round() / 100.0
     };
-    json!({ "n": s.len(), "p50": p(0.5), "p95": p(0.95), "p99": p(0.99), "max": p(1.0) })
+    json!({ "n": s.len(), "p50": p(0.5), "p95": p(0.95), "p99": p(0.99), "p999": p(0.999), "max": p(1.0) })
 }

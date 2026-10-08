@@ -1,8 +1,8 @@
 // Service Worker: arayüzü önbellekte tutar. Uygulama anında açılır (PC'ye sormadan), PC kapalıyken bile
 // "Bilgisayara ulaşılamıyor" ekranı görünür. Önbellekten gelen dosya arka planda ETag ile yenilenir;
 // değişiklik varsa uygulamaya haber verilir (henüz dokunulmadıysa sayfa kendini yeniler).
-const CACHE = 'couch-shell-v9';
-const SHELL = ['/app', '/app.js', '/air.js', '/tv.js', '/brand-icons.js', '/app.css', '/ui.css', '/design.css', '/i18n.js', '/i18n-en.js', '/apple-touch-icon.png', '/icon-192.png'];
+const CACHE = 'couch-shell-v11';
+const SHELL = ['/app', '/app.js', '/air.js', '/tv.js', '/tour.js', '/mascot.js', '/brand-icons.js', '/app.css', '/ui.css', '/design.css', '/i18n.js', '/i18n-en.js', '/apple-touch-icon.png', '/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));

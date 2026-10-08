@@ -29,6 +29,8 @@ const DEVICE_MAX_IDLE_DAYS: i64 = 90;
 pub struct App {
     pub host: String,
     pub lan_ip: String,
+    /// WebRTC veri kanalı (UDP); port açılamadıysa None, telefon WebSocket kullanır
+    pub rtc: Option<crate::rtc::Hub>,
     pub state: Mutex<State>,
     pub pairing: Mutex<Option<Pairing>>,
     /// Çok fazla hatalı PIN: bu ana kadar kendiliğinden yeni kod üretilmez (yönetim sayfasında elle üretilebilir)
@@ -125,10 +127,12 @@ impl App {
         crate::context::start(events.clone());
         let icons = [180, 192, 512].into_iter().map(|s| (s, crate::icons::png(s))).collect();
         let (revoked, _) = broadcast::channel(16);
+        let rtc = crate::rtc::Hub::start();
 
         let app = App {
             host,
             lan_ip,
+            rtc,
             state: Mutex::new(state),
             // Eşleşme kodu açılışta ÜRETİLMEZ: sadece "Telefonu bağla" sayfası açıkken (S4)
             pairing: Mutex::new(None),

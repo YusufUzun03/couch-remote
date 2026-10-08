@@ -4,11 +4,20 @@
   "type": "module",
   "description": "PC programı için uçtan uca duman testi (iPhone'u taklit eder)",
   "scripts": {
-    "smoke": "node smoke-test.mjs"
+    "smoke": "node smoke-test.mjs",
+    "fuzz": "node fuzz-test.mjs",
+    "ui": "node ui-test.mjs",
+    "air": "node air-test.mjs",
+    "test": "node air-test.mjs && node ui-test.mjs",
+    "rtc": "node rtc-test.mjs"
   },
   "dependencies": {
     "@peculiar/x509": "^2.1.0",
     "reflect-metadata": "^0.2.2",
     "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "node-datachannel": "^0.33.4",
+    "playwright": "^1.63.0"
   }
 }

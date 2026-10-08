@@ -26,7 +26,7 @@
     background:radial-gradient(70% 380px at 50% -40px, var(--glow), transparent 70%), var(--bg); }
   .wrap { max-width:1000px; margin:0 auto; }
 
-  header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  header { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin-bottom:22px; }
   header img { width:46px; height:46px; border-radius:12px; box-shadow:0 8px 20px rgba(10,132,255,.3); }
   h1 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0; line-height:1.15; }
   #sub { color:var(--muted); font-size:13.5px; }
@@ -68,6 +68,9 @@
   @keyframes rise { from { opacity:0; transform:translateY(12px); } }
   .qr { background:#fff; border-radius:22px; padding:14px; width:268px; max-width:100%; box-shadow:0 22px 50px -18px var(--accent), 0 0 0 .5px var(--line); animation:pop .7s var(--spring) both; }
   .qr svg { display:block; width:100%; height:auto; }
+  .empty { display:flex; flex-direction:column; align-items:center; gap:10px; padding:26px 8px; text-align:center; }
+  .empty svg { width:42px; height:42px; fill:none; stroke:var(--muted); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; opacity:.7; }
+  .empty p { margin:0; max-width:240px; }
   @keyframes pop { from { opacity:0; transform:scale(.88); } }
   .steps-col h3 { font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0 0 4px; }
   .steps-col .lead { color:var(--muted); margin:0 0 20px; font-size:14.5px; }
@@ -386,7 +389,7 @@
     $('devices').innerHTML = n
       ? s.devices.map((d) => `<div class="row"><div class="dev"><span class="ico">${PHONE_ICON}</span><div><b>${esc(d.name)}</b><div class="muted">${tl('Eşleşme: {paired} · son görülme: {seen}', { paired: esc((d.pairedAt ?? '').slice(0, 10)), seen: esc((d.lastSeen ?? '–').replace('T', ' ').slice(0, 16)) })}</div></div></div>
           <button class="ghost" data-id="${esc(d.id)}">Kaldır</button></div>`).join('')
-      : '<p class="muted" style="margin:0">Henüz eşleşmiş telefon yok. Yukarıdaki QR kodu okut.</p>';
+      : '<div class="empty"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg><p class="muted">Henüz eşleşmiş telefon yok. Yukarıdaki QR kodu okut.</p></div>';
     if (n) {
       $('devices').insertAdjacentHTML('beforeend', '<div class="row-actions"><button class="ghost danger" id="removeAll">Hepsini kaldır</button> <span class="muted">Telefon kaybolduysa veya çalındıysa: tüm eşleşmeleri siler ve Kestirmeler jetonunu yeniler.</span></div>');
       $('removeAll').onclick = () => confirm(tl('Tüm telefonların eşleşmesi kaldırılsın ve Kestirmeler jetonu yenilensin mi?')) && post('/api/remove-all-devices', {}).then(poll);

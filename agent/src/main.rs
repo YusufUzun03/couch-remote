@@ -38,6 +38,7 @@ mod media;
 mod pairing;
 mod screenshot;
 mod power;
+mod rtc;
 mod state;
 mod stats;
 mod sync;

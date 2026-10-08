@@ -27,97 +27,180 @@
   [hidden] { display: none !important; }
   html { background: var(--bg); }
   body { margin: 0; color: var(--label); font: 17px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
-         padding: calc(env(safe-area-inset-top) + 28px) 16px calc(env(safe-area-inset-bottom) + 36px);
+         padding: calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 36px);
          background: radial-gradient(90% 320px at 50% -30px, var(--glow), transparent 70%), var(--bg); min-height: 100vh; }
   .wrap { max-width: 520px; margin: 0 auto; }
-  .logo { display: block; width: 80px; height: 80px; margin: 0 auto 16px; border-radius: 19px; box-shadow: 0 14px 32px rgba(10,132,255,.35); animation: pop .8s var(--spring) both; }
   @keyframes pop { from { opacity: 0; transform: scale(.85); } }
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
-  h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; text-align: center; margin: 0 0 6px; }
-  .lead { color: var(--label-2); text-align: center; margin: 0 0 24px; font-size: 16px; }
-
-  /* Güvenlik doğrulama kartı: bilgisayardaki kodla karşılaştırılır */
-  .verify { background: var(--surface); border-radius: 20px; padding: 16px 18px; margin-bottom: 22px; box-shadow: var(--shadow), var(--hl); display: flex; align-items: center; gap: 14px; animation: rise .6s .1s var(--out) both; }
-  .verify .shield { width: 44px; height: 44px; border-radius: 13px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--green) 70%, white), var(--green)); box-shadow: 0 8px 16px -8px var(--green); }
-  .verify .shield svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .verify small { display: block; color: var(--label-2); font-size: 13.5px; line-height: 1.35; }
-  .verify b { font-size: 15.5px; font-weight: 600; }
-  .code { display: inline-block; margin-top: 4px; font: 700 20px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .08em; background: var(--fill); border-radius: 9px; padding: 3px 10px; }
-
-  .section { color: var(--label-2); font-size: 13px; letter-spacing: .02em; margin: 0 16px 8px; font-weight: 600; }
-  .steps { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 12px; counter-reset: s; }
-  .step { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow), var(--hl); display: flex; gap: 14px; position: relative; animation: rise .6s var(--out) both; }
-  .step:nth-child(1) { animation-delay: .15s; } .step:nth-child(2) { animation-delay: .22s; } .step:nth-child(3) { animation-delay: .29s; }
-  .num { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px;
-         background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 78%, white), var(--accent)); box-shadow: 0 8px 16px -8px var(--accent); transition: background .4s, transform .5s var(--spring); }
-  .num svg { display: none; width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  .step.done .num { background: linear-gradient(160deg, color-mix(in srgb, var(--green) 75%, white), var(--green)); box-shadow: 0 8px 16px -8px var(--green); animation: tick .55s var(--spring); }
-  .step.done .num span { display: none; } .step.done .num svg { display: block; }
   @keyframes tick { from { transform: scale(.6); } }
-  .step b { display: block; font-weight: 600; font-size: 17px; }
-  .step small { display: block; color: var(--label-2); font-size: 14.5px; margin-top: 4px; line-height: 1.4; }
-  .step small b { display: inline; font-size: inherit; color: var(--label); }
-  .path { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 10px; }
-  .chip { background: var(--fill); border-radius: 9px; padding: 4px 10px; font-size: 13.5px; font-weight: 500; }
-  .sep { color: var(--label-3); font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes wave { from { transform: scale(.9); opacity: .7; } to { transform: scale(1.6); opacity: 0; } }
+  @keyframes draw { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
+
+  /* Üst başlık: küçük, dikkat dağıtmaz */
+  .head { text-align: center; margin-bottom: 20px; }
+  .logo { display: block; width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 17px; box-shadow: 0 14px 30px rgba(10,132,255,.35); animation: pop .8s var(--spring) both; }
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 4px; }
+  .lead { color: var(--label-2); margin: 0; font-size: 15.5px; }
+
+  /* Kanepedeki arkadaş: eklemli bir karakter (mascot.js), sıradaki adımı gösterir */
+  .stage { position: relative; height: 178px; margin: -4px auto 6px; max-width: 360px; --couch: #cfd8ee; --couch-back: #e1e7f6; --couch-arm: #c0cae5; --mc-pants: #474c63; --mc-shoe: #fff;
+           animation: rise .6s .05s var(--out) both; }
+  @media (prefers-color-scheme: dark) { .stage { --couch: #2b2f40; --couch-back: #353a4d; --couch-arm: #252837; --mc-pants: #6b7190; --mc-shoe: #e9e9f2; } }
+  .stage svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .stage .couch-back { fill: var(--couch-back); } .stage .couch-seat { fill: var(--couch); } .stage .couch-arm { fill: var(--couch-arm); }
+  .stage .floor { fill: rgba(0,0,0,.08); }
+  @keyframes bob { 50% { transform: translateY(5px); } }
+  .stage .prop { opacity: 0; transition: opacity .4s; }
+  .stage[data-pose="point"] .p-arrow { opacity: 1; animation: bob 1s ease-in-out infinite; }
+  .stage .p-arrow path { fill: none; stroke: var(--accent); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+  .bubble { position: absolute; top: 2px; left: 50%; transform: translateX(-50%) scale(.9); opacity: 0; background: var(--surface); color: var(--label); border-radius: 16px; padding: 7px 14px; font-size: 14.5px; font-weight: 600; box-shadow: var(--shadow), var(--hl); white-space: nowrap; transition: opacity .35s, transform .5s var(--spring); pointer-events: none; }
+  .bubble.show { opacity: 1; transform: translateX(-50%) scale(1); }
+  @media (prefers-reduced-motion: reduce) { .stage .p-arrow { animation: none !important; } }
+
+  /* İlerleme: üç parça */
+  .prog { margin: 0 4px 14px; animation: rise .5s .05s var(--out) both; }
+  .prog .cap { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--label-2); margin-bottom: 8px; }
+  .segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .segs i { height: 5px; border-radius: 3px; background: var(--fill); position: relative; overflow: hidden; }
+  .segs i::after { content: ""; position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .6s var(--out); }
+  .segs i.current::after { transform: scaleX(.45); }
+  .segs i.done::after { transform: scaleX(1); background: var(--green); }
+
+  /* Güvenlik kodu: tek satır, isteyen açıp nedenini okur */
+  details.verify { background: var(--surface); border-radius: 16px; margin-bottom: 14px; box-shadow: var(--shadow), var(--hl); animation: rise .6s .1s var(--out) both; }
+  details.verify summary { list-style: none; display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
+  details.verify summary::-webkit-details-marker { display: none; }
+  .shield { width: 34px; height: 34px; border-radius: 10px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--green) 70%, white), var(--green)); }
+  .shield svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .verify .t { flex: 1; min-width: 0; font-size: 13px; color: var(--label-2); line-height: 1.25; }
+  .verify .t span { display: block; }
+  .verify .t b { display: block; font: 700 18px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .07em; color: var(--label); margin-top: 1px; }
+  .verify .chev { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--label-3); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform .3s var(--out); }
+  details[open] .chev { transform: rotate(90deg); }
+  .verify .why { padding: 0 14px 14px 60px; font-size: 13.5px; color: var(--label-2); line-height: 1.45; }
+  .verify .why b { color: var(--label); font-weight: 600; }
+
+  /* Adım kartları */
+  .steps { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 10px; }
+  .step { background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow), var(--hl); display: flex; gap: 14px; position: relative; animation: rise .6s var(--out) both; transition: opacity .3s, box-shadow .3s; }
+  .step:nth-child(1) { animation-delay: .15s; } .step:nth-child(2) { animation-delay: .22s; } .step:nth-child(3) { animation-delay: .29s; }
+  .num { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; color: #fff;
+         background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 78%, white), var(--accent)); box-shadow: 0 8px 16px -8px var(--accent); transition: background .4s, transform .5s var(--spring); }
+  .num svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .num .ok { display: none; stroke-width: 3; }
+  .step.done .num { background: linear-gradient(160deg, color-mix(in srgb, var(--green) 75%, white), var(--green)); box-shadow: 0 8px 16px -8px var(--green); animation: tick .55s var(--spring); }
+  .step.done .num .ic { display: none; } .step.done .num .ok { display: block; }
+  .step .body { flex: 1; min-width: 0; }
+  .step h2 { margin: 0; font-weight: 600; font-size: 17px; line-height: 1.25; padding-top: 2px; }
+  .step p { margin: 4px 0 0; color: var(--label-2); font-size: 14.5px; line-height: 1.4; }
+  .step b { font-weight: 600; color: var(--label); }
+
+  /* Ayarlar yolu: iOS'taki gruplu liste gibi, satır atlamayan düzen */
+  .path { background: var(--fill); border-radius: 12px; overflow: hidden; margin-top: 10px; }
+  .path .chip { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; font-size: 15px; font-weight: 500; border-bottom: .5px solid var(--sep); }
+  .path .chip:last-child { border-bottom: 0; }
+  .path .chip::after { content: "›"; color: var(--label-3); font-size: 19px; line-height: 1; }
+  .path .chip:last-child::after { content: "✓"; color: var(--accent); font-size: 15px; font-weight: 700; }
+  .tip { background: color-mix(in srgb, var(--orange) 13%, var(--surface)); border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13.5px; color: var(--label-2); line-height: 1.45; }
+  .tip b { color: var(--label); font-weight: 600; }
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: 14px; border-radius: 14px;
          background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0)), var(--accent); color: #fff; font: 600 17px -apple-system, system-ui, sans-serif; text-decoration: none; border: 0;
          box-shadow: 0 12px 26px -12px var(--accent), inset 0 .5px 0 rgba(255,255,255,.3); transition: transform .4s var(--spring), opacity .2s; }
   .btn.secondary { background: var(--fill); color: var(--accent); box-shadow: none; }
   .btn:active { transform: scale(.97); }
   .btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .tip { background: color-mix(in srgb, var(--orange) 13%, var(--surface)); border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 13.5px; color: var(--label-2); line-height: 1.4; }
 
-  /* Sihirbaz: yalnızca sıradaki adım açık, biten adım tek satıra iner, sonrakiler soluk */
-  .prog { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 14px; font-weight: 600; color: var(--label-2); }
-  .prog i { flex: 1; height: 6px; border-radius: 3px; background: var(--fill); overflow: hidden; }
-  .prog i::after { content: ""; display: block; height: 100%; width: var(--p, 0%); background: var(--accent); border-radius: 3px; transition: width .5s var(--out); }
-  .step.done small, .step.done .tip, .step.done .path, .step.done .btn { display: none; }
+  /* Sihirbaz durumu: yalnızca sıradaki adım açık, biten adım tek satıra iner, sonrakiler soluk */
+  .step.done .p, .step.done .tip, .step.done .path, .step.done .btn { display: none; }
   .step.done { padding: 10px 14px; align-items: center; opacity: .75; }
+  .step.done .num { width: 30px; height: 30px; border-radius: 9px; }
+  .step.done .num svg { width: 16px; height: 16px; }
   .step.future { opacity: .5; }
-  .step.future .tip, .step.future .btn, .step.future .got { display: none; }
+  .step.future .tip, .step.future .btn, .step.future .got, .step.future .path, .step.future .p { display: none; }
+  .step.future { padding-top: 12px; padding-bottom: 12px; align-items: center; }
   .step.current { box-shadow: var(--shadow), var(--hl), 0 0 0 2px var(--accent); }
   .got { margin-top: 12px; }
 
-  /* Durum: sertifikaya güvenildi mi? */
-  #status { display: flex; gap: 14px; align-items: center; background: var(--surface); border-radius: 20px; padding: 16px 18px; box-shadow: var(--shadow), var(--hl); transition: background-color .4s; }
-  #status .ind { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; position: relative; }
-  #status.checking .ind { border: 3px solid var(--fill); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  /* Durum satırı: kart değil, ince bir şerit */
+  #status { display: flex; gap: 12px; align-items: center; padding: 6px 6px 2px; color: var(--label-2); font-size: 14px; }
+  #status .ind { width: 22px; height: 22px; border-radius: 50%; flex: none; display: grid; place-items: center; position: relative; }
+  #status.checking .ind { border: 2.5px solid var(--fill); border-top-color: var(--accent); animation: spin .8s linear infinite; }
   #status.waiting .ind { background: var(--orange); }
-  #status.waiting .ind::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--orange); opacity: 0; animation: wave 2s var(--out) infinite; }
-  #status.ok { background: color-mix(in srgb, var(--green) 14%, var(--surface)); }
-  #status.ok .ind { background: var(--green); animation: tick .6s var(--spring); }
-  #status .ind svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
-  #status b { display: block; font-size: 16.5px; font-weight: 600; }
-  #status small { color: var(--label-2); font-size: 14px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes wave { from { transform: scale(.9); opacity: .7; } to { transform: scale(1.6); opacity: 0; } }
+  #status.waiting .ind::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--orange); opacity: 0; animation: wave 2s var(--out) infinite; }
+  #status b { display: block; font-size: 14.5px; font-weight: 600; color: var(--label); }
+  #status small { color: var(--label-2); font-size: 13.5px; }
+  #check { margin-top: 10px; }
+
+  /* Başarı ekranı */
+  #doneCard { text-align: center; padding: 36px 20px 28px; background: var(--surface); border-radius: 24px; box-shadow: var(--shadow), var(--hl); animation: rise .6s var(--out) both; }
+  #doneCard .big { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 18px; display: grid; place-items: center; background: linear-gradient(160deg, color-mix(in srgb, var(--green) 75%, white), var(--green)); box-shadow: 0 16px 34px -12px var(--green); animation: pop .7s var(--spring) both; }
+  #doneCard .big svg { width: 44px; height: 44px; fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; animation: draw .6s .25s var(--out) both; }
+  #doneCard h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.01em; }
+  #doneCard p { margin: 0; color: var(--label-2); font-size: 15.5px; }
+  body.ok .steps, body.ok .prog, body.ok details.verify, body.ok #status, body.ok #check, body.ok .help, body.ok .head .lead { display: none; }
+
+  /* Takıldın mı? */
+  .help { margin-top: 18px; }
+  .help details { background: var(--surface); border-radius: 14px; margin-bottom: 8px; box-shadow: var(--shadow), var(--hl); }
+  .help summary { list-style: none; padding: 12px 14px; font-size: 15px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .help summary::-webkit-details-marker { display: none; }
+  .help summary::after { content: "›"; color: var(--label-3); font-size: 20px; transition: transform .3s var(--out); }
+  .help details[open] summary::after { transform: rotate(90deg); }
+  .help .ans { padding: 0 14px 13px; color: var(--label-2); font-size: 14px; line-height: 1.45; }
+  .help .ans b { color: var(--label); font-weight: 600; }
+  .foot { text-align: center; color: var(--label-3); font-size: 12.5px; letter-spacing: .04em; margin-top: 22px; }
   @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <img class="logo" src="/logo.svg" alt="">
-  <h1>Telefonunu bağla</h1>
-  <p class="lead">Sadece bir kez yapılır, yaklaşık 2 dakika. Sonrasında uygulama her açılışta kendiliğinden bağlanır.</p>
-
-  <div class="verify">
-    <span class="shield"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span>
-    <div>
-      <b>Güvenlik kodu</b>
-      <small>Aşağıda yükleyeceğin profilin adında bu kod yazmalı. Farklıysa yükleme.</small>
-      <span class="code">%%CA_CODE%%</span>
-    </div>
+  <div class="head">
+    <img class="logo" src="/logo.svg" alt="">
+    <h1>Telefonunu bağla</h1>
+    <p class="lead">Sadece bir kez yapılır, yaklaşık 2 dakika. Sonrasında uygulama her açılışta kendiliğinden bağlanır.</p>
   </div>
 
-  <div class="section" id="progLabel">3 adım</div>
-  <div class="prog"><span id="progText">Adım 1 / 3</span><i id="progBar"></i></div>
+  <div class="stage" id="stage" data-pose="sit" aria-hidden="true">
+    <div class="bubble" id="bubble"><span id="bubbleText"></span></div>
+    <svg viewBox="0 0 360 190">
+      <ellipse class="floor" cx="108" cy="180" rx="104" ry="6"/><ellipse class="floor" cx="270" cy="180" rx="30" ry="5"/>
+      <rect class="couch-back" x="38" y="92" width="136" height="64" rx="19"/>
+      <rect class="couch-seat" x="30" y="146" width="152" height="30" rx="14"/>
+      <g id="mBack"></g>
+      <rect class="couch-arm" x="20" y="120" width="27" height="56" rx="13"/>
+      <rect class="couch-arm" x="165" y="120" width="27" height="56" rx="13"/>
+      <g id="mFront"></g>
+      <g class="prop p-arrow"><path d="M214 128 v26 m-8 -8 l8 8 l8 -8"/></g>
+    </svg>
+  </div>
+
+  <div id="doneCard" hidden>
+    <div class="big"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Hazır</h2>
+    <p>Telefon güvenli bağlantıyı tanıdı. Son adım açılıyor…</p>
+  </div>
+
+  <div class="prog">
+    <div class="cap"><span id="progText">Adım 1 / 3</span></div>
+    <div class="segs" id="progBar"><i></i><i></i><i></i></div>
+  </div>
+
+  <details class="verify">
+    <summary>
+      <span class="shield"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span>
+      <span class="t"><span>Güvenlik kodu</span><b>%%CA_CODE%%</b></span>
+      <svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+    </summary>
+    <div class="why">Yükleyeceğin profilin adında bu kod yazmalı. <b>Farklıysa yükleme:</b> yanlış bilgisayara bağlanıyor olabilirsin. Kod, bilgisayardaki sayfada da aynı görünür.</div>
+  </details>
+
   <ol class="steps" id="iosSteps">
     <li class="step" id="s1">
-      <span class="num"><span>1</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="flex:1;min-width:0">
-        <b>Profili indir</b>
-        <small>Çıkan pencerede <b>İzin Ver</b>, sonra <b>Kapat</b>'a dokun.</small>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Profili indir</h2>
+        <p class="p">Çıkan pencerede <b>İzin Ver</b>, sonra <b>Kapat</b>'a dokun.</p>
         <div class="tip">Daha önce bir CouchRemote profili yüklediysen önce sil: <b>Ayarlar › Genel › VPN ve Aygıt Yönetimi</b>. Bilgisayarın ayarları sıfırlandıysa eski profil artık geçerli değildir.</div>
         <a class="btn" id="dl" href="/ca.mobileconfig">
           <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Profili indir
@@ -125,65 +208,71 @@
       </div>
     </li>
     <li class="step" id="s2">
-      <span class="num"><span>2</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="min-width:0">
-        <b>Profili yükle</b>
-        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Profil İndirildi</span><span class="sep">›</span><span class="chip">Yükle</span></div>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Profili yükle</h2>
+        <div class="path p"><span class="chip">Ayarlar</span><span class="chip">Profil İndirildi</span><span class="chip">Yükle</span></div>
         <div class="tip">Kırmızı "Doğrulanmadı" yazısı normal: profili bir şirket değil, senin bilgisayarın oluşturdu. İçinde yalnızca bu bilgisayara güvenli bağlanmak için bir sertifika var.</div>
         <button class="btn secondary got" data-done="s2">Yükledim</button>
       </div>
     </li>
     <li class="step" id="s3">
-      <span class="num"><span>3</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="min-width:0">
-        <b>Sertifikaya güven</b>
-        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Genel</span><span class="sep">›</span><span class="chip">Hakkında</span><span class="sep">›</span><span class="chip">Sertifika Güven Ayarları</span></div>
-        <small id="s3text">En alttaki <b>CouchRemote Yerel CA</b> anahtarını aç. Sadece <b>%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</small>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6z"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Sertifikaya güven</h2>
+        <div class="path p"><span class="chip">Ayarlar</span><span class="chip">Genel</span><span class="chip">Hakkında</span><span class="chip">Sertifika Güven Ayarları</span></div>
+        <p class="p" id="s3text">En alttaki <b>CouchRemote Yerel CA</b> anahtarını aç. Sadece <b>%%HOST%%</b> için geçerlidir; başka hiçbir siteyi etkilemez.</p>
       </div>
     </li>
   </ol>
 
   <ol class="steps" id="androidSteps" hidden>
     <li class="step" id="a1">
-      <span class="num"><span>1</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="flex:1;min-width:0">
-        <b>Sertifikayı indir</b>
-        <small>İnen dosyanın adındaki kod yukarıdaki güvenlik koduyla aynı olmalı.</small>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Sertifikayı indir</h2>
+        <p class="p">İnen dosyanın adındaki kod yukarıdaki güvenlik koduyla aynı olmalı.</p>
         <a class="btn" id="dlAndroid" href="/ca.crt">
           <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Sertifikayı indir
         </a>
       </div>
     </li>
     <li class="step" id="a2">
-      <span class="num"><span>2</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="min-width:0">
-        <b>Sertifikayı yükle</b>
-        <div class="path"><span class="chip">Ayarlar</span><span class="sep">›</span><span class="chip">Güvenlik ve gizlilik</span><span class="sep">›</span><span class="chip">Diğer güvenlik ayarları</span><span class="sep">›</span><span class="chip">Sertifika yükle</span><span class="sep">›</span><span class="chip">CA sertifikası</span></div>
-        <small>"Yine de yükle"yi seç, sonra indirdiğin dosyayı seç. Ekran kilidi (PIN veya desen) istenebilir.</small>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Sertifikayı yükle</h2>
+        <div class="path p"><span class="chip">Ayarlar</span><span class="chip">Güvenlik ve gizlilik</span><span class="chip">Diğer güvenlik ayarları</span><span class="chip">Sertifika yükle</span><span class="chip">CA sertifikası</span></div>
+        <p class="p">"Yine de yükle"yi seç, sonra indirdiğin dosyayı seç. Ekran kilidi (PIN veya desen) istenebilir.</p>
         <div class="tip">Menü adları telefon markasına göre değişir; Ayarlar'da "sertifika" diye aratabilirsin. Sertifika yalnızca bu bilgisayara güvenli bağlanmak içindir.</div>
         <button class="btn secondary got" data-done="a2">Yükledim</button>
       </div>
     </li>
     <li class="step" id="a3">
-      <span class="num"><span>3</span><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-      <div style="min-width:0">
-        <b>Ana ekrana ekle</b>
-        <small>Bağlantı kurulunca Chrome'da <b>⋮</b> menüsünden <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) de.</small>
+      <span class="num"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/></svg><svg class="ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <div class="body">
+        <h2>Ana ekrana ekle</h2>
+        <p class="p">Bağlantı kurulunca Chrome'da <b>⋮</b> menüsünden <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) de.</p>
       </div>
     </li>
   </ol>
 
-  <div class="section">Durum</div>
   <div id="status" class="waiting">
     <span class="ind"></span>
     <div><b id="stTitle">Profil bekleniyor</b><small id="stText">Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.</small></div>
   </div>
   <button class="btn secondary" id="check">Kontrol et</button>
-  <p style="text-align:center;color:var(--label-3);font-size:12.5px;letter-spacing:.04em;margin-top:22px">Yapımcı: <b>WOOP WOOP</b></p>
+
+  <div class="help">
+    <details><summary>Profil indirilmiyor ya da görünmüyor</summary><div class="ans">Safari'de açtığından emin ol (uygulama içi tarayıcılarda indirme çalışmaz). İndirince <b>Ayarlar</b> uygulamasının en üstünde "Profil İndirildi" satırı çıkar; yoksa "Profili indir"e yeniden dokun.</div></details>
+    <details><summary>Sertifika Güven Ayarları listesinde yok</summary><div class="ans">Profil henüz yüklenmemiştir. Önce <b>Ayarlar › Profil İndirildi › Yükle</b> adımını bitir; sonra bu liste ortaya çıkar.</div></details>
+    <details><summary>Bağlantı kurulamıyor</summary><div class="ans">Telefon ve bilgisayar <b>aynı Wi-Fi ağında</b> olmalı. Bilgisayardaki programın çalıştığını (saatin yanındaki simge) ve ağın "Özel" olduğunu kontrol et.</div></details>
+  </div>
+  <p class="foot">Yapımcı: <b>WOOP WOOP</b></p>
 </div>
 
 <script type="module">
   import { t as tl, lang, ready, translateDom } from '/i18n.js';
+  import { createMascot } from '/mascot.js';
   await ready;
   translateDom();
   const APP_ORIGIN = '%%APP_ORIGIN%%';
@@ -195,12 +284,10 @@
   }
   const code = new URLSearchParams(location.search).get('c') || '';
   const box = document.getElementById('status');
-  const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   let checking = false;
 
   function setStatus(state, title, text) {
     box.className = state;
-    box.querySelector('.ind').innerHTML = state === 'ok' ? CHECK : '';
     document.getElementById('stTitle').textContent = title;
     document.getElementById('stText').textContent = text;
   }
@@ -209,6 +296,38 @@
     updateSteps();
   }
   // Sıradaki adım vurgulanır, sonrakiler soluk kalır
+  // Kanepedeki arkadaş: önce kanepede telefona bakar, sonra kalkıp yürür ve sıradaki adımı gösterir
+  const stage = document.getElementById('stage');
+  const bubble = document.getElementById('bubble');
+  const SAY = { point: 'Şu düğmeye bas!', phone: "Ayarlar'ı aç", shield: 'Sertifikaya güven', cheer: 'Harika, bitti!' };
+  const HOLD = { point: null, phone: 'phone', shield: 'shield', cheer: null };
+  const mascot = createMascot(document.getElementById('mBack'), { x: 104, floor: 176, front: document.getElementById('mFront') });
+  mascot.sitAt(104, 142, { instant: true });
+  let wanted = 'sit', shown = 'sit', mReady = false, bubbleTimer = 0;
+  function setPose(p) { wanted = p; if (mReady) showPose(); }
+  function showPose() {
+    const p = wanted;
+    if (p === shown) return;
+    const first = shown === 'sit';
+    shown = p;
+    stage.dataset.pose = p;
+    bubble.classList.remove('show');
+    mascot.pose(p, { hold: HOLD[p] });
+    if (!first) mascot.nudge();
+    if (p === 'cheer') mascot.confetti();
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => {
+      if (wanted !== p || !SAY[p]) return;
+      document.getElementById('bubbleText').textContent = tl(SAY[p]);
+      bubble.classList.add('show');
+    }, 650);
+  }
+  setTimeout(async () => {
+    await mascot.standUp();
+    await mascot.walkTo(268);
+    mReady = true;
+    showPose();
+  }, 1100);
   function updateSteps() {
     const list = [...document.querySelectorAll(ANDROID ? '#androidSteps .step' : '#iosSteps .step')];
     const cur = list.findIndex((s) => !s.classList.contains('done'));
@@ -217,8 +336,11 @@
       s.classList.toggle('future', cur >= 0 && i > cur);
     });
     const n = cur < 0 ? list.length : cur + 1;
+    setPose(cur < 0 ? 'cheer' : ['point', 'phone', 'shield'][cur]);
     document.getElementById('progText').textContent = tl('Adım') + ` ${n} / ${list.length}`;
-    document.getElementById('progBar').style.setProperty('--p', (cur < 0 ? 100 : (cur / list.length) * 100) + '%');
+    [...document.getElementById('progBar').children].forEach((seg, i) => {
+      seg.className = cur < 0 || i < cur ? 'done' : i === cur ? 'current' : '';
+    });
   }
   for (const b of document.querySelectorAll('[data-done]')) b.onclick = () => markDone(b.dataset.done);
   updateSteps();
@@ -242,8 +364,11 @@
       }
       if (!origin) throw new Error('güvenilmiyor');
       markDone('s1', 's2', 's3', 'a1', 'a2', 'a3');
+      document.body.classList.add('ok');
+      document.getElementById('doneCard').hidden = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setStatus('ok', tl('Hazır'), tl('Son adım açılıyor…'));
-      setTimeout(() => (location.href = origin + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 900);
+      setTimeout(() => (location.href = origin + '/pair' + (code ? '?c=' + encodeURIComponent(code) : '')), 1400);
     } catch {
       if (!quiet) setStatus('waiting', tl('Profil bekleniyor'),
         tl(auto ? 'Adımları tamamlayıp buraya dön; sayfa kendiliğinden devam eder.' : 'Sertifika henüz güvenilir değil. 3. adımdaki anahtarı açtığından emin ol.'));

@@ -1,0 +1,64 @@
+name: Testler
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent
+      - name: Birim testleri
+        run: cargo test --manifest-path agent/Cargo.toml
+      - name: Bağımlılık güvenlik denetimi
+        run: |
+          cargo install cargo-audit --locked
+          cd agent
+          cargo audit
+
+  arayuz:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: tools
+      - name: Hava faresi çekirdeği
+        run: node tools/air-test.mjs
+      - run: npx playwright install webkit
+        working-directory: tools
+      - name: WebKit arayüz testi
+        run: node tools/ui-test.mjs
+
+  protokol:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: tools
+      - name: Programı derle
+        run: cargo build --release --manifest-path agent/Cargo.toml
+      - name: İzole örnekle WebRTC ve protokol (fuzz) testleri
+        shell: pwsh
+        env:
+          COUCH_DATA_DIR: ${{ runner.temp }}\couch-ci
+          COUCH_PORT_BASE: '49100'
+          COUCH_DEV: '1'
+        run: |
+          $p = Start-Process -FilePath agent\target\release\couch-agent.exe -ArgumentList '--background' -PassThru -WindowStyle Hidden
+          Start-Sleep 6
+          try { node tools/rtc-test.mjs; if ($LASTEXITCODE -ne 0) { exit 1 }; foreach ($seed in 1337, 42, 2026) { $env:FUZZ_SEED = $seed; node tools/fuzz-test.mjs; if ($LASTEXITCODE -ne 0) { exit 1 } } }
+          finally { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
