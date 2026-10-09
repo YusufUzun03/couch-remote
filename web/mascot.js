@@ -35,15 +35,15 @@ class Spring {
 }
 
 // Pozlar: eklem açıları (derece). 0 = uzuv aşağı bakar; eksi = karakterin sağına (ekranda sağa), artı = sola.
-const BASE = { tilt: 0, torso: 0, head: 0, lookX: 0, lookY: 0, thighA: 0, kneeA: 0, thighB: 0, kneeB: 0, shA: 8, elA: 6, shB: -8, elB: -6 };
+const BASE = { brow: 0, mouth: 0, tilt: 0, torso: 0, head: 0, lookX: 0, lookY: 0, thighA: 0, kneeA: 0, thighB: 0, kneeB: 0, shA: 8, elA: 6, shB: -8, elB: -6 };
 export const POSES = {
-  stand: {},
-  sit: { torso: -3, thighA: -88, kneeA: 88, thighB: -84, kneeB: 84, shA: 4, elA: -4, shB: -44, elB: -78, head: 6, lookX: 0.5, lookY: 0.5 },
-  point: { shA: 44, elA: -10, shB: -6, elB: -4, head: -5, lookX: -0.5, lookY: 0.7, torso: -2 },
-  phone: { shA: 96, elA: -34, shB: -8, elB: -4, head: -4, lookX: -0.8, lookY: -0.1 },
-  shield: { shA: 98, elA: -30, shB: -12, elB: -6, head: -3, lookX: -0.7, lookY: -0.1 },
-  cheer: { shA: 152, elA: 14, shB: -152, elB: -14, head: 0, lookX: 0, lookY: -0.4 },
-  wave: { shA: 6, elA: 4, shB: -150, elB: -30, head: 3, lookX: 0.3, lookY: 0 },
+  stand: { brow: 0.2 },
+  sit: { brow: 0.12, mouth: 0.1, torso: -3, thighA: -88, kneeA: 88, thighB: -84, kneeB: 84, shA: 4, elA: -4, shB: -44, elB: -78, head: 6, lookX: 0.5, lookY: 0.5 },
+  point: { brow: 0.55, mouth: 0.15, shA: 44, elA: -10, shB: -6, elB: -4, head: -5, lookX: -0.5, lookY: 0.7, torso: -2 },
+  phone: { brow: 0.3, mouth: 0.1, shA: 96, elA: -34, shB: -8, elB: -4, head: -4, lookX: -0.8, lookY: -0.1 },
+  shield: { brow: 0.4, mouth: 0.35, shA: 98, elA: -30, shB: -12, elB: -6, head: -3, lookX: -0.7, lookY: -0.1 },
+  cheer: { brow: 1, mouth: 1, shA: 152, elA: 14, shB: -152, elB: -14, head: 0, lookX: 0, lookY: -0.4 },
+  wave: { brow: 0.7, mouth: 0.55, shA: 6, elA: 4, shB: -150, elB: -30, head: 3, lookX: 0.3, lookY: 0 },
 };
 const HOLD_PROPS = ['phone', 'shield'];
 
@@ -53,44 +53,77 @@ const HOLD_PROPS = ['phone', 'shield'];
  */
 export function createMascot(parent, opts = {}) {
   const S = opts.scale ?? 1;
-  const colors = { skin: '#f2c7a3', hair: '#2c2a33', shirt: 'var(--accent, #0a84ff)', pants: 'var(--mc-pants, #474c63)', shoe: 'var(--mc-shoe, #ffffff)', ...opts.colors };
+  const colors = { skin: '#f2c7a3', hair: '#2c2a33', shirt: 'var(--accent, #0a84ff)', pants: 'var(--mc-pants, #474c63)', shoe: 'var(--mc-shoe, #3a4054)', ...opts.colors };
   const fill = (e, c) => css(e, { fill: c });
   const stroke = (e, c, w) => css(e, { stroke: c, strokeWidth: w, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' });
 
+  const shadow = mk('ellipse', { rx: 21 * S, ry: 4.4 * S }, parent);
+  fill(shadow, '#000');
   const root = mk('g', {}, parent);
   const body = mk('g', {}, root);
 
-  // ---- bacaklar (arkadaki önce)
+  // ---- bacaklar (arkadaki önce): jogger pantolon, bilekte paça, spor ayakkabı
   function leg(offsetX) {
     const hip = mk('g', { transform: `translate(${offsetX},0)` }, body);
     const thigh = mk('g', {}, hip);
-    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: THIGH }, thigh), colors.pants, 11);
+    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: THIGH }, thigh), colors.pants, 12.6);
     const knee = mk('g', { transform: `translate(0,${THIGH})` }, thigh);
-    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: SHIN }, knee), colors.pants, 10.5);
+    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: SHIN }, knee), colors.pants, 11);
+    stroke(mk('line', { x1: 3.4, y1: 0, x2: 3.4, y2: SHIN - 3 }, knee), '#000', 3.2).style.opacity = '0.1'; // ışığa ters taraf
+    const cuff = stroke(mk('line', { x1: 0, y1: SHIN - 5, x2: 0, y2: SHIN - 1.2 }, knee), '#000', 12);
+    cuff.style.opacity = '0.2';
     const ankle = mk('g', { transform: `translate(0,${SHIN})` }, knee);
-    fill(mk('rect', { x: -6, y: -1, width: 15, height: 8, rx: 4 }, ankle), colors.shoe);
+    fill(mk('path', { d: 'M-6.6-2.6H3.4Q10.8-2.6 11 3.2V4.6H-6.6Z' }, ankle), colors.shoe); // üst
+    css(mk('path', { d: 'M-6.6 1.2H4.4q2.6 0 3.8 1.8', fill: 'none' }, ankle), { stroke: 'var(--accent, #0a84ff)', strokeWidth: 1.7, strokeLinecap: 'round' });
+    fill(mk('rect', { x: -7, y: 4.2, width: 18.4, height: 3.1, rx: 1.55 }, ankle), '#c9cdd9'); // taban
+    fill(mk('circle', { cx: 8.4, cy: 0.2, r: 0.9 }, ankle), '#9aa0b4'); // bağcık deliği
     return { hip, thigh, knee, ankle };
   }
-  const legB = leg(5);
-  const legA = leg(-5);
+  const legB = leg(5.2);
+  const legA = leg(-5.2);
 
-  // ---- gövde
+  // ---- gövde: kapüşonlu üst (yaka, bağcık, kanguru cebi, etek bandı) ve ışık/gölge
   const torso = mk('g', {}, body);
   const torsoInner = mk('g', {}, torso);
-  fill(mk('rect', { x: -15, y: -TORSO, width: 30, height: TORSO + 6, rx: 14 }, torsoInner), colors.shirt);
+  const clipId = 'mc-torso-' + (createMascot.n = (createMascot.n || 0) + 1);
+  const clip = mk('clipPath', { id: clipId }, torsoInner);
+  mk('rect', { x: -16, y: -TORSO, width: 32, height: TORSO + 7, rx: 15 }, clip);
+  fill(mk('rect', { x: -16, y: -TORSO, width: 32, height: TORSO + 7, rx: 15 }, torsoInner), colors.shirt);
+  const lit = mk('g', { 'clip-path': `url(#${clipId})` }, torsoInner);
+  fill(mk('rect', { x: 5, y: -TORSO - 2, width: 14, height: TORSO + 12 }, lit), '#000').style.opacity = '0.13'; // sağ taraf gölge
+  fill(mk('rect', { x: -16, y: -TORSO - 2, width: 5, height: TORSO + 12 }, lit), '#fff').style.opacity = '0.14'; // sol kenar ışık
+  fill(mk('rect', { x: -17, y: 0.5, width: 34, height: 8, rx: 3 }, lit), '#000').style.opacity = '0.2'; // etek bandı
+  const pocket = mk('path', { d: 'M-10-13H10q2.4 0 2.8 3l1.4 9.4q.2 1.8-1.6 1.8H-12.6q-1.8 0-1.6-1.8L-12.8-10q.4-3 2.8-3Z' }, torsoInner);
+  fill(pocket, '#000').style.opacity = '0.12';
+  const pocketHi = mk('path', { d: 'M-10-13H10q2.4 0 2.8 3' }, torsoInner);
+  stroke(pocketHi, '#fff', 1.1).style.opacity = '0.3';
+  const hood = mk('path', { d: `M-9.6 ${-TORSO + 1}Q0 ${-TORSO + 11} 9.6 ${-TORSO + 1}` }, torsoInner); // kapüşon yakası
+  stroke(hood, '#000', 4.6).style.opacity = '0.2';
+  const hoodHi = mk('path', { d: `M-9.6 ${-TORSO + 1}Q0 ${-TORSO + 11} 9.6 ${-TORSO + 1}` }, torsoInner);
+  stroke(hoodHi, '#fff', 1.4).style.opacity = '0.4';
+  for (const sx of [-3.8, 3.8]) { // bağcıklar
+    stroke(mk('path', { d: `M${sx} ${-TORSO + 7.5}q${sx * 0.2} 4 ${sx * 0.1} 9` }, torsoInner), '#fff', 1.3).style.opacity = '0.85';
+    fill(mk('circle', { cx: sx * 1.05, cy: -TORSO + 17.2, r: 1.3 }, torsoInner), '#fff').style.opacity = '0.9';
+  }
 
-  // ---- kollar (omuz gövdenin üstünde)
+  // ---- kollar: kol bandı (manşet), başparmaklı el
   function arm(sx) {
     const sh = mk('g', { transform: `translate(${sx},${-TORSO + 7})` }, torso);
-    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: UPPER }, sh), colors.shirt, 9);
+    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: UPPER }, sh), colors.shirt, 9.6);
+    stroke(mk('line', { x1: sx > 0 ? 3.2 : -3.2, y1: 1, x2: sx > 0 ? 3.2 : -3.2, y2: UPPER - 1 }, sh), '#000', 2.8).style.opacity = '0.1';
     const el = mk('g', { transform: `translate(0,${UPPER})` }, sh);
-    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: FORE }, el), colors.shirt, 8.5);
-    const hand = mk('g', { transform: `translate(0,${FORE + 1})` }, el);
-    fill(mk('circle', { r: 5 }, hand), colors.skin);
+    fill(mk('circle', { r: 4.8 }, el), colors.shirt);
+    stroke(mk('line', { x1: 0, y1: 0, x2: 0, y2: FORE }, el), colors.shirt, 9);
+    const rib = stroke(mk('line', { x1: 0, y1: FORE - 3.6, x2: 0, y2: FORE + 0.2 }, el), '#000', 9.6);
+    rib.style.opacity = '0.2';
+    const hand = mk('g', { transform: `translate(0,${FORE + 1.6})` }, el);
+    const thumb = mk('ellipse', { cx: sx > 0 ? -3.5 : 3.5, cy: -1.8, rx: 1.9, ry: 3, transform: `rotate(${sx > 0 ? 24 : -24} ${sx > 0 ? -3.5 : 3.5} -1.8)` }, hand);
+    fill(thumb, colors.skin);
+    fill(mk('circle', { r: 5.1 }, hand), colors.skin);
     return { sh, el, hand };
   }
-  const armB = arm(13);
-  const armA = arm(-13);
+  const armB = arm(13.4);
+  const armA = arm(-13.4);
 
   // ---- elde tutulan nesneler (elin dönüşünü izler, dik kalır). Her iki el için ayrı kopya.
   function makeProps(hand) {
@@ -100,11 +133,13 @@ export function createMascot(parent, opts = {}) {
     fill(mk('rect', { x: -11, y: -19, width: 22, height: 38, rx: 5.5 }, phone), '#111');
     css(phone.firstChild, { stroke: 'var(--accent, #0a84ff)', strokeWidth: 1.4 });
     fill(mk('rect', { x: -8.5, y: -15.5, width: 17, height: 31, rx: 3 }, phone), 'var(--accent, #0a84ff)');
+    fill(mk('rect', { x: -3.4, y: -17.6, width: 6.8, height: 1.6, rx: 0.8 }, phone), '#000').style.opacity = '0.6';
     const gear = mk('g', {}, phone);
     stroke(mk('circle', { r: 3.6 }, gear), '#fff', 1.8);
     stroke(mk('path', { d: 'M0-7.2v2.4M0 4.8v2.4M-7.2 0h2.4M4.8 0h2.4' }, gear), '#fff', 1.8);
     const shield = mk('g', {}, upright);
     fill(mk('path', { d: 'M0-20l15 5.5v13c0 10-6.5 16.5-15 19.5-8.5-3-15-9.5-15-19.5v-13z' }, shield), 'var(--green, #34c759)');
+    fill(mk('path', { d: 'M0-20l15 5.5v13c0 10-6.5 16.5-15 19.5z' }, shield), '#000').style.opacity = '0.12';
     stroke(mk('path', { d: 'M-7.5-1l5 5 9-10' }, shield), '#fff', 3);
     return { upright, phone, shield };
   }
@@ -112,17 +147,41 @@ export function createMascot(parent, opts = {}) {
   const propsB = makeProps(armB.hand);
   const OFFS = { phone: [-2, -18], shield: [-2, -20] };
 
-  // ---- baş
-  const head = mk('g', { transform: `translate(0,${-TORSO - 12})` }, torso);
-  fill(mk('circle', { r: 14.8 }, head), colors.skin);
-  const hair = mk('path', { d: 'M-15.2-1.6a15.4 15.4 0 0 1 30.4 0c-7.4-4.8-19.8-6-30.4 0z' }, head);
-  fill(hair, colors.hair);
+  // ---- baş: kulaklar, boyun, yüz, göz parlaması, burun, yan ayrık saç
+  const head = mk('g', { transform: `translate(0,${-TORSO - 13})` }, torso);
+  for (const sx of [-16.6, 16.6]) {
+    fill(mk('circle', { cx: sx, cy: 3, r: 3.5 }, head), colors.skin);
+    fill(mk('circle', { cx: sx * 0.99, cy: 3.2, r: 1.7 }, head), '#d98f70').style.opacity = '0.55';
+  }
+  fill(mk('rect', { x: -5.6, y: 10, width: 11.2, height: 10, rx: 3.4 }, head), colors.skin);
+  fill(mk('ellipse', { cx: 0, cy: 14.6, rx: 8.6, ry: 3.2 }, head), '#b86a4a').style.opacity = '0.2'; // çene altı gölgesi
+  fill(mk('circle', { r: 16.6 }, head), colors.skin);
+  for (const sx of [-10.4, 10.4]) { const c = mk('circle', { cx: sx, cy: 7.4, r: 3.4 }, head); fill(c, '#ff8f8f'); c.style.opacity = '0.34'; }
+  stroke(mk('path', { d: 'M-1.5 6.2q1.5 1.9 3 0' }, head), '#d38c6b', 1.3);
   const eyes = mk('g', {}, head);
-  const eyeL = fill(mk('circle', { cx: -5, cy: 2, r: 1.7 }, eyes), colors.hair);
-  const eyeR = fill(mk('circle', { cx: 5, cy: 2, r: 1.7 }, eyes), colors.hair);
-  const smile = mk('path', { d: 'M-4.5 7.6q4.5 3.4 9 0' }, head);
-  stroke(smile, colors.hair, 1.8);
-  for (const e of [eyeL, eyeR]) css(e, { transformBox: 'fill-box', transformOrigin: 'center' });
+  function eye(cx) {
+    const g = mk('g', {}, eyes);
+    fill(mk('ellipse', { cx, cy: 2.8, rx: 2.15, ry: 2.6 }, g), colors.hair);
+    fill(mk('circle', { cx: cx + 0.75, cy: 1.9, r: 0.8 }, g), '#fff');
+    fill(mk('circle', { cx: cx - 0.7, cy: 3.9, r: 0.4 }, g), '#fff').style.opacity = '0.7';
+    css(g, { transformBox: 'fill-box', transformOrigin: 'center' });
+    return g;
+  }
+  const eyeL = eye(-5.9);
+  const eyeR = eye(5.9);
+  // saç: yan ayrık, alnı hafif örten; açık bir vurgu çizgisiyle
+  const hair = mk('g', {}, head);
+  fill(mk('path', { d: 'M-17.6 1.6C-18.8-10.8-10.6-19.2 0-19.2S18.8-10.8 17.6 1.6C16-4 11.4-8.8 4.6-9.6C-1.6-5.4-8.8-3.6-15.2-2.8C-16.6-1.8-17.2-.2-17.6 1.6Z' }, hair), colors.hair);
+  stroke(mk('path', { d: 'M-10.6-13.6Q-4-18 3.6-16.2' }, hair), '#fff', 1.8).style.opacity = '0.25';
+  const browL = mk('path', { d: 'M-8.8 -1.4q3.4-2.1 6.8 0' }, head);
+  const browR = mk('path', { d: 'M2 -1.4q3.4-2.1 6.8 0' }, head);
+  for (const bw of [browL, browR]) stroke(bw, colors.hair, 1.7);
+  const smile = mk('path', { d: 'M-4.8 9q4.8 3.6 9.6 0' }, head);
+  stroke(smile, colors.hair, 1.9);
+  const grin = mk('path', { d: 'M-5.9 7.8q5.9 9.6 11.8 0z' }, head);
+  fill(grin, colors.hair);
+  const tongue = mk('path', { d: 'M-2.8 12.2q2.8-2.4 5.6 0q-2.8 2.8-5.6 0z' }, head);
+  fill(tongue, '#ff7a85');
 
   // ---- durum
   const ch = {
@@ -139,6 +198,7 @@ export function createMascot(parent, opts = {}) {
     shB: new Spring(BASE.shB, 15, 0.52), elB: new Spring(BASE.elB, 15, 0.55),
     phoneA: new Spring(0, 16, 0.55), shieldA: new Spring(0, 16, 0.55), phoneB: new Spring(0, 16, 0.55), shieldB: new Spring(0, 16, 0.55),
     squash: new Spring(0, 18, 0.45),
+    brow: new Spring(0, 16, 0.6), mouth: new Spring(0, 14, 0.7),
   };
   const st = {
     floor: opts.floor ?? 176,
@@ -151,6 +211,7 @@ export function createMascot(parent, opts = {}) {
     jump: null,
     time: 0,
     blinkAt: 2.5,
+    nextIdle: 2.2, glanceUntil: 0, tapUntil: 0, baseLook: { x: 0, y: 0 },
     blink: 0,
     dir: 1,
     reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -163,12 +224,19 @@ export function createMascot(parent, opts = {}) {
     for (const k of Object.keys(BASE)) if (ch[k]) ch[k].t = p[k];
     ch.thighA.t = p.thighA; ch.kneeA.t = p.kneeA; ch.thighB.t = p.thighB; ch.kneeB.t = p.kneeB;
     ch.torso.t = p.torso; ch.tilt.t = p.tilt;
+    st.baseLook = { x: p.lookX, y: p.lookY };
     if (instant || st.reduced) for (const k of Object.keys(ch)) ch[k].snap(ch[k].t);
   }
 
   // ---- çizim
   function render() {
     const hx = ch.hipX.x;
+    const air = Math.max(0, (st.floor - STAND_HIP) - ch.hipY.x - (st.hopY || 0)); // zeminden yükseklik
+    const shK = Math.max(0.45, 1 - air / 70);
+    shadow.setAttribute('cx', (hx + (st.standing ? 0 : 14 * S)).toFixed(1));
+    shadow.setAttribute('cy', (st.floor + 2).toFixed(1));
+    shadow.setAttribute('transform', `translate(${((st.standing ? hx : hx + 14 * S) * (1 - shK)).toFixed(1)},${((st.floor + 2) * (1 - shK)).toFixed(1)}) scale(${shK.toFixed(3)})`);
+    shadow.style.opacity = String((0.16 * shK).toFixed(3));
     const sq = ch.squash.x; // + = ezilme
     root.setAttribute('transform', `translate(${hx.toFixed(2)},${(ch.hipY.x + (st.hopY || 0)).toFixed(2)}) scale(${S})`);
     body.setAttribute('transform', `rotate(${ch.tilt.x.toFixed(2)}) scale(${(1 + sq * 0.05).toFixed(3)},${(1 - sq * 0.06).toFixed(3)})`);
@@ -196,7 +264,7 @@ export function createMascot(parent, opts = {}) {
     armA.sh.setAttribute('transform', `translate(-13,${-TORSO + 7}) rotate(${sA.toFixed(2)})`);
     armA.el.setAttribute('transform', `translate(0,${UPPER}) rotate(${ch.elA.x.toFixed(2)})`);
     armB.sh.setAttribute('transform', `translate(13,${-TORSO + 7}) rotate(${sB.toFixed(2)})`);
-    armB.el.setAttribute('transform', `translate(0,${UPPER}) rotate(${(ch.elB.x + (st.wave || 0)).toFixed(2)})`);
+    armB.el.setAttribute('transform', `translate(0,${UPPER}) rotate(${(ch.elB.x + (st.wave || 0) + (st.tap || 0)).toFixed(2)})`);
     // nesneler: elin toplam dönüşünü tersine çevirerek dik durur
     const totalA = ch.torso.x + ch.tilt.x + sA + ch.elA.x;
     const totalB = ch.torso.x + ch.tilt.x + sB + ch.elB.x + (st.wave || 0);
@@ -209,10 +277,21 @@ export function createMascot(parent, opts = {}) {
         P[n].setAttribute('transform', `translate(${OFFS[n][0] * sc},${OFFS[n][1] * sc}) scale(${((0.15 + 0.85 * Math.min(1.12, k)) * sc).toFixed(3)})`);
       }
     }
-    head.setAttribute('transform', `translate(0,${-TORSO - 12}) rotate(${(ch.head.x + Math.sin(st.time * 0.9) * 1.6).toFixed(2)})`);
+    head.setAttribute('transform', `translate(0,${-TORSO - 13}) rotate(${(ch.head.x + Math.sin(st.time * 0.9) * 1.6).toFixed(2)})`);
     const lx = ch.lookX.x, ly = ch.lookY.x;
     eyes.setAttribute('transform', `translate(${(lx * 2.6).toFixed(2)},${(ly * 1.6).toFixed(2)})`);
     smile.setAttribute('transform', `translate(${(lx * 1.6).toFixed(2)},0)`);
+    const brow = ch.brow.x;
+    const by = -brow * 2.4 + (st.blink > 0 ? 0.6 : 0);
+    const bt = `translate(0,${by.toFixed(2)}) rotate(${(-Math.max(0, brow) * 4).toFixed(1)} -5.4 -4)`;
+    browL.setAttribute('transform', bt);
+    browR.setAttribute('transform', `translate(0,${by.toFixed(2)}) rotate(${(Math.max(0, brow) * 4).toFixed(1)} 5.4 -4)`);
+    const mo = Math.max(0, Math.min(1, ch.mouth.x));
+    const open = Math.max(0, Math.min(1, (mo - 0.3) * 4)); // gülümseme ile açık gülüş keskin geçer, iki ağız üst üste görünmez
+    smile.style.opacity = String(1 - open);
+    grin.style.opacity = tongue.style.opacity = String(open);
+    grin.setAttribute('transform', `scale(1,${(0.4 + 0.6 * mo).toFixed(3)})`);
+    tongue.setAttribute('transform', `translate(0,${((1 - mo) * -2.5).toFixed(2)})`);
     const b = st.blink;
     for (const e of [eyeL, eyeR]) e.style.transform = `scaleY(${b > 0 ? 0.12 : 1})`;
     hair.setAttribute('transform', `translate(${(lx * 0.8).toFixed(2)},0)`);
@@ -228,6 +307,16 @@ export function createMascot(parent, opts = {}) {
     // göz kırpma
     if (st.time > st.blinkAt) { st.blink = 0.14; st.blinkAt = st.time + 2.4 + Math.random() * 3; }
     if (st.blink > 0) st.blink -= dt;
+
+    // boşta canlılık: kanepede arada ekrana/bize bakar ve telefona dokunur
+    if (!st.standing && st.time > st.nextIdle && !st.reduced) {
+      st.glanceUntil = st.time + 0.9;
+      st.tapUntil = st.time + 1.6;
+      st.nextIdle = st.time + 3.6 + Math.random() * 3;
+    }
+    if (!st.standing && st.glanceUntil > st.time) { ch.lookX.t = -0.1; ch.lookY.t = -0.75; ch.brow.t = 0.5; }
+    else if (!st.standing) { ch.lookX.t = st.baseLook.x; ch.lookY.t = st.baseLook.y; ch.brow.t = 0.12; }
+    st.tap = !st.standing && st.tapUntil > st.time ? Math.sin(st.time * 17) * 5 * Math.min(1, (st.tapUntil - st.time) * 2) : 0;
 
     // yürüme hedefi
     if (st.walkTo != null && !st.jump) {
@@ -382,7 +471,7 @@ export function createMascot(parent, opts = {}) {
     },
     /** Konfeti: karakterin üstünden fışkırır */
     confetti(n = 26) { if (!st.reduced) burst(parent, ch.hipX.x, ch.hipY.x - 70 * S, n); },
-    destroy() { alive = false; cancelAnimationFrame(raf); root.remove(); },
+    destroy() { alive = false; cancelAnimationFrame(raf); root.remove(); shadow.remove(); },
     current: 'stand',
   };
   applyPose('stand', { instant: true });

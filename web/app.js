@@ -2069,15 +2069,15 @@ $('openFix').onclick = () => { closeSheets(); openSheet('fixSheet'); };
 // ============================================================ ilk açılış turu
 const tab = (v) => `#tabs button[data-view="${v}"]`;
 const TOUR = [
-  { title: 'Hoş geldin!', text: 'Telefonun artık bilgisayarının kumandası. 30 saniyede nerede ne olduğunu göstereyim.' },
-  { target: tab('pad'), before: () => showView('pad'), title: 'Touchpad', text: 'Parmağını kaydırarak imleci oynat. Dokun: tıkla. İki parmakla kaydır: sayfayı kaydır. İki parmakla dokun: sağ tık.' },
-  { target: tab('kbd'), before: () => showView('kbd'), title: 'Klavye', text: 'Telefonla bilgisayara yaz. Ctrl, Alt, Win ve ok tuşları şeridi de burada.' },
-  { target: tab('remote'), before: () => showView('remote'), title: 'Kumanda', text: "Oynat, duraklat, ses ve Netflix, YouTube gibi servislere tek dokunuş. TV'ni de buradan yönetebilirsin." },
-  { target: tab('apps'), before: () => showView('apps'), title: 'Uygulamalar', text: 'Bilgisayardaki uygulama ve oyunları aç, açık pencereler arasında geç.' },
-  { target: tab('share'), before: () => showView('share'), title: 'Aktar', text: 'Panoyu ve dosyaları telefonla bilgisayar arasında gönder.' },
+  { title: 'Hoş geldin!', text: 'Selam! Telefonun artık bilgisayarının kumandası. Gel, nerede ne var 30 saniyede göstereyim.' },
+  { target: tab('pad'), before: () => showView('pad'), title: 'Touchpad', text: 'Parmağınla gez, imleç peşinden gelsin. Dokun: tıkla. İki parmakla kaydır: sayfa kayar. İki parmakla dokun: sağ tık.' },
+  { target: tab('kbd'), before: () => showView('kbd'), title: 'Klavye', text: 'Telefonla bilgisayara yaz. Ctrl, Alt, Win ve ok tuşları şeridi de burada, kısayollar parmağının ucunda.' },
+  { target: tab('remote'), before: () => showView('remote'), title: 'Kumanda', text: "Film mi açıyorsun? Oynat, duraklat, sesi ayarla. Netflix ve YouTube gibi servislere tek dokunuşla geç. TV'ni de buradan yönetebilirsin." },
+  { target: tab('apps'), before: () => showView('apps'), title: 'Uygulamalar', text: 'Bilgisayardaki uygulama ve oyunları aç, açık pencereler arasında geç. Kanepeden kalkmana gerek yok.' },
+  { target: tab('share'), before: () => showView('share'), title: 'Aktar', text: 'Panoyu ve dosyaları telefon ile bilgisayar arasında gönder.' },
   { target: '#devBtn', before: () => showView('pad'), title: 'Cihaz seç', text: "Buradan bilgisayar ile eklediğin TV'ler arasında geçiş yaparsın." },
-  { target: '#settingsBtn', title: 'Ayarlar', text: 'Tema, hassasiyet, güç menüsü ve Siri kestirmeleri burada. Bu turu da buradan tekrar açabilirsin.' },
-  { title: 'Hazırsın!', text: "İyi eğlenceler. Takılırsan Ayarlar'dan turu yeniden başlatabilirsin." },
+  { target: '#settingsBtn', title: 'Ayarlar', text: 'Tema, hassasiyet, güç menüsü ve Siri kestirmeleri burada. Turu da buradan yeniden açabilirsin.' },
+  { title: 'Hazırsın!', text: "Hepsi bu, iyi eğlenceler! Takılırsan Ayarlar'dan turu yeniden başlatabilirsin." },
 ];
 function startTour() {
   closeSheets();
