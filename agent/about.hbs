@@ -1,0 +1,28 @@
+# Third-party licenses
+
+CouchRemote itself is released under the MIT License (see `LICENSE`). The program is built from the open-source
+components listed below, each under its own license. This file is generated with `cargo about`.
+
+The in-app brand logos (Netflix, YouTube, Spotify, ...) come from [Simple Icons](https://simpleicons.org) (CC0).
+The logos remain trademarks of their respective owners and are used only to identify the services the app can open.
+CouchRemote is not affiliated with or endorsed by any of them.
+
+## Summary
+
+{{#each overview}}
+- **{{{name}}}**: {{count}} package(s)
+{{/each}}
+
+{{#each licenses}}
+## {{{name}}}
+
+Used by:
+{{#each used_by}}
+- {{crate.name}} {{crate.version}}{{#if crate.repository}} ({{{crate.repository}}}){{/if}}
+{{/each}}
+
+```
+{{{text}}}
+```
+
+{{/each}}

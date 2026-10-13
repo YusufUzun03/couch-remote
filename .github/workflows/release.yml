@@ -1,0 +1,49 @@
+name: Release build
+
+# Sürüm derlemesi GitHub'da, kaynak koddan otomatik yapılır (kod imzalama programları bunu şart koşar:
+# imzalanan dosya doğrudan depodaki koddan çıkmış olmalı). Etiket (v*) gönderilince çalışır ve TASLAK bir release oluşturur;
+# yayınlamak için release'i GitHub'da gözden geçirip "Publish" demek gerekir. Elle çalıştırılırsa yalnızca derleme çıktısı üretir.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: agent
+      - name: Derle
+        run: cargo build --release --locked --manifest-path agent/Cargo.toml
+      - name: Dosyayı ve SHA-256'yı hazırla
+        shell: pwsh
+        run: |
+          Copy-Item agent/target/release/couch-agent.exe CouchRemote.exe
+          $h = (Get-FileHash CouchRemote.exe -Algorithm SHA256).Hash.ToLower()
+          "$h  CouchRemote.exe" | Out-File -Encoding ascii SHA256SUMS.txt
+          "SHA-256: $h"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CouchRemote
+          path: |
+            CouchRemote.exe
+            SHA256SUMS.txt
+      - name: Taslak release oluştur (yalnızca etiketle)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $ver = $tag.TrimStart('v')
+          $notes = "docs/release-notes-$ver.md"
+          if (-not (Test-Path $notes)) { throw "Sürüm notu yok: $notes" }
+          $hash = (Get-FileHash CouchRemote.exe -Algorithm SHA256).Hash.ToLower()
+          (Get-Content $notes -Raw).Replace('<SHA256>', $hash) | Set-Content -Encoding utf8 release-notes.txt
+          gh release create $tag CouchRemote.exe SHA256SUMS.txt --draft --title $tag --notes-file release-notes.txt

@@ -25,6 +25,10 @@ Bir kez eşleştir; sonrasında uygulamayı açman yeterli.
 
 > Dosya henüz kod imzalı değil: Windows SmartScreen uyarısında "Ek bilgi → Yine de çalıştır" gerekir.
 
+## Destek
+
+CouchRemote ücretsiz ve açık kaynak (MIT). İşine yarıyorsa geliştirilmesine [GitHub Sponsors](https://github.com/sponsors/YusufUzun03) üzerinden destek olabilirsin. Destekler kod imzalama (Windows SmartScreen uyarısını kaldırır) ve test cihazları gibi masraflara gider. Hata bildirmek ve yıldız vermek de aynı derecede yardımcı olur.
+
 ## Nasıl çalışır
 
 ```
@@ -65,3 +69,7 @@ node preview-server.mjs        # arayüz önizlemesi: http://127.0.0.1:47890/pre
 ## Lisans
 
 [MIT](LICENSE) © 2026 Yusuf Uzun
+
+Üçüncü taraf bileşenler ve lisansları: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+
+**Ad ve logo:** MIT lisansı kodu kapsar, "CouchRemote" adını ve logosunu kapsamaz. Değiştirilmiş bir sürüm yayınlarsan lütfen farklı bir ad ver, kullanıcılar aslıyla karıştırmasın. Uygulamadaki marka logoları (Netflix, YouTube, Spotify, ...) sahiplerine aittir ve yalnızca uygulamanın açabildiği servisleri belirtmek için kullanılır; CouchRemote bu markalarla bağlantılı değildir ve onlar tarafından onaylanmamıştır.

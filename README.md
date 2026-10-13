@@ -25,6 +25,10 @@ See [INSTALL.md](INSTALL.md) (install on the PC + pair your iPhone, ~3 min). Rea
 
 > The file isn't code-signed yet: Windows SmartScreen will ask you to click "More info → Run anyway".
 
+## Support
+
+CouchRemote is free and open source (MIT). If it's useful to you, you can support its development on [GitHub Sponsors](https://github.com/sponsors/YusufUzun03). Sponsorships go toward costs such as code signing (which removes the Windows SmartScreen warning) and testing devices. Bug reports and stars help just as much.
+
 ## How it works
 
 ```
@@ -65,3 +69,7 @@ node preview-server.mjs        # UI preview: http://127.0.0.1:47890/preview
 ## License
 
 [MIT](LICENSE) © 2026 Yusuf Uzun
+
+Third-party components and their licenses: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+
+**Name and logo:** the MIT License covers the code, not the "CouchRemote" name or logo. If you publish a modified version, please give it a different name so users don't mistake it for the original. Brand logos shown in the app (Netflix, YouTube, Spotify, ...) belong to their owners and are used only to identify the services the app can open; CouchRemote is not affiliated with or endorsed by them.

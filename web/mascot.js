@@ -225,7 +225,7 @@ export function createMascot(parent, opts = {}) {
     ch.thighA.t = p.thighA; ch.kneeA.t = p.kneeA; ch.thighB.t = p.thighB; ch.kneeB.t = p.kneeB;
     ch.torso.t = p.torso; ch.tilt.t = p.tilt;
     st.baseLook = { x: p.lookX, y: p.lookY };
-    if (instant || st.reduced) for (const k of Object.keys(ch)) ch[k].snap(ch[k].t);
+    if (instant) for (const k of Object.keys(ch)) ch[k].snap(ch[k].t);
   }
 
   // ---- çizim
@@ -362,7 +362,7 @@ export function createMascot(parent, opts = {}) {
   }
 
   // ---- genel API
-  const sleep = (ms) => new Promise((r) => setTimeout(r, st.reduced ? 0 : ms));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const api = {
     root,
     /** Duran bir poz (kollar, kafa, nesne). */
@@ -402,7 +402,6 @@ export function createMascot(parent, opts = {}) {
     async standUp() {
       if (opts.front) opts.front.append(root); // kalkınca kolçağın önünde yürür
       api.hold(null);
-      if (st.reduced) { st.standing = true; ch.hipY.t = st.floor - STAND_HIP; applyPose('stand', { instant: true }); return; }
       st.tiltBase = 11; ch.shA.t = 34; ch.shB.t = -34; ch.elA.t = -14; ch.elB.t = 14; // ellerle itiş
       await sleep(260);
       st.standing = true;
@@ -416,7 +415,6 @@ export function createMascot(parent, opts = {}) {
     },
     walkTo(x) {
       return new Promise((res) => {
-        if (st.reduced) { ch.hipX.snap(x); return res(); }
         st.walkTo = x; st._arrive = res;
       });
     },
@@ -424,7 +422,8 @@ export function createMascot(parent, opts = {}) {
     jumpTo(x, floor, { dur = 520, height = 26 } = {}) {
       return new Promise((res) => {
         const y1 = floor - STAND_HIP;
-        if (st.reduced) { ch.hipX.snap(x); ch.hipY.snap(y1); st.floor = floor; return res(); }
+        // hareketi azalt: zıplama yerine yeni zemine yürüyerek geç
+        if (st.reduced) { st.floor = floor; ch.hipY.snap(y1); st.walkTo = x; st._arrive = res; return; }
         st.floor = floor; st.walkTo = null; st.vx = 0;
         st.dir = Math.sign(x - ch.hipX.x) || st.dir;
         // çömelip fırla
