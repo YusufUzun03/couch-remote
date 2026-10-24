@@ -46,6 +46,8 @@ struct WebView: UIViewRepresentable {
               orig.apply(console, arguments);
             };
           });
+          // The shell is the installed app: skip the "Add to Home Screen" guide the web page shows in Safari.
+          try { Object.defineProperty(navigator, 'standalone', { get: function () { return true; } }); } catch (e) {}
           window.addEventListener('error', function (e) { send('error', e.message); });
           window.addEventListener('unhandledrejection', function (e) { send('rejection', String(e.reason)); });
           var Native = window.WebSocket;
