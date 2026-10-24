@@ -19,6 +19,7 @@ const mock = {
   pairing: { pin: '482915', expiresIn: 540, setupUrl: 'http://couch-test.local:47800/setup?c=abc', ipUrl: 'http://192.168.1.20:47800/setup?c=abc', qr: QR, setupSeen: false, profileSeen: false },
   shortcut: { url: 'https://couch-test.local:47801/api/v1/action/playpause', token: 'TESTTOKEN', actions: [{ id: 'playpause', params: '', about: 'Oynat' }], last: null },
   latency: { oneWay: null, proc: null, rate: 0 }, reports: [],
+  getApp: { url: 'https://yusufuzun03.github.io/couch-remote/', qr: QR },
 };
 // Performans ölçümü (?perf=1): zamanlayıcı ve animasyon karesi uyanışlarını sayar → window.__wake
 const PERF_JS = `(() => {

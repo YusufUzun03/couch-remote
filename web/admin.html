@@ -155,7 +155,7 @@
         <p class="lead" id="heroLead">Sadece bir kez. Sonrasında telefondaki simgeye dokunmak yeterli.</p>
         <ol class="tracker" id="tracker">
           <li data-s="1" class="active"><span class="mark"><span class="num">1</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-            <div><b>QR kodu okut</b><small>iPhone'un <b>Kamera</b> uygulamasını QR koda tut, çıkan bağlantıya dokun.</small></div></li>
+            <div><b>QR kodu okut</b><small>CouchRemote uygulamasında <b>QR kodu okut</b>'a dokun. Uygulaman yoksa iPhone'un <b>Kamera</b> uygulamasını QR koda tut.</small></div></li>
           <li data-s="2" class="pending"><span class="mark"><span class="num">2</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
             <div><b>Güvenlik profilini yükle</b><small>Açılan sayfadaki adımları izle (bir kez, ~1 dk). Profil adında şu kod görünmeli: <span class="code" id="caCode"></span></small></div></li>
           <li data-s="3" class="pending"><span class="mark"><span class="num">3</span><svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
@@ -164,6 +164,10 @@
         <details class="pin-fb" id="pinFb">
           <summary>QR okutamıyor musun? PIN ile bağla</summary>
           <div id="pinBox"></div>
+        </details>
+        <details class="pin-fb" id="getAppFb">
+          <summary>iPhone'da uygulama yok mu?</summary>
+          <div id="getAppBox"></div>
         </details>
         <div class="row-actions" id="cancelAdd" hidden><button class="plain" id="cancelAddBtn">Vazgeç</button></div>
       </div>
@@ -313,6 +317,13 @@
     showHero('connect');
     $('cancelAdd').hidden = !(n > 0 && addMode);
     $('caCode').textContent = s.caCode;
+    if (s.getApp && $('getAppBox').dataset.url !== s.getApp.url) {
+      $('getAppBox').dataset.url = s.getApp.url;
+      $('getAppBox').innerHTML = `
+        <p class="muted" style="margin:0 0 10px">iPhone'unun kamerasıyla bu kodu okut; uygulamanın indirme sayfası açılır.</p>
+        <div class="qr" style="width:160px">${s.getApp.qr}</div>
+        <p class="muted" style="margin-top:10px"><code>${esc(s.getApp.url)}</code></p>`;
+    }
     renderTracker(p);
     if (lastQr !== p.setupUrl) {
       lastQr = p.setupUrl;

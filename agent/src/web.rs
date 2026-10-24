@@ -762,6 +762,9 @@ async fn backup_import(body: Bytes) -> Response {
     }
 }
 
+/// Landing page that leads a phone to the iPhone app (App Store link lives in site/index.html).
+const GET_APP_URL: &str = "https://yusufuzun03.github.io/couch-remote/";
+
 async fn status(State(app): State<S>) -> Response {
     let HTTP_PORT = crate::http_port();
     app.ensure_pairing();
@@ -788,10 +791,14 @@ async fn status(State(app): State<S>) -> Response {
         .map(|d| json!({ "id": d.id, "name": d.name, "pairedAt": d.paired_at, "lastSeen": d.last_seen, "via": d.via, "keyMode": d.key_mode, "origin": d.origin }))
         .collect();
     let origin = app.local_origin();
+    let get_app_qr = qrcode::QrCode::new(GET_APP_URL.as_bytes())
+        .map(|c| c.render::<qrcode::render::svg::Color>().min_dimensions(160, 160).quiet_zone(true).build())
+        .unwrap_or_default();
     json_resp(
         StatusCode::OK,
         json!({
             "host": app.host, "lanIp": app.lan_ip, "pairing": pairing, "version": env!("CARGO_PKG_VERSION"),
+            "getApp": { "url": GET_APP_URL, "qr": get_app_qr },
             "pairingLocked": app.pairing_locked(), "caCode": app.ca_code,
             "notice": crate::state::notice(),
             "unknown": { "count": app.unknown_attempts.load(Ordering::Relaxed), "lastAt": *app.unknown_last.lk() },
