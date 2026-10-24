@@ -10,8 +10,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'ios', 'CouchRemote', 'Assets.xcassets', 'AppIcon.appiconset', 'icon-1024.png');
 const N = 1024;
 
-// Same artwork as web/logo.svg, but square: iOS applies its own corner mask.
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#5E5CE6"/></linearGradient></defs><rect width="100" height="100" fill="url(#g)"/><g fill="#fff" transform="translate(50 50) scale(1.05) translate(-50 -50)"><rect x="26" y="32" width="48" height="22" rx="7"/><rect x="23" y="50" width="54" height="16" rx="5"/><rect x="17" y="41" width="14" height="26" rx="6"/><rect x="69" y="41" width="14" height="26" rx="6"/><rect x="28.5" y="66" width="5" height="8" rx="1.5"/><rect x="66.5" y="66" width="5" height="8" rx="1.5"/></g></svg>`;
+// Same artwork as web/logo.svg (flat blue), but square: iOS applies its own corner mask.
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0A84FF"/><g fill="#fff"><rect x="28" y="29" width="44" height="24" rx="8"/><rect x="23" y="52" width="54" height="16" rx="5"/><rect x="14" y="42" width="16" height="28" rx="7"/><rect x="70" y="42" width="16" height="28" rx="7"/><rect x="27" y="69" width="6" height="8" rx="1.5"/><rect x="67" y="69" width="6" height="8" rx="1.5"/></g><rect x="48.8" y="29" width="2.4" height="24" rx="1.2" fill="#0A84FF"/></svg>`;
 
 const browser = await webkit.launch();
 const page = await browser.newPage();

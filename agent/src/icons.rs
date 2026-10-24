@@ -1,4 +1,4 @@
-//! Uygulama simgesi: mavi→mor gradyan üzerinde beyaz kanepe. Harici araç olmadan, bellekte çizilir.
+//! Uygulama simgesi: düz mavi zemin üzerinde beyaz kanepe. Harici araç olmadan, bellekte çizilir.
 //! Aynı tasarımın SVG hali web sayfalarında (yönetim, indirme sayfası) kullanılır.
 use flate2::{write::ZlibEncoder, Compression};
 use std::io::Write;
@@ -20,18 +20,19 @@ fn sd_round_rect(px: f64, py: f64, cx: f64, cy: f64, hw: f64, hh: f64, r: f64) -
     qx.max(qy).min(0.0) + qx.max(0.0).hypot(qy.max(0.0)) - r
 }
 
-const TOP_LEFT: [f64; 3] = [10.0, 132.0, 255.0]; // iOS mavisi #0A84FF
-const BOTTOM_RIGHT: [f64; 3] = [94.0, 92.0, 230.0]; // iOS indigo #5E5CE6
+const BG: [f64; 3] = [10.0, 132.0, 255.0]; // iOS mavisi #0A84FF
 
 /// 100 birimlik tasarım ızgarasında kanepe parçaları: (merkez x, merkez y, yarı genişlik, yarı yükseklik, köşe)
 const SOFA: [(f64, f64, f64, f64, f64); 6] = [
-    (50.0, 43.0, 24.0, 11.0, 7.0), // sırtlık
-    (50.0, 58.0, 27.0, 8.0, 5.0),  // oturak
-    (24.0, 54.0, 7.0, 13.0, 6.0),  // sol kolçak
-    (76.0, 54.0, 7.0, 13.0, 6.0),  // sağ kolçak
-    (31.0, 70.0, 2.5, 4.0, 1.5),   // sol ayak
-    (69.0, 70.0, 2.5, 4.0, 1.5),   // sağ ayak
+    (50.0, 41.0, 22.0, 12.0, 8.0), // sırtlık
+    (50.0, 60.0, 27.0, 8.0, 5.0),  // oturak
+    (22.0, 56.0, 8.0, 14.0, 7.0),  // sol kolçak
+    (78.0, 56.0, 8.0, 14.0, 7.0),  // sağ kolçak
+    (30.0, 73.0, 3.0, 4.0, 1.5),   // sol ayak
+    (70.0, 73.0, 3.0, 4.0, 1.5),   // sağ ayak
 ];
+/// Sırtlığı ikiye bölen ince dikiş (zemin renginde)
+const SEAM: (f64, f64, f64, f64, f64) = (50.0, 41.0, 1.2, 12.0, 0.6);
 
 /// Ham RGBA (satır satır). `rounded`: köşeler şeffaf (tepsi simgesi); aksi halde tam kare
 /// (iOS ana ekran simgesinin köşelerini kendisi yuvarlar).
@@ -42,14 +43,14 @@ pub fn rgba(size: u32, rounded: bool) -> Vec<u8> {
     for y in 0..size {
         for x in 0..size {
             let (px, py) = (x as f64 + 0.5, y as f64 + 0.5);
-            let t = (px + py) / (2.0 * size as f64);
             let glyph = SOFA
                 .iter()
                 .map(|&(cx, cy, hw, hh, r)| sd_round_rect(px, py, cx * s, cy * s, hw * s, hh * s, r * s))
                 .fold(f64::MAX, f64::min);
-            let white = (0.5 - glyph).clamp(0.0, 1.0); // kenar yumuşatma
+            let seam = sd_round_rect(px, py, SEAM.0 * s, SEAM.1 * s, SEAM.2 * s, SEAM.3 * s, SEAM.4 * s);
+            let white = (0.5 - glyph.max(-seam)).clamp(0.0, 1.0); // kenar yumuşatma
             for c in 0..3 {
-                let bg = TOP_LEFT[c] + (BOTTOM_RIGHT[c] - TOP_LEFT[c]) * t;
+                let bg = BG[c];
                 out.push((bg + (255.0 - bg) * white).round() as u8);
             }
             let alpha = if rounded { (0.5 - sd_round_rect(px, py, half, half, half, half, size as f64 * 0.22)).clamp(0.0, 1.0) } else { 1.0 };
