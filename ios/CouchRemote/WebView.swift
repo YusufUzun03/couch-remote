@@ -1,14 +1,15 @@
 import SwiftUI
 import WebKit
-import CryptoKit
 
-/// Hosts the CouchRemote web app. SPIKE: the TLS challenge handler trusts the certificate presented by the
-/// single host the user typed in, and logs its SHA-256. The real version pins the CouchRemote CA instead.
+/// Hosts the CouchRemote web app. TLS is accepted only when the server certificate chains to the CouchRemote
+/// root certificate this phone stored while pairing, and only for the paired PC's name.
 struct WebView: UIViewRepresentable {
     let url: URL
+    let ca: SecCertificate
     let log: DiagLog
+    let onLoaded: () -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(host: url.host ?? "", log: log) }
+    func makeCoordinator() -> Coordinator { Coordinator(host: url.host ?? "", ca: ca, log: log, onLoaded: onLoaded) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -32,8 +33,12 @@ struct WebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         let host: String
+        let ca: SecCertificate
         let log: DiagLog
-        init(host: String, log: DiagLog) { self.host = host; self.log = log }
+        let onLoaded: () -> Void
+        init(host: String, ca: SecCertificate, log: DiagLog, onLoaded: @escaping () -> Void) {
+            self.host = host; self.ca = ca; self.log = log; self.onLoaded = onLoaded
+        }
 
         /// Forwards console output, script errors and WebSocket lifecycle events to the native log.
         static let bridgeScript = """
@@ -70,6 +75,7 @@ struct WebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             log.add("page loaded: \(webView.url?.absoluteString ?? "?")")
+            onLoaded()
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -89,17 +95,20 @@ struct WebView: UIViewRepresentable {
                 return
             }
             guard space.host == host else {
-                log.add("tls: other host \(space.host), default handling")
-                completionHandler(.performDefaultHandling, nil)
+                log.add("tls: refused \(space.host), not the paired PC")
+                completionHandler(.cancelAuthenticationChallenge, nil)
                 return
             }
-            var note = "tls: challenge for \(space.host):\(space.port)"
-            if let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first {
-                let digest = SHA256.hash(data: SecCertificateCopyData(leaf) as Data)
-                note += " leaf sha256=" + digest.map { String(format: "%02x", $0) }.joined().prefix(16) + "... chain=\(chain.count)"
+            SecTrustSetAnchorCertificates(trust, [ca] as CFArray)
+            SecTrustSetAnchorCertificatesOnly(trust, true)
+            var error: CFError?
+            if SecTrustEvaluateWithError(trust, &error) {
+                log.add("tls: \(space.host):\(space.port) chains to the paired CouchRemote CA")
+                completionHandler(.useCredential, URLCredential(trust: trust))
+            } else {
+                log.add("tls: REJECTED \(space.host): \(error?.localizedDescription ?? "unknown")")
+                completionHandler(.cancelAuthenticationChallenge, nil)
             }
-            log.add(note + " -> trusting (spike)")
-            completionHandler(.useCredential, URLCredential(trust: trust))
         }
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import WebKit
 
-/// Spike diagnostics: collects what the web view and the TLS challenge handler report.
+/// Diagnostics: collects what the web view and the TLS challenge handler report.
 final class DiagLog: ObservableObject {
     @Published private(set) var lines: [String] = []
     weak var webView: WKWebView?
@@ -41,16 +41,5 @@ final class DiagLog: ObservableObject {
                 else { self.add("check \(name): \(value ?? "nil")") }
             }
         }
-        // Open a throwaway WebSocket to the same origin to see whether wss:// is accepted by the trust override.
-        let wsProbe = """
-        (function(){
-          var u = 'wss://' + location.host + '/spike-probe';
-          var s = new WebSocket(u);
-          s.onopen = function(){ window.webkit.messageHandlers.diag.postMessage('probe wss: OPEN (' + u + ')'); s.close(); };
-          s.onerror = function(){ window.webkit.messageHandlers.diag.postMessage('probe wss: ERROR (' + u + ')'); };
-          s.onclose = function(e){ window.webkit.messageHandlers.diag.postMessage('probe wss: close ' + e.code); };
-        })();
-        """
-        webView.evaluateJavaScript(wsProbe, completionHandler: nil)
     }
 }
