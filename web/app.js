@@ -237,7 +237,11 @@ function connect() {
         try { localStorage.setItem('unregistered', '1'); } catch {}
         // Eşleşme bilgisayardan kaldırıldı: bu telefondaki anahtarı da sil, eşleşme ekranına dön
         await forgetIdentity();
-        location.replace('/app');
+        // A fresh QR code arrived with this launch: retry once with it instead of dropping to the PIN screen
+        let again = null;
+        try { again = sessionStorage.getItem('pairCode'); sessionStorage.removeItem('pairCode'); } catch {}
+        if (again) { try { localStorage.removeItem('unregistered'); } catch {} }
+        location.replace(again ? `/app?c=${encodeURIComponent(again)}` : '/app');
       } else if (m.type === 'rtc-answer') {
         onRtcAnswer(m);
       } else if (m.type === 'stats') {
@@ -2834,6 +2838,7 @@ async function init() {
     return;
   }
 
+  if (startCode) { try { sessionStorage.setItem('pairCode', startCode); } catch {} }
   identity = await loadIdentity();
   // The iOS shell forwards console output to its Connection log, so a failed pairing can be diagnosed on the phone.
   console.log(`pairing: saved identity=${!!identity}, code in address=${!!startCode}`);
@@ -2843,6 +2848,7 @@ async function init() {
     try {
       identity = await pair({ code: startCode });
       exp.pairedVia = 'start_url kodu';
+      try { sessionStorage.removeItem('pairCode'); } catch {}
       toast(tl('Eşleşme tamam ✓'));
     } catch (e) {
       exp.pairError = `${e.code ?? ''} ${e.message}`;
