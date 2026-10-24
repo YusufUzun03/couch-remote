@@ -511,10 +511,12 @@ async function ensureAirSensors() {
   if (typeof DeviceOrientationEvent.requestPermission === 'function') {
     let result = 'denied';
     try {
-      result = await DeviceOrientationEvent.requestPermission();
-    } catch {
-      // izin penceresi gösterilemedi
+      // Some web views never answer; do not leave the button dead
+      result = await Promise.race([DeviceOrientationEvent.requestPermission(), new Promise((r) => setTimeout(() => r('timeout'), 6000))]);
+    } catch (e) {
+      console.warn(`motion permission error: ${e?.name} ${e?.message}`);
     }
+    if (result === 'timeout') console.warn('motion permission request did not answer');
     if (result !== 'granted') {
       setAirNote(tl('Hareket izni verilmedi. Ayarlar › Safari › Hareket ve Yön Erişimi\'ni aç, sonra tekrar dene.'));
       return false;
