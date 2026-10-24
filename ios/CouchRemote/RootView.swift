@@ -92,6 +92,23 @@ struct RootView: View {
                 }
                 .padding(.top, 8)
             }
+            DisclosureGroup("Don't have the PC program yet?") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("CouchRemote needs a small free program on your Windows PC. Open this page on the PC to download it:")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text(Links.site.absoluteString)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                    HStack {
+                        ShareLink(item: Links.site) { Label("Send link to PC", systemImage: "square.and.arrow.up") }
+                        Spacer()
+                        Link("Open page", destination: Links.site)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.top, 8)
+            }
             if working { ProgressView("Connecting…") }
             if !message.isEmpty {
                 Text(message).font(.footnote).foregroundStyle(.red)
