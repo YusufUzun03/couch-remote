@@ -21,6 +21,7 @@ struct WebView: UIViewRepresentable {
 
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = context.coordinator
+        view.uiDelegate = context.coordinator
         view.isOpaque = false
         view.scrollView.contentInsetAdjustmentBehavior = .never
         log.webView = view
@@ -31,7 +32,7 @@ struct WebView: UIViewRepresentable {
 
     func updateUIView(_ view: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         let host: String
         let ca: SecCertificate
         let log: DiagLog
@@ -71,6 +72,15 @@ struct WebView: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             log.add("\(message.body)")
+        }
+
+        /// The air mouse reads the phone's motion sensors. Without this answer the page's permission request can hang;
+        /// the shell grants it for the paired PC only.
+        func webView(_ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin,
+                     initiatedByFrame frame: WKFrameInfo, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            let allowed = origin.host == host
+            log.add("motion permission \(allowed ? "granted" : "denied") for \(origin.host)")
+            decisionHandler(allowed ? .grant : .deny)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
