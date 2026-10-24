@@ -2,7 +2,7 @@
 
 **English** · [Türkçe](README.tr.md)
 
-Turn your **iPhone into a touchpad, keyboard and media remote for your Windows PC**. Start a movie from bed, change the volume, move the cursor. You install one `.exe` on the PC; **nothing is installed on the phone** (it's a web app you add to your Home Screen from Safari). No cloud, no account — everything stays on your local network.
+Turn your **iPhone into a touchpad, keyboard and media remote for your Windows PC**. Start a movie from bed, change the volume, move the cursor. You install one `.exe` on the PC; on the iPhone you use the CouchRemote app (App Store) or, without it, a web app you add to your Home Screen from Safari. The [download page](https://yusufuzun03.github.io/couch-remote/) leads to both. No cloud, no account — everything stays on your local network.
 
 ## Features
 

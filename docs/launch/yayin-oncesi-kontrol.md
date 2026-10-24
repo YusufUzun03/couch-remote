@@ -23,7 +23,8 @@ Durum: ✅ yapıldı · ⏳ senin kararın/işlemin gerekiyor · ⬜ sonra
 - ✅ `.github/workflows/release.yml`: etiketle (`v0.11.0`) kaynaktan derler, SHA256SUMS üretir, **taslak** release açar. Henüz hiç çalıştırılmadı.
 - ✅ Destek bağlantısı (uygulama + README + `FUNDING.yml`), GitHub Sponsors başvurusu onaylanana kadar çalışmaz.
 - ⏳ Repoyu public yapmak (GitHub › Settings › Danger zone). Geri alınabilir ama indekslenen/kopyalanan içerik geri alınamaz.
-- ⏳ GitHub Pages ile `site/` yayını (public repoda ücretsiz).
+- ⏳ GitHub Pages ile `site/` yayını: Settings › Pages › Source: GitHub Actions, sonra Actions › Pages › Run workflow (`.github/workflows/pages.yml`, yalnız elle çalışır).
+- ⬜ App Store yayınlanınca bağlantıyı `site/index.html` içindeki `APP_STORE_URL` sabitine yaz, Pages'i yeniden çalıştır.
 - ⬜ Microsoft'a yanlış alarm bildirimi (https://www.microsoft.com/wdsi/filesubmission): imzasız exe için, yayından sonra, senin Microsoft hesabınla.
 - ⬜ VirusTotal'a yükleme: dosya üçüncü tarafa gönderilir ve herkese açık görünür, bu yüzden senin onayınla.
 - ⬜ SignPath başvurusu: `docs/launch/signpath-basvuru.md`.
