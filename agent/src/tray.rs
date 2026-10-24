@@ -43,7 +43,7 @@ pub fn start(app: Arc<App>) {
             let url_click = app.admin_url();
             TrayIconEvent::set_event_handler(Some(move |e: TrayIconEvent| {
                 if let TrayIconEvent::Click { button: MouseButton::Left, button_state: tray_icon::MouseButtonState::Up, .. } = e {
-                    system::open_url(&url_click);
+                    system::open_admin(&url_click);
                 }
             }));
 
@@ -53,7 +53,7 @@ pub fn start(app: Arc<App>) {
             let url_menu = app.admin_url();
             MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
                 if e.id == connect_id {
-                    system::open_url(&url_menu);
+                    system::open_admin(&url_menu);
                 } else if e.id == autostart_id {
                     // Menü öğesi thread'ler arası paylaşılamıyor: yeni durum kayıt defterinden hesaplanır
                     let on = !system::autostart_enabled();

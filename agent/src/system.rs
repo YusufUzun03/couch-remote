@@ -54,6 +54,31 @@ pub fn open_url(url: &str) {
     crate::launcher::shell_open(url);
 }
 
+/// Edge'in yolu (Windows 10/11'de hazır gelir); Chrome bulunamazsa yönetim penceresi bununla açılır.
+fn edge_path() -> Option<PathBuf> {
+    for root in [HKEY_CURRENT_USER, winreg::enums::HKEY_LOCAL_MACHINE] {
+        let found = RegKey::predef(root)
+            .open_subkey(r"Software\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe")
+            .and_then(|k| k.get_value::<String, _>(""))
+            .map(|p| PathBuf::from(p.trim_matches('"')));
+        if let Some(p) = found.ok().filter(|p| p.exists()) {
+            return Some(p);
+        }
+    }
+    let pf = std::env::var_os("ProgramFiles(x86)").map(|p| PathBuf::from(p).join(r"Microsoft\Edge\Application\msedge.exe"));
+    pf.filter(|p| p.exists())
+}
+
+/// Yönetim sayfasını sekmesiz, uygulama penceresi olarak açar (Chrome veya Edge `--app`); olmazsa varsayılan tarayıcıyla.
+pub fn open_admin(url: &str) {
+    let window = [crate::launcher::chrome_path(), edge_path()].into_iter().flatten().find_map(|browser| {
+        std::process::Command::new(browser).arg(format!("--app={url}")).arg("--window-size=1180,800").spawn().ok()
+    });
+    if window.is_none() {
+        open_url(url);
+    }
+}
+
 // ------------------------------------------------------------------ tek örnek
 
 pub struct InstanceGuard(HANDLE);

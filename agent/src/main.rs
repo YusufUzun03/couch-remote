@@ -186,7 +186,7 @@ async fn run(background: bool) -> anyhow::Result<()> {
             // Aynı sürüm zaten çalışıyor: yeni örnek başlatma, "Telefonu bağla" sayfasını öne getir
             _ => {
                 if !background {
-                    system::open_url(&running_admin_url());
+                    system::open_admin(&running_admin_url());
                 }
                 return Ok(());
             }
@@ -255,7 +255,7 @@ async fn run(background: bool) -> anyhow::Result<()> {
     // İlk açılış (henüz eşleşmiş telefon yok) veya kullanıcı elle açtıysa "Telefonu bağla" sayfasını aç
     let first_run = app.state.lk().devices.is_empty();
     if std::env::var_os("COUCH_NO_BROWSER").is_none() && (!background || first_run) {
-        system::open_url(&app.admin_url());
+        system::open_admin(&app.admin_url());
     }
 
     // Konsolsuz sürümde Ctrl+C gelmez; dinleme kurulamazsa program açık kalmaya devam etsin
