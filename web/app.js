@@ -2835,6 +2835,8 @@ async function init() {
   }
 
   identity = await loadIdentity();
+  // The iOS shell forwards console output to its Connection log, so a failed pairing can be diagnosed on the phone.
+  console.log(`pairing: saved identity=${!!identity}, code in address=${!!startCode}`);
   if (identity) {
     exp.pairedVia = 'kayıtlı anahtar';
   } else if (startCode) {
@@ -2844,6 +2846,7 @@ async function init() {
       toast(tl('Eşleşme tamam ✓'));
     } catch (e) {
       exp.pairError = `${e.code ?? ''} ${e.message}`;
+      console.warn(`pairing with the code failed: ${e.code ?? 'no-code'} ${e.name}: ${e.message}`);
       showPin(e.code === 'expired' ? tl('Eşleşme kodunun süresi dolmuş. PC\'deki yönetim sayfasında görünen PIN\'i gir.') : undefined);
     }
   } else {
