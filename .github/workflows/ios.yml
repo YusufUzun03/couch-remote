@@ -56,19 +56,15 @@ jobs:
       - name: Generate project
         working-directory: ios
         run: xcodegen generate
-      - name: Archive
+      - name: Archive (unsigned; signing happens at export)
         working-directory: ios
         run: |
-          xcodebuild archive -project CouchRemote.xcodeproj -scheme CouchRemote \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/CouchRemote.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" \
-            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
+          set -eo pipefail
+          xcodebuild archive -project CouchRemote.xcodeproj -scheme CouchRemote             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/CouchRemote.xcarchive"             CODE_SIGNING_ALLOWED=NO             CURRENT_PROJECT_VERSION="${{ github.run_number }}" | tail -n 40
       - name: Export and upload to TestFlight
         working-directory: ios
         run: |
+          set -eo pipefail
           cat > "$RUNNER_TEMP/export.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
