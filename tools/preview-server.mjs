@@ -7,6 +7,7 @@ import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..', 'web');
+const SITE = join(dirname(fileURLToPath(import.meta.url)), '..', 'site'); // landing page, served at /site/
 // Ajanın gerçek CSP politikalarıyla aynı (agent/src/web.rs): arayüz bu kısıtlarla denenir, ihlaller tarayıcı konsolunda görünür
 const CSP_APP = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' wss:; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 const CSP_PAGE = "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
@@ -42,6 +43,15 @@ createServer(async (req, res) => {
     return res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
   }
   if (req.method === 'POST' && path.startsWith('/api/')) return res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
+  if (path === '/site' || path === '/site/' || path === '/site/logo.svg') {
+    const name = path === '/site/logo.svg' ? 'logo.svg' : 'index.html';
+    try {
+      const body = await readFile(join(SITE, name));
+      return res.writeHead(200, { 'content-type': TYPES[extname(name)], 'cache-control': 'no-store' }).end(body);
+    } catch {
+      return res.writeHead(404).end();
+    }
+  }
   const file = path === '/preview' ? 'app.html' : path.slice(1);
   if (!/^[\w.-]+$/.test(file)) return res.writeHead(404).end();
   try {

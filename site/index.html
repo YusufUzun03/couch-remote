@@ -4,102 +4,136 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CouchRemote</title>
-<meta name="description" content="iPhone'unu bilgisayarın için touchpad, klavye ve kumandaya çevir. Kurulum yok, hesap yok, reklam yok.">
+<meta name="description" content="iPhone'unu bilgisayarın için touchpad, klavye ve kumandaya çevir. Hesap yok, reklam yok.">
+<link rel="icon" href="logo.svg">
 <style>
-  .lang-sw { position:fixed; top:14px; right:14px; z-index:5; display:flex; background:var(--card); border-radius:999px; padding:3px; box-shadow:var(--shadow); }
-  .lang-sw button { border:0; background:transparent; color:var(--muted); font:600 12.5px inherit; font-family:inherit; padding:6px 11px; border-radius:999px; cursor:pointer; }
-  .lang-sw button.on { background:var(--accent); color:#fff; }
-  .lang-sw button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  :root { --bg:#fbfbfd; --card:#fff; --fill:rgba(120,120,128,.1); --fg:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --line:rgba(0,0,0,.08);
-          --shadow:0 1px 2px rgba(0,0,0,.04), 0 12px 32px rgba(0,0,0,.06); }
+  :root { --bg:#fff; --fg:#1d1d1f; --muted:#6e6e73; --accent:#0071e3; --fill:#f5f5f7; --line:rgba(0,0,0,.1); }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg:#000; --card:#1c1c1e; --fill:rgba(120,120,128,.24); --fg:#f5f5f7; --muted:#a1a1a6; --accent:#2997ff; --line:rgba(255,255,255,.1); --shadow:none; }
+    :root:not([data-theme="light"]) { --bg:#000; --fg:#f5f5f7; --muted:#a1a1a6; --accent:#2997ff; --fill:#1c1c1e; --line:rgba(255,255,255,.14); }
   }
   [hidden] { display:none !important; }
   * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
   body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.55 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
-  .wrap { max-width:980px; margin:0 auto; padding:0 16px; }
-  header { padding:72px 0 48px; text-align:center; }
-  .logo { display:block; margin-left:auto; margin-right:auto; width:96px; height:96px; border-radius:22px; box-shadow:0 14px 36px rgba(10,132,255,.3); margin-bottom:24px; }
-  h1 { font-size:clamp(36px, 7vw, 60px); line-height:1.06; margin:0 auto 16px; letter-spacing:-0.03em; font-weight:700; max-width:760px; }
-  .lead { font-size:clamp(18px, 2.4vw, 22px); color:var(--muted); max-width:640px; margin:0 auto 32px; }
-  .dl { display:inline-flex; align-items:center; gap:10px; background:var(--accent); color:#fff; text-decoration:none; font-weight:600;
-        padding:15px 28px; border-radius:980px; font-size:18px; transition:transform .15s, opacity .15s; }
-  .dl.alt { background:var(--fill); color:var(--accent); }
+  .wrap { max-width:880px; margin:0 auto; padding:0 20px; }
+  .lang { position:fixed; top:14px; right:14px; z-index:5; display:flex; background:var(--fill); border-radius:999px; padding:3px; }
+  .lang button { border:0; background:transparent; color:var(--muted); font:600 12.5px inherit; font-family:inherit; padding:6px 11px; border-radius:999px; cursor:pointer; }
+  .lang button.on { background:var(--accent); color:#fff; }
+  .lang button:focus-visible, a:focus-visible, summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+
+  header { padding:88px 0 56px; text-align:center; }
+  .logo { width:88px; height:88px; border-radius:20px; display:block; margin:0 auto 28px; }
+  h1 { font-size:clamp(34px, 7vw, 56px); line-height:1.07; letter-spacing:-.03em; font-weight:700; margin:0 auto 16px; max-width:720px; }
+  .lead { font-size:clamp(18px, 2.4vw, 21px); color:var(--muted); max-width:600px; margin:0 auto 32px; }
   .cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
-  .dl:hover { opacity:.9; } .dl:active { transform:scale(.98); }
-  .dl svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
-  .meta { color:var(--muted); font-size:14px; margin-top:14px; }
-  h2 { font-size:clamp(26px, 4vw, 34px); letter-spacing:-0.02em; margin:72px 0 20px; text-align:center; }
-  .steps { list-style:none; padding:0; margin:0 auto; display:grid; gap:14px; counter-reset:s; max-width:720px; }
-  .steps li { background:var(--card); border-radius:20px; padding:22px 22px 22px 72px; position:relative; counter-increment:s; box-shadow:var(--shadow); }
-  .steps li::before { content:counter(s); position:absolute; left:22px; top:22px; width:32px; height:32px; border-radius:50%; background:var(--accent);
-                      color:#fff; font-weight:700; display:grid; place-items:center; font-size:15px; }
-  .steps b { display:block; font-size:18px; }
-  .steps p { margin:4px 0 0; color:var(--muted); font-size:16px; }
-  .note.two { max-width:560px; margin:18px auto 0; }
-  .note { background:var(--fill); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:15px; color:var(--muted); }
-  .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); }
-  .card { background:var(--card); border-radius:20px; padding:22px; box-shadow:var(--shadow); }
-  .card b { display:block; margin-bottom:6px; font-size:18px; }
-  .card p { margin:0; color:var(--muted); font-size:16px; }
-  .center { text-align:center; color:var(--muted); max-width:640px; margin:0 auto; }
-  footer { color:var(--muted); font-size:13px; padding:72px 0 40px; text-align:center; }
-  code { font-family:ui-monospace, "SF Mono", Consolas, monospace; font-size:.9em; }
+  .btn { display:inline-flex; align-items:center; gap:10px; text-decoration:none; font-weight:600; font-size:17px; padding:14px 26px; border-radius:980px; background:var(--accent); color:#fff; transition:opacity .15s, transform .15s; }
+  .btn.alt { background:var(--fill); color:var(--accent); }
+  .btn:hover { opacity:.9; } .btn:active { transform:scale(.98); }
+  .btn svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+  .meta { color:var(--muted); font-size:14px; margin-top:16px; }
+  .hint { max-width:520px; margin:18px auto 0; color:var(--muted); font-size:15px; }
+
+  h2 { font-size:clamp(24px, 4vw, 32px); letter-spacing:-.02em; margin:0 0 28px; }
+  section { padding:56px 0; border-top:1px solid var(--line); }
+
+  .flow { list-style:none; margin:0; padding:0; counter-reset:s; }
+  .flow li { display:grid; grid-template-columns:44px 1fr; gap:0 16px; padding:0 0 28px; position:relative; counter-increment:s; }
+  .flow li:last-child { padding-bottom:0; }
+  .flow li::before { content:counter(s); grid-row:1 / span 3; width:36px; height:36px; border-radius:50%; background:var(--accent); color:#fff; font-weight:700; font-size:15px; display:grid; place-items:center; }
+  .flow li::after { content:""; position:absolute; left:17px; top:42px; bottom:6px; width:2px; background:var(--line); }
+  .flow li:last-child::after { display:none; }
+  .where { font-size:12.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
+  .flow b { font-size:19px; line-height:1.3; }
+  .flow p { margin:4px 0 0; color:var(--muted); font-size:16px; }
+
+  .feat { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:0 40px; margin:0; padding:0; list-style:none; }
+  .feat li { padding:18px 0; border-top:1px solid var(--line); }
+  .feat b { display:block; font-size:17px; }
+  .feat span { color:var(--muted); font-size:16px; }
+
+  details { border-top:1px solid var(--line); padding:16px 0; }
+  details:last-of-type { border-bottom:1px solid var(--line); }
+  summary { cursor:pointer; font-weight:600; font-size:17px; list-style:none; display:flex; justify-content:space-between; gap:16px; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"+"; color:var(--muted); font-weight:400; font-size:22px; line-height:1.1; }
+  details[open] summary::after { content:"\2212"; }
+  details p { color:var(--muted); font-size:16px; margin:10px 0 0; max-width:640px; }
+
+  footer { color:var(--muted); font-size:13px; padding:40px 0 48px; text-align:center; border-top:1px solid var(--line); }
 </style>
-<link rel="icon" href="logo.svg">
 </head>
 <body>
-<div class="lang-sw" role="group" aria-label="Dil / Language"><button id="langTr" type="button">TR</button><button id="langEn" type="button">EN</button></div>
+<div class="lang" role="group" aria-label="Dil / Language"><button id="langTr" type="button">TR</button><button id="langEn" type="button">EN</button></div>
 <div class="wrap">
   <header>
-    <svg class="logo" role="img" aria-label="CouchRemote" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#5E5CE6"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#g)"/><g fill="#fff"><rect x="26" y="32" width="48" height="22" rx="7"/><rect x="23" y="50" width="54" height="16" rx="5"/><rect x="17" y="41" width="14" height="26" rx="6"/><rect x="69" y="41" width="14" height="26" rx="6"/><rect x="28.5" y="66" width="5" height="8" rx="1.5"/><rect x="66.5" y="66" width="5" height="8" rx="1.5"/></g></svg>
-    <h1>iPhone'un, bilgisayarının uzaktan kumandası.</h1>
-    <p class="lead">Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.</p>
+    <img class="logo" src="logo.svg" alt="CouchRemote">
+    <h1 data-en="Your iPhone, as your computer's remote.">iPhone'un, bilgisayarının uzaktan kumandası.</h1>
+    <p class="lead" data-en="Control your computer from bed or the couch: touchpad, keyboard, media remote, apps and a sleep timer. No account, no ads, no internet needed.">Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.</p>
     <div class="cta" id="cta">
-      <a class="dl" id="download" href="https://github.com/YusufUzun03/couch-remote/releases/latest/download/CouchRemote.exe"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>Windows için indir</a>
-      <a class="dl alt" id="appBtn" href="#" hidden>iPhone için indir</a>
+      <a class="btn" id="download" href="https://github.com/YusufUzun03/couch-remote/releases/latest/download/CouchRemote.exe"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg><span data-en="Download for Windows">Windows için indir</span></a>
+      <a class="btn alt" id="appBtn" href="#" hidden data-en="Get the iPhone app">iPhone uygulamasını indir</a>
     </div>
-    <div class="meta">Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~6 MB</div>
-    <div class="note two" id="needPc" hidden>Bu uygulama, Windows bilgisayarındaki CouchRemote programıyla çalışır. Önce programı bilgisayarına kur, sonra uygulamayla ekrandaki QR kodu okut.</div>
-    <div class="note two" id="needApp" hidden>iPhone tarafı: uygulamayı App Store'dan indir ve bilgisayarda açılan QR kodu onunla okut.</div>
-    <div class="note two" id="appSoon" hidden>iPhone uygulaması yakında App Store'da. Şimdilik programı kur; bilgisayardaki QR kodu iPhone kamerasıyla okutarak da bağlanabilirsin.</div>
+    <div class="meta" data-en="Windows 10 / 11 · iPhone (iOS 17+) · Free · ~6 MB">Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~6 MB</div>
+    <p class="hint" id="needPc" hidden data-en="CouchRemote has two parts: a small program on your Windows PC and the app on your iPhone. Open this page on your PC to get the program, then scan the QR code it shows with the app.">CouchRemote iki parçadan oluşur: Windows bilgisayarında küçük bir program ve iPhone'unda uygulama. Programı almak için bu sayfayı bilgisayarında aç, sonra programın gösterdiği QR kodu uygulamayla okut.</p>
+    <p class="hint" id="appSoon" hidden data-en="The iPhone app is coming to the App Store soon.">iPhone uygulaması yakında App Store'da.</p>
   </header>
 
-  <h2>Kurulum (2 dakika)</h2>
-  <ol class="steps">
-    <li>
-      <b>CouchRemote.exe'yi indir ve çalıştır</b>
-      <p>Program kendini kurar, Windows ile birlikte açılır ve saatin yanında küçük bir simge olarak durur.</p>
-      <div class="note">Windows "Bilgisayarınız korundu" derse: <b style="display:inline">Ek bilgi → Yine de çalıştır</b>. Bu uyarı, program henüz dijital imzalı olmadığı için çıkıyor.</div>
-    </li>
-    <li>
-      <b>Güvenlik duvarı iznini onayla</b>
-      <p>Telefonunun sadece evdeki ağından bağlanabilmesi için bir kez yönetici izni istenir.</p>
-    </li>
-    <li>
-      <b>iPhone'a CouchRemote uygulamasını kur, QR kodu okut</b>
-      <p>App Store'dan "CouchRemote for PC"yi indir, aç ve bilgisayar ekranındaki QR kodu uygulamayla okut. Güvenlik profili gerekmez.</p>
-      <div class="note">Uygulama olmadan da olur: QR kodu iPhone kamerasıyla okut, açılan sayfadaki adımlarla profili yükle ve <b style="display:inline">Paylaş → Ana Ekrana Ekle</b>.</div>
-    </li>
-  </ol>
+  <section id="setup">
+    <h2 data-en="Setup in 2 minutes">2 dakikada kurulum</h2>
+    <ol class="flow">
+      <li>
+        <span class="where" data-en="On your PC">Bilgisayarında</span>
+        <b data-en="Download and run CouchRemote.exe">CouchRemote.exe'yi indir ve çalıştır</b>
+        <p data-en="It installs itself, starts with Windows and sits next to the clock as a small icon. Approve the firewall prompt once so your phone can reach it from your home network.">Kendini kurar, Windows ile açılır ve saatin yanında küçük bir simge olarak durur. Telefonun evdeki ağdan ulaşabilsin diye güvenlik duvarı iznini bir kez onayla.</p>
+      </li>
+      <li>
+        <span class="where" data-en="On your iPhone">iPhone'unda</span>
+        <b data-en="Install the CouchRemote app">CouchRemote uygulamasını kur</b>
+        <p data-en="Get &quot;CouchRemote for PC&quot; from the App Store.">App Store'dan "CouchRemote for PC"yi indir.</p>
+      </li>
+      <li>
+        <span class="where" data-en="Together">İkisi birlikte</span>
+        <b data-en="Scan the QR code on your PC screen">Bilgisayar ekranındaki QR kodu okut</b>
+        <p data-en="Open the app and tap Scan QR code. It pairs by itself; you only do this once.">Uygulamayı aç ve QR kodu okut'a dokun. Kendiliğinden eşleşir; bunu yalnızca bir kez yaparsın.</p>
+      </li>
+    </ol>
+  </section>
 
-  <h2>Neler yapabilirsin</h2>
-  <div class="grid">
-    <div class="card"><b>Touchpad</b><p>Düşük gecikmeli imleç, iki parmakla ivmeli kaydırma, üç parmakla masaüstü değiştirme.</p></div>
-    <div class="card"><b>Klavye</b><p>iPhone klavyesiyle Türkçe dahil yaz; Ctrl, Alt, Win, F tuşları ve kısayollar.</p></div>
-    <div class="card"><b>Kumanda</b><p>Çalan film veya şarkının adı ve kapağı, oynat/duraklat, ileri-geri sarma, ses.</p></div>
-    <div class="card"><b>Güç ve uyku zamanlayıcısı</b><p>Uyut, kapat, kilitle; film bitince sesi yavaşça kısıp bilgisayarı uyutan zamanlayıcı.</p></div>
-    <div class="card"><b>Pano ve dosya</b><p>Kopyaladığını telefon ile bilgisayar arasında taşı, fotoğraf ve dosya gönder.</p></div>
-    <div class="card"><b>Uygulamalar</b><p>Netflix, YouTube, Spotify ve bilgisayarındaki programları tek dokunuşla aç; içlerinde ara.</p></div>
-    <div class="card"><b>Siri ve Kestirmeler</b><p>"Hey Siri, bilgisayarda videoyu durdur" gibi komutlar ve Eylem Düğmesi.</p></div>
-    <div class="card"><b>Gizlilik</b><p>Her şey evdeki ağında kalır. Hiçbir sunucuya veri gitmez, hesap açman gerekmez.</p></div>
-  </div>
+  <section>
+    <h2 data-en="What you can do">Neler yapabilirsin</h2>
+    <ul class="feat">
+      <li><b data-en="Touchpad">Touchpad</b><span data-en="Low-latency cursor, inertial two-finger scrolling, three-finger desktop switching.">Düşük gecikmeli imleç, iki parmakla ivmeli kaydırma, üç parmakla masaüstü değiştirme.</span></li>
+      <li><b data-en="Keyboard">Klavye</b><span data-en="Type in Turkish or English; Ctrl, Alt, Win, F keys and shortcuts.">Türkçe dahil yaz; Ctrl, Alt, Win, F tuşları ve kısayollar.</span></li>
+      <li><b data-en="Media remote">Kumanda</b><span data-en="Now playing with cover art, play/pause, skip and seek, volume.">Çalan film veya şarkının adı ve kapağı, oynat/duraklat, ileri-geri sarma, ses.</span></li>
+      <li><b data-en="Power and sleep timer">Güç ve uyku zamanlayıcısı</b><span data-en="Sleep, shut down, lock; a timer that fades the volume and puts the computer to sleep when the movie ends.">Uyut, kapat, kilitle; film bitince sesi kısıp bilgisayarı uyutan zamanlayıcı.</span></li>
+      <li><b data-en="Clipboard and files">Pano ve dosya</b><span data-en="Move what you copied between phone and computer, send photos and files.">Kopyaladığını telefon ile bilgisayar arasında taşı, fotoğraf ve dosya gönder.</span></li>
+      <li><b data-en="Apps">Uygulamalar</b><span data-en="Open Netflix, YouTube, Spotify and your computer's programs with one tap.">Netflix, YouTube, Spotify ve bilgisayarındaki programları tek dokunuşla aç.</span></li>
+      <li><b data-en="Siri and Shortcuts">Siri ve Kestirmeler</b><span data-en="Commands like &quot;Hey Siri, pause the video on my computer&quot; and the Action Button.">"Hey Siri, bilgisayarda videoyu durdur" gibi komutlar ve Eylem Düğmesi.</span></li>
+      <li><b data-en="Private by design">Gizlilik</b><span data-en="Everything stays on your home network. No server, no account, no data leaves your computer.">Her şey evdeki ağında kalır. Sunucu yok, hesap yok; veri bilgisayarından çıkmaz.</span></li>
+    </ul>
+  </section>
 
-  <h2>Kaldırmak istersen</h2>
-  <p class="center">Saatin yanındaki simge → <b>Kaldır</b>, veya Windows Ayarlar → Uygulamalar → CouchRemote. iPhone'da simgeyi sil ve Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldır.</p>
+  <section>
+    <h2 data-en="Good to know">Bilmen gerekenler</h2>
+    <details>
+      <summary data-en="Windows says &quot;Windows protected your PC&quot;">Windows "Bilgisayarınız korundu" diyor</summary>
+      <p data-en="Choose More info → Run anyway. The warning appears because the program is not digitally signed yet.">Ek bilgi → Yine de çalıştır'ı seç. Program henüz dijital imzalı olmadığı için bu uyarı çıkıyor.</p>
+    </details>
+    <details>
+      <summary data-en="My phone cannot find the computer">Telefon bilgisayarı bulamıyor</summary>
+      <p data-en="Both must be on the same Wi-Fi. If Windows marked the network as Public, the CouchRemote page on your PC offers a button to make it Private.">İkisi aynı Wi-Fi'da olmalı. Windows ağı "Genel" işaretlediyse bilgisayardaki CouchRemote sayfası ağı "Özel" yapmak için bir düğme sunar.</p>
+    </details>
+    <details>
+      <summary data-en="Can I connect without the app?">Uygulamasız bağlanabilir miyim?</summary>
+      <p data-en="Yes. Scan the QR code with the iPhone camera, install the security profile on the page that opens, then use Share → Add to Home Screen. The app is simpler and needs no profile.">Evet. QR kodu iPhone kamerasıyla okut, açılan sayfada güvenlik profilini yükle, sonra Paylaş → Ana Ekrana Ekle'yi kullan. Uygulama daha basit ve profil gerektirmiyor.</p>
+    </details>
+    <details>
+      <summary data-en="How do I remove it?">Nasıl kaldırırım?</summary>
+      <p data-en="Icon next to the clock → Uninstall, or Windows Settings → Apps → CouchRemote. On iPhone, delete the app (and the profile under Settings → General → VPN & Device Management, if you used one).">Saatin yanındaki simge → Kaldır, veya Windows Ayarlar → Uygulamalar → CouchRemote. iPhone'da uygulamayı sil (profil kurduysan Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden onu da kaldır).</p>
+    </details>
+  </section>
 
-  <footer>CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.</footer>
+  <footer data-en="CouchRemote · Works on your home network; your data never leaves your computer.">CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.</footer>
 </div>
 <script>
   // App Store (or TestFlight) address of the iPhone app. Leave empty until it is published.
@@ -111,7 +145,6 @@
     if (hasApp) { appBtn.href = APP_STORE_URL; appBtn.hidden = false; }
     document.getElementById('appSoon').hidden = hasApp || !iphone;
     document.getElementById('needPc').hidden = !iphone;
-    document.getElementById('needApp').hidden = iphone || !hasApp;
     // On an iPhone the app is the main action and the PC program becomes the secondary one.
     if (iphone && hasApp) {
       document.getElementById('download').classList.add('alt');
@@ -121,27 +154,12 @@
   })();
 </script>
 <script>
-  // Türkçe ↔ İngilizce: metinler eşleşen öğelerin içeriğiyle değiştirilir (tarayıcı dili Türkçe değilse İngilizce açılır)
+  // Turkish is the source text; every translatable element carries its English in data-en.
   (() => {
-    const PAIRS = [["iPhone'un, bilgisayarının uzaktan kumandası.","Your iPhone, as your computer's remote."],["Yataktan veya kanepeden bilgisayarını kontrol et: touchpad, klavye, film kumandası, uygulamalar ve uyku zamanlayıcısı. Hesap yok, reklam yok, internet gerekmez.","Control your computer from bed or the couch: touchpad, keyboard, media remote, apps and a sleep timer. No account, no ads, no internet needed."],["Windows için indir","Download for Windows"],["Windows 10 / 11 · iPhone (iOS 17+) · Ücretsiz · ~6 MB","Windows 10 / 11 · iPhone (iOS 17+) · Free · ~6 MB"],["Kurulum (2 dakika)","Setup (2 minutes)"],["CouchRemote.exe'yi indir ve çalıştır","Download and run CouchRemote.exe"],["Program kendini kurar, Windows ile birlikte açılır ve saatin yanında küçük bir simge olarak durur.","The program installs itself, starts with Windows and sits next to the clock as a small icon."],["Windows \"Bilgisayarınız korundu\" derse: <b style=\"display:inline\">Ek bilgi → Yine de çalıştır</b>. Bu uyarı, program henüz dijital imzalı olmadığı için çıkıyor.","If Windows says \"Windows protected your PC\": <b style=\"display:inline\">More info → Run anyway</b>. This warning appears because the program isn't digitally signed yet."],["Güvenlik duvarı iznini onayla","Approve the firewall permission"],["Telefonunun sadece evdeki ağından bağlanabilmesi için bir kez yönetici izni istenir.","An administrator permission is requested once so your phone can connect from your home network only."],["iPhone için indir","Download for iPhone"],["Bu uygulama, Windows bilgisayarındaki CouchRemote programıyla çalışır. Önce programı bilgisayarına kur, sonra uygulamayla ekrandaki QR kodu okut.","This app works with the CouchRemote program on your Windows PC. Install the program on your computer first, then scan the on-screen QR code with the app."],["iPhone tarafı: uygulamayı App Store'dan indir ve bilgisayarda açılan QR kodu onunla okut.","iPhone side: get the app from the App Store and scan the QR code shown on your computer with it."],["iPhone uygulaması yakında App Store'da. Şimdilik programı kur; bilgisayardaki QR kodu iPhone kamerasıyla okutarak da bağlanabilirsin.","The iPhone app is coming to the App Store soon. For now, install the program; you can also connect by scanning the QR code on your computer with the iPhone camera."],["iPhone'a CouchRemote uygulamasını kur, QR kodu okut","Install the CouchRemote app on your iPhone and scan the QR code"],["App Store'dan \"CouchRemote for PC\"yi indir, aç ve bilgisayar ekranındaki QR kodu uygulamayla okut. Güvenlik profili gerekmez.","Get \"CouchRemote for PC\" from the App Store, open it and scan the QR code on your computer screen with the app. No security profile needed."],["Uygulama olmadan da olur: QR kodu iPhone kamerasıyla okut, açılan sayfadaki adımlarla profili yükle ve <b style=\"display:inline\">Paylaş → Ana Ekrana Ekle</b>.","It also works without the app: scan the QR code with the iPhone camera, install the profile with the steps on the page that opens, then <b style=\"display:inline\">Share → Add to Home Screen</b>."],["Neler yapabilirsin","What you can do"],["Düşük gecikmeli imleç, iki parmakla ivmeli kaydırma, üç parmakla masaüstü değiştirme.","Low-latency cursor, inertial two-finger scrolling, three-finger desktop switching."],["Klavye","Keyboard"],["iPhone klavyesiyle Türkçe dahil yaz; Ctrl, Alt, Win, F tuşları ve kısayollar.","Type with the iPhone keyboard or an on-screen full keyboard; Ctrl, Alt, Win, F keys and shortcuts."],["Kumanda","Remote"],["Çalan film veya şarkının adı ve kapağı, oynat/duraklat, ileri-geri sarma, ses.","Now playing with cover art, play/pause, skip and seek, volume."],["Güç ve uyku zamanlayıcısı","Power and sleep timer"],["Uyut, kapat, kilitle; film bitince sesi yavaşça kısıp bilgisayarı uyutan zamanlayıcı.","Sleep, shut down, lock; a timer that fades the volume and puts the computer to sleep when the movie ends."],["Pano ve dosya","Clipboard and files"],["Kopyaladığını telefon ile bilgisayar arasında taşı, fotoğraf ve dosya gönder.","Move what you copied between phone and computer, send photos and files."],["Uygulamalar","Apps"],["Netflix, YouTube, Spotify ve bilgisayarındaki programları tek dokunuşla aç; içlerinde ara.","Open Netflix, YouTube, Spotify and your computer's programs with one tap; search inside them."],["Siri ve Kestirmeler","Siri & Shortcuts"],["\"Hey Siri, bilgisayarda videoyu durdur\" gibi komutlar ve Eylem Düğmesi.","Commands like \"Hey Siri, pause the video on my computer\" and the Action Button."],["Gizlilik","Privacy"],["Her şey evdeki ağında kalır. Hiçbir sunucuya veri gitmez, hesap açman gerekmez.","Everything stays on your home network. No data goes to any server, no account needed."],["Kaldırmak istersen","If you want to remove it"],["Saatin yanındaki simge → <b>Kaldır</b>, veya Windows Ayarlar → Uygulamalar → CouchRemote. iPhone'da simgeyi sil ve Ayarlar → Genel → VPN ve Aygıt Yönetimi'nden profili kaldır.","Icon next to the clock → <b>Uninstall</b>, or Windows Settings → Apps → CouchRemote. On iPhone, delete the icon and remove the profile under Settings → General → VPN & Device Management."],["CouchRemote · Evdeki ağında çalışır, verilerin bilgisayarından çıkmaz.","CouchRemote · Works on your home network; your data never leaves your computer."]];
-    const norm = (s) => s.replace(/\s+/g, ' ').trim();
-    const map = new Map(PAIRS.map(([tr, en]) => [norm(tr), en]));
-    const rev = new Map(PAIRS.map(([tr, en]) => [norm(en), tr]));
-    const targets = [...document.querySelectorAll('h1, .lead, h2, .meta, .steps li b, .steps li p, .note, .card b, .card p, p.center, footer, #download, #appBtn')];
+    const els = [...document.querySelectorAll('[data-en]')];
+    for (const el of els) el.dataset.tr = el.innerHTML;
     function apply(lang) {
-      const m = lang === 'en' ? map : rev;
-      for (const el of targets) {
-        const dl = el.id === 'download' || el.id === 'appBtn';
-        // indirme düğmesinde simge korunur: sadece metin düğümü çevrilir
-        if (dl) {
-          const n = [...el.childNodes].find((x) => x.nodeType === 3 && x.textContent.trim());
-          const to = n && m.get(norm(n.textContent));
-          if (to) n.textContent = to;
-          continue;
-        }
-        const to = m.get(norm(el.innerHTML));
-        if (to !== undefined) el.innerHTML = to;
-      }
+      for (const el of els) el.innerHTML = lang === 'en' ? el.dataset.en : el.dataset.tr;
       document.documentElement.lang = lang;
       document.title = lang === 'en' ? 'CouchRemote — your iPhone as a remote for your PC' : 'CouchRemote';
       document.getElementById('langTr').classList.toggle('on', lang === 'tr');
@@ -151,11 +169,9 @@
     let pref = null;
     try { pref = localStorage.getItem('lang'); } catch {}
     const auto = (navigator.language || 'tr').toLowerCase().startsWith('tr') ? 'tr' : 'en';
-    let cur = 'tr';
-    const set = (l) => { if (l !== cur) { apply(l); cur = l; } else apply(l); };
-    document.getElementById('langTr').onclick = () => set('tr');
-    document.getElementById('langEn').onclick = () => set('en');
-    set(pref === 'tr' || pref === 'en' ? pref : auto);
+    document.getElementById('langTr').onclick = () => apply('tr');
+    document.getElementById('langEn').onclick = () => apply('en');
+    apply(pref === 'tr' || pref === 'en' ? pref : auto);
   })();
 </script>
 </body>
