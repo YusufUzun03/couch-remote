@@ -177,7 +177,7 @@ struct DiagSheet: View {
                     .padding(12)
                     .textSelection(.enabled)
             }
-            .navigationTitle("Diagnostics")
+            .navigationTitle("Connection")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .bottomBar) {
@@ -185,7 +185,7 @@ struct DiagSheet: View {
                     Spacer()
                     Button("Clear") { log.clear() }
                     Spacer()
-                    Button("Change server", role: .destructive, action: onChangeServer)
+                    Button("Change PC", role: .destructive, action: onChangeServer)
                 }
             }
         }
