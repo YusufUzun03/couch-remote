@@ -1,0 +1,34 @@
+name: CouchRemote
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  CouchRemote:
+    type: application
+    platform: iOS
+    sources:
+      - CouchRemote
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.yusufuzun03.couchremote
+        PRODUCT_NAME: CouchRemote
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: CouchRemote/Info.plist
+      properties:
+        CFBundleDisplayName: CouchRemote
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: CouchRemote connects to the CouchRemote program on your PC over your home network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true

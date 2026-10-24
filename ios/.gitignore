@@ -1,0 +1,4 @@
+*.xcodeproj
+CouchRemote/Info.plist
+build/
+DerivedData/
